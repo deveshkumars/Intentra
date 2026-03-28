@@ -1,0 +1,147 @@
+{
+  "$schema": "https://intentra.dev/schemas/culture/v1",
+  "version": "1.0.0",
+  "team": {
+    "name": "",
+    "description": ""
+  },
+
+  "coding_style": {
+    "language_preferences": [],
+    "formatting": {
+      "indent_style": "spaces",
+      "indent_size": 2,
+      "max_line_length": 100,
+      "trailing_newline": true
+    },
+    "naming_conventions": {
+      "variables": "camelCase",
+      "functions": "camelCase",
+      "classes": "PascalCase",
+      "files": "kebab-case",
+      "constants": "SCREAMING_SNAKE_CASE"
+    },
+    "patterns": {
+      "preferred": [],
+      "discouraged": []
+    },
+    "documentation": {
+      "require_docstrings": false,
+      "style": "jsdoc"
+    }
+  },
+
+  "risk_tolerance": {
+    "level": "medium",
+    "description": "Describes how much risk the team accepts when making changes.",
+    "guidelines": {
+      "breaking_changes": "require_major_version_bump",
+      "experimental_features": "flag_with_comment",
+      "untested_code": "block_merge",
+      "third_party_dependencies": "review_required"
+    },
+    "deploy": {
+      "require_staging": true,
+      "require_canary": false,
+      "rollback_window_hours": 24
+    }
+  },
+
+  "merge_priorities": {
+    "description": "When branches conflict, which concerns take precedence.",
+    "order": [
+      "security_fixes",
+      "data_integrity",
+      "user_facing_stability",
+      "performance",
+      "developer_experience",
+      "experimental_features"
+    ],
+    "branch_priorities": {
+      "description": "Named branches or branch patterns ranked by priority (highest first).",
+      "ranked": []
+    },
+    "conflict_resolution_preference": "discuss",
+    "auto_resolve_rules": [
+      {
+        "pattern": "*.lock",
+        "strategy": "ours",
+        "reason": "Lock files should use the base branch version and be regenerated."
+      },
+      {
+        "pattern": "CHANGELOG.md",
+        "strategy": "union",
+        "reason": "Changelogs from both sides should be preserved."
+      }
+    ]
+  },
+
+  "review_standards": {
+    "required_approvals": 1,
+    "require_passing_tests": true,
+    "require_linear_history": false,
+    "stale_review_dismissal": true,
+    "checklist": {
+      "author": [
+        "Self-reviewed the diff",
+        "Tests written and passing",
+        "No debug code left in",
+        "Docs updated if behavior changed"
+      ],
+      "reviewer": [
+        "Understand the intent of the change",
+        "Check edge cases",
+        "Verify tests cover the change",
+        "Flag any security concerns"
+      ]
+    },
+    "pr_size": {
+      "preferred_max_lines": 400,
+      "warn_above_lines": 800,
+      "block_above_lines": null
+    },
+    "labels": {
+      "ready_for_review": "ready",
+      "work_in_progress": "wip",
+      "blocked": "blocked",
+      "needs_discussion": "needs-discussion"
+    }
+  },
+
+  "handoff": {
+    "require_handoff_doc": false,
+    "handoff_template": ".intentra/handoff-{date}.md",
+    "fields_required": [
+      "what_was_built",
+      "decisions_made",
+      "next_steps"
+    ]
+  },
+
+  "agent_behavior": {
+    "description": "Controls how AI agents (e.g. collab-agent) behave in this repo.",
+    "autonomy_level": "suggest",
+    "allowed_auto_actions": [
+      "read_files",
+      "run_tests",
+      "create_branch",
+      "write_handoff_doc"
+    ],
+    "require_human_approval_for": [
+      "merge_to_main",
+      "delete_branch",
+      "force_push",
+      "rebase_shared_branch"
+    ],
+    "intent_parsing": {
+      "enabled": true,
+      "clarify_ambiguous_intents": true,
+      "examples": [
+        {
+          "intent": "Pull Devesh's UI changes but ignore Eashan's ML model",
+          "resolved_to": "cherry-pick commits touching ui/ from devesh/feature-ui, exclude commits touching ml/"
+        }
+      ]
+    }
+  }
+}
