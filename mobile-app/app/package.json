@@ -1,0 +1,28 @@
+{
+  "name": "gstack-monitor",
+  "version": "1.0.0",
+  "main": "App.tsx",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios"
+  },
+  "dependencies": {
+    "expo": "~52.0.0",
+    "expo-status-bar": "~2.0.0",
+    "react": "18.3.1",
+    "react-native": "0.76.3",
+    "@react-navigation/native": "^6.1.18",
+    "@react-navigation/stack": "^6.4.1",
+    "react-native-screens": "~4.1.0",
+    "react-native-safe-area-context": "4.12.0",
+    "react-native-gesture-handler": "~2.20.2",
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "react-native-sse": "^1.2.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@types/react": "~18.3.12",
+    "typescript": "^5.3.0"
+  }
+}

@@ -1,0 +1,193 @@
+import React, { useCallback } from 'react';
+import {
+  View, Text, FlatList, ScrollView, StyleSheet,
+  TouchableOpacity, RefreshControl,
+} from 'react-native';
+import { TrackedAgent, ProgressEvent } from '../types';
+import { AgentCard } from '../components/AgentCard';
+import { EventRow } from '../components/EventRow';
+import { ConnectionStatus } from '../useEventStream';
+
+interface Props {
+  events: ProgressEvent[];
+  trackedAgents: TrackedAgent[];
+  status: ConnectionStatus;
+  onReconnect: () => void;
+  onAgentPress: (agent: TrackedAgent) => void;
+  onSetupPress: () => void;
+}
+
+const STATUS_DOT_COLOR: Record<ConnectionStatus, string> = {
+  connected: '#4ade80',
+  connecting: '#f59e0b',
+  disconnected: '#475569',
+  error: '#f87171',
+};
+
+export function DashboardScreen({
+  events, trackedAgents, status, onReconnect, onAgentPress, onSetupPress,
+}: Props) {
+  const dotColor = STATUS_DOT_COLOR[status];
+
+  const renderEvent = useCallback(({ item }: { item: ProgressEvent }) => (
+    <EventRow event={item} />
+  ), []);
+
+  const renderAgent = useCallback((agent: TrackedAgent) => (
+    <AgentCard
+      key={agent.id}
+      agent={agent}
+      onPress={() => onAgentPress(agent)}
+    />
+  ), [onAgentPress]);
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>gstack monitor</Text>
+        <View style={styles.headerRight}>
+          <View style={[styles.dot, { backgroundColor: dotColor }]} />
+          <TouchableOpacity onPress={onSetupPress} style={styles.gearBtn}>
+            <Text style={styles.gear}>⚙</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Tracked agent cards */}
+      {trackedAgents.length > 0 && (
+        <View style={styles.sessionsSection}>
+          <Text style={styles.sectionLabel}>Tracked agents</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sessionScroll}>
+            {trackedAgents.map(renderAgent)}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Event feed */}
+      <Text style={styles.feedLabel}>Live events</Text>
+      {events.length === 0 ? (
+        <View style={styles.empty}>
+          {status === 'connected'
+            ? <Text style={styles.emptyText}>Waiting for agents...</Text>
+            : status === 'connecting'
+              ? <Text style={styles.emptyText}>Connecting...</Text>
+              : (
+                <View style={styles.emptyAction}>
+                  <Text style={styles.emptyText}>Not connected</Text>
+                  <TouchableOpacity onPress={onSetupPress} style={styles.setupBtn}>
+                    <Text style={styles.setupBtnText}>Set up server</Text>
+                  </TouchableOpacity>
+                </View>
+              )
+          }
+        </View>
+      ) : (
+        <FlatList
+          data={events}
+          keyExtractor={e => e.id}
+          renderItem={renderEvent}
+          style={styles.feed}
+          refreshControl={
+            <RefreshControl
+              refreshing={status === 'connecting'}
+              onRefresh={onReconnect}
+              tintColor="#475569"
+            />
+          }
+        />
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0d0d0d',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 56,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#1e293b',
+  },
+  title: {
+    color: '#f1f5f9',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  gearBtn: {
+    padding: 4,
+  },
+  gear: {
+    color: '#64748b',
+    fontSize: 18,
+  },
+  sessionsSection: {
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  sectionLabel: {
+    color: '#475569',
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  feedLabel: {
+    color: '#475569',
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  sessionScroll: {
+    paddingLeft: 16,
+  },
+  feed: {
+    flex: 1,
+  },
+  empty: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#475569',
+    fontSize: 15,
+  },
+  emptyAction: {
+    alignItems: 'center',
+    gap: 16,
+  },
+  setupBtn: {
+    backgroundColor: '#1e293b',
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  setupBtnText: {
+    color: '#94a3b8',
+    fontSize: 14,
+  },
+});
