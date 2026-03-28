@@ -1,34 +1,143 @@
-# gstack
+# Intentra: Agentic Software Collaboration Platform
+Reinventing Agentic Software Development Collaboration: We provide an agentic coding platform that makes collaboration between humans smooth, brings human culture to agents, and helps developers monitor their agents on the go.
 
-> "I don't think I've typed like a line of code probably since December, basically, which is an extremely large change." — [Andrej Karpathy](https://fortune.com/2026/03/21/andrej-karpathy-openai-cofounder-ai-agents-coding-state-of-psychosis-openclaw/), No Priors podcast, March 2026
+Installation information is below
 
-When I heard Karpathy say this, I wanted to find out how. How does one person ship like a team of twenty? Peter Steinberger built [OpenClaw](https://github.com/openclaw/openclaw) — 247K GitHub stars — essentially solo with AI agents. The revolution is here. A single builder with the right tooling can move faster than a traditional team.
+## 1. Vision
+We are reinventing how developers collaborate in an era of AI agents.
+**North Star:**  
+Enable seamless collaboration between humans and AI agents where:
+- English is the new programming language, and developers can share their prompts along with their code
+- Agents understand and preserve human organizational culture
+- Collaboration is intent-driven, not command-driven
+- Developers can supervise and steer autonomous systems in real time
+This platform changes the game when it comes to agentic coding. It’s no longer “share your code,” but “share your prompts.” Developers should be able to embody their human culture into the agents, and then leave the computer, tracking progress on their mobile devices.
+---
+## 2. Problem Definition
+### Current Pain Points
+- Git workflows are rigid and unintuitive for complex collaboration
+- AI agents operate in isolation without shared context or "team culture"
+- Developers lack visibility and control over autonomous agent behavior away from their computer
+- Collaboration is fragmented since code is shared, but not the prompts
+### Who Experiences This?
+- Software engineers working in teams
+- AI-first startups using coding agents
+- Open-source contributors
+- Technical founders managing multi-agent workflows
+---
+## 3. Innovation
+### 3.1 Intent as Code
+Instead of imperative commands, users specify **intent**:
+Example:
+> "Pull Devesh's UI changes but ignore Eashan's ML model, and merge safely."
+Agents interpret:
+- Context
+- Dependencies
+- Organizational priorities
+This introduces a **semantic layer on top of Git**.
+---
+### 3.2 Intelligent Merge Engine
+Agents perform merges with:
+- Dependency awareness
+- Test validation
+- Priority-based conflict resolution
+Example:
+> Prefer stability of frontend over experimental ML branch
+---
+### 3.3 Cultural Embedding in Agents
+Agents inherit:
+- Team coding style
+- Risk tolerance
+- Merge priorities
+- Review standards
+This creates **organization-aware agents**, not generic copilots.
+---
+### 3.4 Portable Work via Markdown
+Agents generate a **stateful markdown summary**:
+- What was built
+- Decisions made
+- Current architecture
+- Next steps
+Other users can import this and continue development seamlessly.
+---
+### 3.5 Mobile Agent Monitoring
+A mobile interface allows:
+- Real-time agent monitoring
+- Intervention (approve/deny actions)
+- High-level steering
+---
+## 4. Technical Architecture
+### 4.1 System Overview
+- Mobile App: React Native
+- Agent Layer: Using Claude Code and open-source gStack
+- Communication between coding platform and mobile app: ngrok
+- New Capabilities: Delivered via Claude Code Skills and open source gstack
+---
+### 4.2 Core Components
+#### 1. Intent Parser
+- Converts natural language → structured commands
+- Uses LLM + schema validation
+#### 2. Agent Orchestrator: gstack
+- Manages task execution
+- Coordinates multiple agents
+#### 3. Culture Expert: Intent as Code
+- Stores organizational culture in a json format 
+#### 4. Markdown Serializer
+- Exports/imports project state
+- Enables portability
+#### 5. Mobile Interface
+- Lightweight API-driven dashboard
+---
+##5. Scalability
+Intentra is architected not just as a tool, but as an ecosystem. While the current iteration focuses on immediate developer needs, the framework is designed for massive horizontal and vertical expansion.
+### 5.1 Extensibility beyond the Hackathon
+High potential for scalability allowing for Intentra to revolutionize software development 
+As the user base grows, Intentra facilitates seamless cross-user contribution, turning individual development into a collective, AI-augmented intelligence.
+Intentra is currently optimized for Claude’s sophisticated reasoning capabilities, tapping into an established and rapidly growing developer base
+## 6. Team Execution Plan:
+Division of work
+Both of us work on the masterplan, README
+Gordon will work on implementing the collab-agent and code architecture
+Devesh will work on the mobile application and markdown as code sharing
+Milestones for the 24 hours
 
-I'm [Garry Tan](https://x.com/garrytan), President & CEO of [Y Combinator](https://www.ycombinator.com/). I've worked with thousands of startups — Coinbase, Instacart, Rippling — when they were one or two people in a garage. Before YC, I was one of the first eng/PM/designers at Palantir, cofounded Posterous (sold to Twitter), and built Bookface, YC's internal social network.
+Timeline
+2:00 PM master doc completed
+5:00 PM we should have a stencil up for gstack
+10:00 PM we should the functioning claude skill up and running, fully done with the Skill.md file
+5:00 AM: Mobile app should be up and running
+10:00 AM: The markdown as code functionality should be implemented
+2:00 PM: Code is finished and fully polished 
 
-**gstack is my answer.** I've been building products for twenty years, and right now I'm shipping more code than I ever have. In the last 60 days: **600,000+ lines of production code** (35% tests), **10,000-20,000 lines per day**, part-time, while running YC full-time. Here's my last `/retro` across 3 projects: **140,751 lines added, 362 commits, ~115k net LOC** in one week.
+## 7: Feasibility: Can it be built in 24 hours by this team?
+Given the team’s specialized expertise in AI-augmented development and a highly defined product scope, we have structured our workflow to ensure a production-ready MVP within the 24-hour window. This project is entirely feasible during this 24 hours and is a well-formed idea for a short-term hackathon. 
 
-**2026 — 1,237 contributions and counting:**
+## 8 Market Awareness: Competitive landscape, positioning
+The current industry leaders in AI coding Cursor and Claude Code and in collaboration is Github. Our product would be revolutionary since it transcends current industries and allows for effective communication between humans using markdown as code, a more intentional collaboration platform, and a mobile application.
 
-![GitHub contributions 2026 — 1,237 contributions, massive acceleration in Jan-Mar](docs/images/github-2026.png)
+## 9 Risk Assessment: Risks identified, contingency plans
+It’s possible that it is too difficult to get Claude to communicate with a backend that the mobile application can access in a secure way. If this were to occur, then it is paramount to use security principles to determine a safe way to communicate the status of the coding to the mobile application. One such contingency would be to have read-only information moving from Claude.
 
-**2013 — when I built Bookface at YC (772 contributions):**
 
-![GitHub contributions 2013 — 772 contributions building Bookface at YC](docs/images/github-2013.png)
+## 10 User Impact: How many people benefit? How much improvement?
+Intentra isn’t just for elite engineers; it’s designed to lower the barrier to entry for complex software architecture while raising the ceiling for professional teams. 
+For Software Engineers: Intentra eliminates problems that developers may have with asynchronous work together. It allows for intuitive collaboration while also allowing teams or developers to pass off their coding agents and prompts to allow everybody to be on the same page.
+For Students & Beginners: Intentra can act as a mentor. By translating complex Git operations into Intent as Code, it allows new learners to focus on logic and architecture rather than struggling with CLI syntax.
+Intentra is designed to bring organizational culture and human reasoning to integrate coding agents directly into organizations’ workflows. It will revolutionize software development.
 
-Same person. Different era. The difference is the tooling.
+## 11 Differentiation Strategy: What makes this different from existing solutions
+No existing solution for agentic coding provides a platform to share prompts in a portable, vendor-agnostic format. No existing solution allows for organizational culture to be embedded in the agent’s every action. No existing solution allows for developers to get up from their desks and take a walk, continuing to monitor progress from their devices. And certainly, no existing solution seamlessly does all of the above at once.
 
-**gstack is how I do it.** It turns Claude Code into a virtual engineering team — a CEO who rethinks the product, an eng manager who locks architecture, a designer who catches AI slop, a reviewer who finds production bugs, a QA lead who opens a real browser, a security officer who runs OWASP + STRIDE audits, and a release engineer who ships the PR. Twenty specialists and eight power tools, all slash commands, all Markdown, all free, MIT license.
+## 12 Ecosystem Thinking: Interoperability, API design, extensibility
+### 12.1 Interoperability as a Cornerstone
+One of Intentra’s key features is the saving of prompts to allow for thorough collaboration in agentic software development. The prompts are LLM-agnostic, allowing for Intentra to execute these features in a variety of environments.
+### 12.2 API-First Design
+Because Intentra is applicable for any and all software engineers, its API is designed to be versatile across platforms. It allows IDEs (VS Code, JetBrains) to send natural language "Intents" directly to the orchestrator.
+Additionally, the API for agents to follow organizational culture is a standardized JSON schema that allows HR or Engineering Ops tools to programmatically update "Team Coding Standards" across all active agents. 
+### 12.3 Extensibility
+	Given the incredibly structured nature of the codebase, it is very easy to add new skills to Claude in a markdown format. The system for the mobile application can be easily adapted for a future web application as well, and the culture platform is a JSON format that other vendors could use in the future. We created extensible formats that will one day become commonplace in the world, just as MCP once did.
 
-This is my open source software factory. I use it every day. I'm sharing it because these tools should be available to everyone.
-
-Fork it. Improve it. Make it yours. And if you want to hate on free open source software — you're welcome to, but I'd rather you just try it first.
-
-**Who this is for:**
-- **Founders and CEOs** — especially technical ones who still want to ship
-- **First-time Claude Code users** — structured roles instead of a blank prompt
-- **Tech leads and staff engineers** — rigorous review, QA, and release automation on every PR
-
+# Installation
 ## Quick start
 
 1. Install gstack (30 seconds — see below)
@@ -46,7 +155,7 @@ Fork it. Improve it. Make it yours. And if you want to hate on free open source 
 
 Open Claude Code and paste this. Claude does the rest.
 
-> Install gstack: run **`git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup`** then add a "gstack" section to CLAUDE.md that says to use the /browse skill from gstack for all web browsing, never use mcp\_\_claude-in-chrome\_\_\* tools, and lists the available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse, /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /retro, /investigate, /document-release, /codex, /cso, /autoplan, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade. Then ask the user if they also want to add gstack to the current project so teammates get it.
+> Install gstack: run **`git clone --single-branch --depth 1 https://github.com/deveshkumars/Intentra.git ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup`** then add a "gstack" section to CLAUDE.md that says to use the /browse skill from gstack for all web browsing, never use mcp\_\_claude-in-chrome\_\_\* tools, and lists the available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse, /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /retro, /investigate, /document-release, /codex, /cso, /autoplan, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade. Then ask the user if they also want to add gstack to the current project so teammates get it.
 
 ### Step 2: Add to your repo so teammates get it (optional)
 
@@ -214,71 +323,7 @@ gstack is powerful with one sprint. It is transformative with ten running at onc
 
 [Conductor](https://conductor.build) runs multiple Claude Code sessions in parallel — each in its own isolated workspace. One session running `/office-hours` on a new idea, another doing `/review` on a PR, a third implementing a feature, a fourth running `/qa` on staging, and six more on other branches. All at the same time. I regularly run 10-15 parallel sprints — that's the practical max right now.
 
-The sprint structure is what makes parallelism work. Without a process, ten agents is ten sources of chaos. With a process — think, plan, build, review, test, ship — each agent knows exactly what to do and when to stop. You manage them the way a CEO manages a team: check in on the decisions that matter, let the rest run.
 
 ---
 
-Free, MIT licensed, open source. No premium tier, no waitlist.
-
-I open sourced how I build software. You can fork it and make it your own.
-
-> **We're hiring.** Want to ship 10K+ LOC/day and help harden gstack?
-> Come work at YC — [ycombinator.com/software](https://ycombinator.com/software)
-> Extremely competitive salary and equity. San Francisco, Dogpatch District.
-
-## Docs
-
-| Doc | What it covers |
-|-----|---------------|
-| [Skill Deep Dives](docs/skills.md) | Philosophy, examples, and workflow for every skill (includes Greptile integration) |
-| [Builder Ethos](ETHOS.md) | Builder philosophy: Boil the Lake, Search Before Building, three layers of knowledge |
-| [Architecture](ARCHITECTURE.md) | Design decisions and system internals |
-| [Browser Reference](BROWSER.md) | Full command reference for `/browse` |
-| [Contributing](CONTRIBUTING.md) | Dev setup, testing, contributor mode, and dev mode |
-| [Changelog](CHANGELOG.md) | What's new in every version |
-
-## Privacy & Telemetry
-
-gstack includes **opt-in** usage telemetry to help improve the project. Here's exactly what happens:
-
-- **Default is off.** Nothing is sent anywhere unless you explicitly say yes.
-- **On first run,** gstack asks if you want to share anonymous usage data. You can say no.
-- **What's sent (if you opt in):** skill name, duration, success/fail, gstack version, OS. That's it.
-- **What's never sent:** code, file paths, repo names, branch names, prompts, or any user-generated content.
-- **Change anytime:** `gstack-config set telemetry off` disables everything instantly.
-
-Data is stored in [Supabase](https://supabase.com) (open source Firebase alternative). The schema is in [`supabase/migrations/`](supabase/migrations/) — you can verify exactly what's collected. The Supabase publishable key in the repo is a public key (like a Firebase API key) — row-level security policies deny all direct access. Telemetry flows through validated edge functions that enforce schema checks, event type allowlists, and field length limits.
-
-**Local analytics are always available.** Run `gstack-analytics` to see your personal usage dashboard from the local JSONL file — no remote data needed.
-
-## Troubleshooting
-
-**Skill not showing up?** `cd ~/.claude/skills/gstack && ./setup`
-
-**`/browse` fails?** `cd ~/.claude/skills/gstack && bun install && bun run build`
-
-**Stale install?** Run `/gstack-upgrade` — or set `auto_upgrade: true` in `~/.gstack/config.yaml`
-
-**Want shorter commands?** `cd ~/.claude/skills/gstack && ./setup --no-prefix` — switches from `/gstack-qa` to `/qa`. Your choice is remembered for future upgrades.
-
-**Want namespaced commands?** `cd ~/.claude/skills/gstack && ./setup --prefix` — switches from `/qa` to `/gstack-qa`. Useful if you run other skill packs alongside gstack.
-
-**Codex says "Skipped loading skill(s) due to invalid SKILL.md"?** Your Codex skill descriptions are stale. Fix: `cd ~/.codex/skills/gstack && git pull && ./setup --host codex` — or for repo-local installs: `cd "$(readlink -f .agents/skills/gstack)" && git pull && ./setup --host codex`
-
-**Windows users:** gstack works on Windows 11 via Git Bash or WSL. Node.js is required in addition to Bun — Bun has a known bug with Playwright's pipe transport on Windows ([bun#4253](https://github.com/oven-sh/bun/issues/4253)). The browse server automatically falls back to Node.js. Make sure both `bun` and `node` are on your PATH.
-
-**Claude says it can't see the skills?** Make sure your project's `CLAUDE.md` has a gstack section. Add this:
-
-```
-## gstack
-Use /browse from gstack for all web browsing. Never use mcp__claude-in-chrome__* tools.
-Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review,
-/design-consultation, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse,
-/qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /retro,
-/investigate, /document-release, /codex, /cso, /autoplan, /careful, /freeze, /guard,
-/unfreeze, /gstack-upgrade.
-```
-
-## License
-
-MIT. Free forever. Go build something.
+Free, MIT licensed, open source. Thanks to gstack from Garry Tan. 
