@@ -76,10 +76,9 @@ The .tmpl uses `{{PREAMBLE}}` (resolved at gen time) plus custom sections:
 
 ## What's in-flight
 
-- The 5 modes have full prompt engineering but are marked `<!-- TODO: Implement each
-  mode fully in v0.2+ -->` in the generated SKILL.md. The orchestration framework and
-  culture injection are wired up — the mode prompts themselves need real-world testing
-  and iteration.
+- All 5 modes are fully implemented with detailed prompt engineering, culture
+  injection, and orchestration. They need real-world testing on repos with actual
+  merge conflicts, multi-branch landscapes, and messy histories to tune the output.
 
 ## What's blocked
 
