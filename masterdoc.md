@@ -228,6 +228,8 @@ This MVP is intentionally scoped to be built in **24 hours** by this team becaus
 | Agent violates team standards | Caught in PR review (expensive) | Blocked at runtime by CultureJSON (free) |
 | "Why was this decision made?" | No answer | Query the intent log |
 
+**Headline estimates:** Engineers reclaim ~30% of time previously spent babysitting agents at a desk. Teams reduce merge friction ~50% by catching culture violations at runtime instead of PR review.
+
 ---
 
 ## 8. Scalability Design (Beyond the Demo)
@@ -246,6 +248,8 @@ The MVP runs fully local (Claude Code + ngrok). Scaling is a transport and stora
 **Key design decision:** `IntentSchema` and `CultureJSON` are deliberately flat JSON with no vendor-specific fields. This means they survive the migration from “file on disk” to “row in Postgres” to “indexed in Elasticsearch” without changing any consumer code.
 
 **Multi-agent concurrency (beyond demo):** add a lightweight queue in front of the `gStack` orchestrator. Agents acquire a lock per repo before executing write operations. The `IntentSchema` already has an `intent_id` field, so deduplication and ordering come for free.
+
+**Plugin architecture:** adapters attach to the stable API surface without touching core. CI/CD systems (GitHub Actions, CircleCI), issue trackers (Jira, Linear), and build systems (Jenkins, Buildkite) plug in via the `/control/approve` and `/control/deny` endpoints and the `intent_id` linkage in handoff snapshots.
 
 ---
 
