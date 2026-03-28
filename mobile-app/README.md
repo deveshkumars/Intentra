@@ -134,14 +134,51 @@ step labels, and outcome.
 
 ## Server API
 
+### Tracked agents
+
+Register named agents and update their status — they appear as cards in the app dashboard.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/agents` | Create a tracked agent (`status: running`) |
+| `PATCH` | `/agents/:id` | Update status / message |
+| `DELETE` | `/agents/:id` | Remove agent |
+| `GET` | `/agents` | List all tracked agents |
+
+Status values: `running`, `done`, `error`.
+
+```bash
+# Create an agent
+curl -s -X POST http://localhost:7891/agents \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "my-task", "description": "optional description"}'
+# → {"id":"agent_...","name":"my-task","status":"running",...}
+
+# Mark done (use the id from the create response)
+curl -s -X PATCH http://localhost:7891/agents/<id> \
+  -H 'Content-Type: application/json' \
+  -d '{"status": "done"}'
+
+# Mark errored with a message
+curl -s -X PATCH http://localhost:7891/agents/<id> \
+  -H 'Content-Type: application/json' \
+  -d '{"status": "error", "message": "something went wrong"}'
+
+# List all agents
+curl -s http://localhost:7891/agents
+
+# Delete an agent
+curl -s -X DELETE http://localhost:7891/agents/<id>
+```
+
+### Progress events
+
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/progress` | Push a progress event. Never returns an error. |
 | `GET` | `/events/stream` | SSE stream. Replays buffer on connect, then live. |
 | `GET` | `/events/history?limit=N` | REST fallback (max 200). |
 | `GET` | `/health` | Connection check — `{ ok, events, subscribers, uptime }` |
-
-Test it with curl:
 
 ```bash
 # Health check
