@@ -665,6 +665,14 @@ if the user has explicitly told you to proceed without asking.
 
 ## Core Modes
 
+### Ground-truth principle
+
+**Every claim about the codebase must be verified before stating it.** Do not assert
+that a file, comment, branch, TODO, pattern, or state exists (or doesn't) based on
+memory or assumption. Always grep, read, or git-log first. If you cannot verify
+something, mark it "unverified" explicitly. This applies to all modes — handoff docs,
+branch reports, PR summaries, and history analysis are only useful if they're accurate.
+
 ### Mode Orchestration
 
 All 5 modes share culture context from Step 1. Before any mode runs, the orchestrator
@@ -994,6 +1002,13 @@ cat README.md 2>/dev/null | head -30
 ```
 
 5. Build the handoff document. All sections are mandatory. If no data exists for a section, include it with "None identified" rather than omitting.
+
+   **Ground-truth rule:** Every factual claim in the handoff MUST be verified against
+   the actual codebase before writing. Never state that a file, comment, TODO, marker,
+   or code pattern exists (or doesn't exist) based on memory or assumption — run a grep,
+   read the file, or check git log first. If you cannot verify a claim, say "unverified"
+   explicitly. A wrong handoff is worse than no handoff — the next contributor will trust
+   it and waste time on phantom issues or miss real ones.
 
    If `team.communication` is "async-first", write verbose handoffs with full context
    (assume the next contributor has zero ambient knowledge). If "sync-first", write
