@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# gstack-progress — POST a progress event to the mobile monitor server
+#
+# Usage:
+#   gstack-progress --message "Running tests" [--step lint] [--pct 42] [--skill qa]
+#
+# Env overrides (for testing):
+#   GSTACK_PROGRESS_PORT — port (default 7891)
+#   GSTACK_PROGRESS_URL  — full base URL (overrides port)
+#   GSTACK_SKILL         — current skill name (already set in skill preambles)
+#
+# Non-blocking, silent-fails if server is not running.
+# NOTE: Uses set -uo pipefail (no -e) — must never exit non-zero
+
+set -uo pipefail
+
+PORT="${GSTACK_PROGRESS_PORT:-7891}"
+BASE_URL="${GSTACK_PROGRESS_URL:-http://localhost:$PORT}"
+
+MESSAGE=""
+STEP=""
+PCT=""
+SKILL_NAME="${GSTACK_SKILL:-}"
+SESSION="${CLAUDE_SESSION_ID:-}"
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --message) MESSAGE="$2"; shift 2 ;;
+    --step)    STEP="$2"; shift 2 ;;
+    --pct)     PCT="$2"; shift 2 ;;
+    --skill)   SKILL_NAME="$2"; shift 2 ;;
+    *)         shift ;;
+  esac
+done
+
+# Sanitize string fields for JSON safety (strip quotes, backslashes, control chars)
+json_safe() { printf '%s' "$1" | tr -d '"\\\n\r\t' | head -c 200; }
+
+TS="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "")"
+MESSAGE="$(json_safe "$MESSAGE")"
+STEP="$(json_safe "$STEP")"
+SKILL_NAME="$(json_safe "$SKILL_NAME")"
+SESSION="$(json_safe "$SESSION")"
+
+# Build JSON without jq dependency
+BODY="{\"kind\":\"progress\",\"source\":\"post\",\"ts\":\"$TS\""
+[ -n "$MESSAGE" ]     && BODY="$BODY,\"message\":\"$MESSAGE\""
+[ -n "$STEP" ]        && BODY="$BODY,\"step\":\"$STEP\""
+[ -n "$PCT" ]         && BODY="$BODY,\"pct\":$PCT"
+[ -n "$SKILL_NAME" ]  && BODY="$BODY,\"skill\":\"$SKILL_NAME\""
+[ -n "$SESSION" ]     && BODY="$BODY,\"session_id\":\"$SESSION\""
+BODY="$BODY}"
+
+# curl with tight timeout — never block the agent
+curl -s -m 2 -X POST "$BASE_URL/progress" \
+  -H 'Content-Type: application/json' \
+  -d "$BODY" >/dev/null 2>&1 || true
+
+exit 0
