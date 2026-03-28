@@ -307,28 +307,324 @@ Print the detected platform and base branch. Use them in all subsequent git comm
 
 ---
 
+## Step 1: Load Culture Context
+
+Before any mode runs, load the team's culture file if it exists.
+
+```bash
+[ -f .intentra/culture.json ] && cat .intentra/culture.json || echo "NO_CULTURE_FILE"
+```
+
+If culture exists, parse and hold these values in context for all subsequent modes:
+- `merge_priorities.order` — ranked concern list for conflict resolution
+- `merge_priorities.branch_priorities.ranked` — explicit branch priority ranking
+- `merge_priorities.auto_resolve_rules` — mechanical conflict resolution (lock files, changelogs)
+- `risk_tolerance.level` — low/medium/high, affects how aggressive recommendations are
+- `risk_tolerance.guidelines` — what blocks merge, what needs review
+- `review_standards` — approval requirements, PR size thresholds, checklists
+- `handoff.fields_required` — what a handoff doc must contain
+- `agent_behavior.autonomy_level` — "suggest" (recommend only), "act" (execute with confirmation), "ask" (ask before every action)
+- `agent_behavior.require_human_approval_for` — actions that always need explicit user confirmation
+- `agent_behavior.intent_parsing` — whether to enable the Intent as Code parser
+
+If `NO_CULTURE_FILE`: operate with sensible defaults (medium risk, discuss-first conflict resolution, suggest-only autonomy). Note to the user: "No `.intentra/culture.json` found. Using defaults. Run `/collab-agent` with mode 'Setup Culture' to create one."
+
+---
+
+## Intent as Code Parser
+
+This is the semantic layer on top of Git. Instead of typing git commands, users express
+**intent** in natural language. The parser resolves intent to concrete git operations,
+informed by culture context.
+
+### How it works
+
+```
+USER INTENT (natural language)
+       │
+       ▼
+┌─────────────────────┐
+│  1. Parse entities   │  Who? (person/branch/team)
+│                      │  What? (files/dirs/modules)
+│                      │  Action? (merge/cherry-pick/exclude/rebase/review)
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  2. Resolve refs     │  Map names → branches, map dirs → file patterns
+│                      │  Check: do these branches/people actually exist?
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  3. Apply culture    │  Check merge_priorities, risk_tolerance, agent_behavior
+│                      │  Adjust strategy based on team rules
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  4. Build plan       │  Produce ordered list of git commands
+│                      │  Flag destructive ops, estimate risk
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  5. Confirm + exec   │  Show the plan, get approval, execute step by step
+└─────────────────────┘
+```
+
+### Step-by-step
+
+**1. Parse entities from the intent.**
+
+Extract from the user's natural language:
+
+| Entity type | Examples | How to resolve |
+|-------------|----------|----------------|
+| **Person** | "Devesh's changes", "what Alice pushed" | Map to git author: `git log --format="%an" --all \| sort -u` |
+| **Branch** | "the UI branch", "feature/ml" | Map to branch: `git branch -a` |
+| **Path/module** | "UI changes", "the ML model", "frontend" | Map to file paths: check directory names, common patterns (ui/, frontend/, ml/, api/) |
+| **Action** | "pull", "merge", "ignore", "cherry-pick", "rebase onto" | Map to git operation (see action table below) |
+| **Condition** | "but ignore", "only if tests pass", "safely" | Filters or guards on the action |
+
+**2. Resolve references to concrete git objects.**
+
+For each entity, verify it exists:
+
+```bash
+# Resolve person → find their branches
+git log --all --format="%an|%H" --since="30 days ago" | grep -i "PERSON_NAME" | head -10
+
+# Resolve branch by fuzzy match
+git branch -a | grep -i "BRANCH_HINT"
+
+# Resolve module → find matching paths
+git ls-files | grep -i "MODULE_HINT" | head -20
+```
+
+If a reference is ambiguous (e.g., "Devesh's changes" matches 3 branches), present the
+options via AskUserQuestion. Never guess silently.
+
+**3. Apply culture rules.**
+
+Read the loaded culture context and adjust:
+
+- If `risk_tolerance.level` is "low" and the intent involves force-push or rebase of shared branches, warn explicitly and require confirmation
+- If `merge_priorities.order` ranks "security_fixes" above "experimental_features" and the intent involves merging an experimental branch over a security fix, flag the conflict
+- If `agent_behavior.autonomy_level` is "suggest", present the plan but do NOT execute until the user says "go"
+- If `agent_behavior.autonomy_level` is "act", present the plan and execute unless a step is in `require_human_approval_for`
+- Check `merge_priorities.auto_resolve_rules` for any file patterns that can be resolved mechanically
+
+**4. Build the execution plan.**
+
+Produce a numbered list of concrete git commands. For each command, annotate:
+
+```
+INTENT EXECUTION PLAN
+═════════════════════
+Source: "Pull Devesh's UI changes but ignore Eashan's ML model, merge safely"
+
+  1. git fetch origin                                         [SAFE]
+  2. git checkout -b integrate-devesh-ui                      [SAFE]
+  3. git cherry-pick <commit-a> <commit-b> <commit-c>         [SAFE]
+     ↳ Commits by Devesh touching ui/, frontend/, components/
+     ↳ Excluding: commits touching ml/, models/, training/
+  4. git diff --stat integrate-devesh-ui...main                [READ-ONLY]
+     ↳ Verify: only UI files changed
+  5. git merge integrate-devesh-ui --no-ff                     [NEEDS APPROVAL]
+     ↳ Culture: merge_to_main requires human approval
+
+Risk: LOW (cherry-pick is reversible, no force operations)
+Culture: merge_priorities says user_facing_stability > experimental_features ✓
+```
+
+**Risk labels:**
+- `[SAFE]` — read-only or easily reversible (branch create, fetch, diff)
+- `[NEEDS APPROVAL]` — in `agent_behavior.require_human_approval_for` or destructive
+- `[DESTRUCTIVE]` — force-push, reset --hard, delete branch — always requires explicit confirmation
+
+**5. Confirm and execute.**
+
+If `autonomy_level` is "suggest" or any step is `[NEEDS APPROVAL]` or `[DESTRUCTIVE]`:
+present the full plan and ask for approval via AskUserQuestion before executing anything.
+
+If `autonomy_level` is "act" and all steps are `[SAFE]`: execute the plan step by step,
+printing each command and its output as you go. Stop immediately on any error.
+
+After execution, print a summary:
+```
+INTENT RESOLVED
+═══════════════
+  Intent:    "Pull Devesh's UI changes but ignore Eashan's ML model"
+  Commits:   3 cherry-picked (a1b2c3, d4e5f6, g7h8i9)
+  Files:     12 files changed in ui/, components/
+  Excluded:  5 commits by Eashan touching ml/
+  Branch:    integrate-devesh-ui → merged to main
+  Status:    DONE
+```
+
+### Action resolution table
+
+| User says | Git operation | Risk |
+|-----------|--------------|------|
+| "pull", "get", "grab" | `git cherry-pick` or `git merge` depending on scope | LOW-MED |
+| "ignore", "skip", "exclude" | Filter commits/files from the operation | LOW |
+| "merge safely" | `git merge --no-ff` with test validation | MED |
+| "rebase onto" | `git rebase <target>` | HIGH (rewrites history) |
+| "undo", "revert" | `git revert <commit>` | LOW |
+| "clean up", "squash" | `git rebase -i` (interactive) | HIGH |
+| "split", "separate" | Create new branch with subset of commits | LOW |
+| "who changed", "who owns" | `git log --format` + `git blame` — read-only query, routes to Mode 2 or 3 | NONE |
+
+### Intent examples from culture.json
+
+If `.intentra/culture.json` has `agent_behavior.intent_parsing.examples`, use them as
+few-shot references for resolving similar intents. The examples show how the team expects
+intents to be interpreted in this specific codebase.
+
+### Ambiguity handling
+
+When an intent is ambiguous, do NOT guess. Use AskUserQuestion:
+
+> I parsed your intent but need to clarify one thing.
+>
+> You said: "{original intent}"
+>
+> I'm not sure about: {ambiguous part}
+>
+> Options:
+> - A) {interpretation 1}
+> - B) {interpretation 2}
+> - C) Let me rephrase
+
+If `agent_behavior.intent_parsing.clarify_ambiguous_intents` is `false`, pick the safest
+interpretation and proceed (but still flag what you assumed in the execution plan).
+
+---
+
 ## Core Modes
+
+### Mode Orchestration
+
+All 5 modes share culture context from Step 1. Before any mode runs, the orchestrator
+ensures a consistent state.
+
+**Synchronous mode chain:** Modes can trigger each other. When one mode discovers work
+that belongs to another mode, it chains into it seamlessly instead of asking the user
+to restart.
+
+```
+MODE ROUTING TABLE
+══════════════════
+  Mode 1 (Merge Conflict) discovers branch coordination issue → chains to Mode 2
+  Mode 2 (Branch Coordination) finds PR-ready branches → chains to Mode 3
+  Mode 3 (PR Facilitation) needs handoff context → chains to Mode 4
+  Mode 4 (Handoff Docs) encounters messy history → chains to Mode 5
+  Mode 5 (History Untangling) resolves to merge conflicts → chains to Mode 1
+  Any mode can chain to any other. The loop exits when no more work is discovered.
+```
+
+**Shared state contract:** Every mode reads from and writes to a shared session state.
+When modes chain, the state carries forward.
+
+```
+SESSION STATE (in-memory, held in conversation context)
+═══════════════════════════════════════════════════════
+  platform:           GitHub | GitLab | unknown (from Step 0)
+  base_branch:        main | master | etc (from Step 0)
+  culture:            parsed culture.json or defaults (from Step 1)
+  branch_map:         {} (populated by Mode 2, consumed by Modes 1, 3, 4)
+  conflict_files:     [] (populated by Mode 1, consumed by Mode 5)
+  reviewer_map:       {} (populated by Mode 3, consumed by Mode 4)
+  handoff_path:       null (populated by Mode 4)
+  actions_taken:      [] (append-only log of git commands executed this session)
+```
+
+**Culture injection:** Every mode receives the full culture object. Each mode reads
+the fields it cares about:
+
+| Mode | Primary culture fields | Fallback behavior |
+|------|----------------------|-------------------|
+| 1. Merge Conflict | `merge_priorities.order`, `merge_priorities.auto_resolve_rules`, `risk_tolerance` | Discuss-first, no auto-resolve |
+| 2. Branch Coordination | `merge_priorities.branch_priorities.ranked`, `agent_behavior.autonomy_level` | No priority ranking, suggest-only |
+| 3. PR Facilitation | `review_standards.*`, `coding_style.documentation` | 1 approval, no size limits |
+| 4. Handoff Docs | `handoff.*`, `review_standards.labels` | Default template, all fields |
+| 5. History Untangling | `agent_behavior.require_human_approval_for`, `risk_tolerance.level` | Require approval for all destructive ops |
+
+**Autonomy gate:** Before executing any git command (not read-only), check:
+1. Is the action in `agent_behavior.require_human_approval_for`? If yes, ask first.
+2. Is `agent_behavior.autonomy_level` set to "suggest"? If yes, show plan, don't execute.
+3. Is `agent_behavior.autonomy_level` set to "ask"? If yes, confirm every individual step.
+4. Only if `autonomy_level` is "act" and the action is NOT in `require_human_approval_for`, execute directly.
+
+This gate applies uniformly across all 5 modes. No mode bypasses it.
+
+---
 
 ### 1. Merge Conflict Resolution
 
 Walk through active merge conflicts with the human(s) involved. Surface what each side changed,
 why the conflict exists, and recommend a resolution strategy. Go beyond "pick ours or theirs"
-— explain the intent behind each change.
+... explain the intent behind each change.
+
+**Culture fields used:**
+- `merge_priorities.order` — ranked concerns (security_fixes > data_integrity > user_facing_stability > ...)
+- `merge_priorities.auto_resolve_rules` — mechanical resolution for lock files, changelogs, etc.
+- `merge_priorities.conflict_resolution_preference` — "discuss" | "ours" | "theirs" | "manual"
+- `risk_tolerance.level` — affects how conservative recommendations are
+- `risk_tolerance.guidelines.untested_code` — "block_merge" means never recommend merging untested conflict resolutions
 
 **Steps:**
-1. Run `git status` to identify conflicted files
-2. For each conflicted file, read both sides of the conflict using `git diff --diff-filter=U`
-3. Identify the intent behind each side: read recent commits on each branch that touched this file
-4. Explain the conflict plainly — what each side was trying to do, and why they collide
-5. Recommend a resolution strategy with concrete reasoning (not just "take the newer one")
-6. If organizational culture is stored at `.intentra/culture.json`, check `merge_priorities` to inform the recommendation
-7. After resolution is agreed, walk through applying it file by file
-
-**Culture check:**
+1. Detect conflict state:
 ```bash
-[ -f .intentra/culture.json ] && cat .intentra/culture.json || echo "NO_CULTURE_FILE"
+git status --porcelain | grep "^UU\|^AA\|^DD\|^AU\|^UA"
 ```
-If culture exists, use `merge_priorities` and `risk_tolerance` to weight your recommendation.
+2. For each conflicted file, get both sides:
+```bash
+# Show the conflict markers in context
+git diff --diff-filter=U
+# Show what each branch changed
+git log --oneline -5 --first-parent -- <file>
+git log --oneline -5 MERGE_HEAD --first-parent -- <file> 2>/dev/null
+```
+3. Classify each conflict by concern type. Map to `merge_priorities.order`:
+   - Does one side fix a security issue? → security_fixes (highest priority)
+   - Does one side change data handling? → data_integrity
+   - Is one side user-facing? → user_facing_stability
+   - Is one side a performance optimization? → performance
+   - Is one side developer-only (tooling, DX)? → developer_experience
+   - Is one side experimental? → experimental_features (lowest priority)
+
+4. Check `auto_resolve_rules`. For each conflicted file:
+   - Match file path against `pattern` (e.g., `*.lock` → strategy "ours")
+   - If a rule matches, apply it automatically and tell the user what you did and why
+   - If no rule matches, proceed to manual resolution
+
+5. For manual conflicts, explain plainly:
+   - What side A was trying to do (the intent, not just the diff)
+   - What side B was trying to do
+   - Why they collide
+   - Which concern ranks higher per `merge_priorities.order`
+
+6. Recommend resolution with culture-backed reasoning:
+```
+CONFLICT: src/auth/login.ts
+═══════════════════════════
+  Side A (feature/auth):   Adds rate limiting to login endpoint
+  Side B (feature/ui):     Refactors login to use new UI component
+  Concern ranking:         security_fixes > user_facing_stability
+  RECOMMENDATION:          Keep A's rate limiting, adapt B's refactor around it
+  Risk:                    LOW (both changes are additive, not contradictory)
+  Culture:                 merge_priorities ranks security above UI stability ✓
+```
+
+7. If `risk_tolerance.guidelines.untested_code` is "block_merge":
+   - After resolving, check if tests exist for the merged result
+   - If no tests cover the resolution, flag it: "Resolution untested. Culture says untested code blocks merge. Write tests before completing."
+
+8. After resolution is agreed, apply file by file. Log each resolution to `actions_taken`.
+
+9. **Chain check:** After resolving all conflicts, run `git diff --stat` against base. If the resulting diff touches files owned by different people (check via `git log`), suggest chaining to **Mode 3** (PR Facilitation) for review assignment.
 
 ---
 
@@ -337,97 +633,269 @@ If culture exists, use `merge_priorities` and `risk_tolerance` to weight your re
 Map out the current branch landscape: who owns which branch, how they relate to the base,
 what's stale, what's likely to conflict when merged, and in what order branches should land.
 
+**Culture fields used:**
+- `merge_priorities.branch_priorities.ranked` — explicit branch ordering (e.g., `["hotfix/*", "feature/auth", "feature/ui"]`)
+- `merge_priorities.order` — concern-based priority for conflict prediction
+- `agent_behavior.autonomy_level` — whether to auto-create coordination branches or just recommend
+- `risk_tolerance.guidelines.breaking_changes` — "require_major_version_bump" affects landing order
+
 **Steps:**
-1. List all branches: `git branch -a --sort=-committerdate`
-2. For each active branch (modified in last 30 days), identify:
-   - Last committer (`git log -1 --format="%an" <branch>`)
-   - Distance from base (`git rev-list --count <base>..<branch>`)
-   - Files changed (`git diff --name-only <base>...<branch> | head -20`)
-3. Detect likely conflicts: find branches that touch overlapping files
-4. Recommend a landing order based on dependencies and conflict risk
-5. Flag stale branches (no commits in 30+ days) separately
-
-**Produce a branch map:**
-```
-BRANCH                  OWNER     COMMITS  STATUS     CONFLICTS WITH
-──────────────────────  ────────  ───────  ─────────  ──────────────
-feature/auth            alice     8        ACTIVE     feature/ui
-feature/ui              bob       3        ACTIVE     feature/auth
-fix/login-bug           carol     1        READY      —
-old/experiment          unknown   0        STALE      —
+1. Gather branch data:
+```bash
+# All branches sorted by last commit
+git branch -a --sort=-committerdate --format='%(refname:short)|%(committerdate:relative)|%(authorname)'
+# Count divergence from base for each branch
+for branch in $(git branch -r --format='%(refname:short)' | grep -v HEAD); do
+  ahead=$(git rev-list --count origin/<base>..${branch} 2>/dev/null || echo "?")
+  behind=$(git rev-list --count ${branch}..origin/<base> 2>/dev/null || echo "?")
+  echo "${branch}|ahead:${ahead}|behind:${behind}"
+done
 ```
 
-Recommend the safe landing order. Flag any branch that will need a rebase before it can merge cleanly.
+2. For each active branch (commit within 30 days), build a profile:
+   - Owner: `git log -1 --format="%an" <branch>`
+   - Commit count from base: `git rev-list --count <base>..<branch>`
+   - Files changed: `git diff --name-only <base>...<branch>`
+   - Last activity: `git log -1 --format="%cr" <branch>`
+
+3. Detect likely conflicts via file overlap analysis:
+```bash
+# For each pair of active branches, find overlapping changed files
+git diff --name-only <base>...<branch-A> > /tmp/branch-a-files
+git diff --name-only <base>...<branch-B> > /tmp/branch-b-files
+comm -12 <(sort /tmp/branch-a-files) <(sort /tmp/branch-b-files)
+```
+
+4. If `branch_priorities.ranked` exists in culture, use it to weight landing order.
+   Branches matching higher-priority patterns land first. Example:
+   - `hotfix/*` pattern → lands before everything
+   - Named branch `feature/auth` → lands in its explicit position
+   - Unranked branches → sort by conflict risk (least conflicts first)
+
+5. Produce the branch map and populate `branch_map` in session state:
+```
+BRANCH MAP — {repo} — {date}
+════════════════════════════
+                                                          CULTURE
+BRANCH                  OWNER     +/-     STATUS     CONFLICTS WITH    PRIORITY
+──────────────────────  ────────  ──────  ─────────  ──────────────    ────────
+hotfix/security-fix     alice     +3/-0   READY      —                 1 (hotfix/*)
+feature/auth            bob       +47/-8  ACTIVE     feature/ui        2 (explicit)
+feature/ui              carol     +22/-5  ACTIVE     feature/auth      3 (explicit)
+experiment/ml-model     dave      +150    ACTIVE     —                 — (unranked)
+old/cleanup             unknown   +0/-0   STALE      —                 — (stale)
+
+RECOMMENDED LANDING ORDER:
+  1. hotfix/security-fix  → merge now (security_fixes priority, no conflicts)
+  2. feature/auth         → merge next (culture ranks auth above UI)
+  3. feature/ui           → rebase onto auth first, then merge
+  4. experiment/ml-model  → review required (150+ lines, risk_tolerance check)
+  5. old/cleanup          → candidate for deletion (stale 30+ days)
+
+CONFLICT HOTSPOTS:
+  src/auth/middleware.ts  → touched by feature/auth AND feature/ui
+  src/api/routes.ts      → touched by feature/auth AND experiment/ml-model
+```
+
+6. If `risk_tolerance.guidelines.breaking_changes` is "require_major_version_bump":
+   - Scan each branch for breaking change indicators (removed exports, changed function signatures, altered API responses)
+   - Flag branches that contain breaking changes so they don't land without a version bump
+
+7. **Chain check:** If any branch is marked READY with no conflicts, suggest chaining to **Mode 3** (PR Facilitation) to get it reviewed and merged. If any branch pair has heavy conflicts, suggest chaining to **Mode 1** (Merge Conflict Resolution) proactively.
 
 ---
 
 ### 3. PR Facilitation
 
 Help a team run a PR from creation to merge: suggest reviewers by area of expertise,
-surface review conflicts, produce a reconciled action list, and track outstanding items.
+surface review friction, produce a reconciled action list, and track outstanding items.
+
+**Culture fields used:**
+- `review_standards.required_approvals` — number of approvals needed (default: 1)
+- `review_standards.require_passing_tests` — block merge without green tests
+- `review_standards.stale_review_dismissal` — dismiss approvals when new commits push
+- `review_standards.checklist.author` — what the author must self-check before requesting review
+- `review_standards.checklist.reviewer` — what reviewers must verify
+- `review_standards.pr_size.preferred_max_lines` — warn if PR exceeds this (default: 400)
+- `review_standards.pr_size.warn_above_lines` — stronger warning threshold (default: 800)
+- `review_standards.labels` — standard label names (ready, wip, blocked, needs-discussion)
+- `coding_style.documentation.require_docstrings` — flag missing docs if true
 
 **Steps:**
-1. Get the PR diff: `git diff <base>...<current-branch> --stat`
-2. Identify files changed and their recent owners via `git log --format="%an" --follow -- <file> | sort | uniq -c | sort -rn | head -3` for each significant file
-3. Suggest reviewers by file ownership — not just "assign anyone," but name specific people and explain why
-4. Scan for common review friction points: large diffs (>500 lines), mixed concerns (logic + formatting), missing tests
-5. If there are existing review comments (GitHub/GitLab), summarize outstanding threads
-6. Produce a clear action list: what the author needs to fix, what reviewers need to re-check, what's blocking merge
+1. Get the PR scope:
+```bash
+# Diff stat
+git diff <base>...<current-branch> --stat
+# Total lines changed
+git diff <base>...<current-branch> --shortstat
+# File list
+git diff <base>...<current-branch> --name-only
+```
 
-**Reviewer suggestion format:**
+2. **PR size check** against culture thresholds:
+   - If total changed lines > `pr_size.preferred_max_lines`: "This PR is {n} lines. Culture prefers PRs under {max}. Consider splitting."
+   - If total changed lines > `pr_size.warn_above_lines`: "WARNING: {n} lines changed. Culture warns above {warn}. This will be hard to review as-is."
+   - If `pr_size.block_above_lines` is set and exceeded: "BLOCKED: {n} lines exceeds the {block} line hard limit. Split this PR before requesting review."
+
+3. Identify reviewers by file ownership:
+```bash
+# For each changed file, find the top 3 contributors
+for file in $(git diff --name-only <base>...<current-branch>); do
+  echo "=== $file ==="
+  git log --format="%an" --follow -- "$file" | sort | uniq -c | sort -rn | head -3
+done
 ```
-FILE                    SUGGESTED REVIEWER  REASON
-──────────────────────  ──────────────────  ──────────────────────────
-auth/login.ts           alice               8 of last 10 commits
-api/users.ts            bob                 owns this module entirely
-tests/auth.test.ts      carol               wrote the test suite
+
+4. Cross-reference with `review_standards.required_approvals`. If culture requires 2 approvals, suggest at least 2 distinct reviewers covering different areas of the diff.
+
+5. Run the **author self-check** from `review_standards.checklist.author`:
+   - "Self-reviewed the diff" → remind author
+   - "Tests written and passing" → check: `git diff --name-only <base>...<current-branch> | grep -i test`; if no test files changed and the PR adds logic, flag it
+   - "No debug code left in" → scan diff for console.log, debugger, TODO-REMOVE, HACK
+   - "Docs updated if behavior changed" → if `coding_style.documentation.require_docstrings` is true, check for new exported functions without docstrings
+
+6. If platform is GitHub and a PR exists, pull existing review data:
+```bash
+gh pr view --json reviews,comments,statusCheckRollup -q '{reviews: .reviews, comments: .comments, checks: .statusCheckRollup}'
 ```
+   Summarize: how many approvals vs. requested changes, unresolved comment threads, failing checks.
+
+7. Produce the **reviewer suggestion table** and the **action list**:
+```
+REVIEWER ASSIGNMENTS
+════════════════════
+FILE                    SUGGESTED REVIEWER  REASON                         PRIORITY
+──────────────────────  ──────────────────  ────────────────────────────── ────────
+auth/login.ts           alice               8 of last 10 commits           HIGH
+api/users.ts            bob                 owns this module               HIGH
+tests/auth.test.ts      carol               wrote the test suite           MEDIUM
+README.md               anyone              docs-only change               LOW
+
+Culture: {required_approvals} approval(s) required. Suggest: {reviewer1} + {reviewer2}
+
+ACTION LIST
+═══════════
+  Author:
+    [ ] {checklist item from culture}
+    [ ] {checklist item from culture}
+  Reviewers:
+    [ ] {checklist item from culture}
+  Blocking:
+    [ ] {failing check or unresolved thread}
+  Ready when:
+    All boxes checked + {required_approvals} approval(s) + tests green
+```
+
+8. Populate `reviewer_map` in session state for use by Mode 4 (Handoff Docs).
+
+9. **Chain check:** If the PR is ready to merge (all checks pass, approvals met), suggest executing the merge. If handoff is needed before merge (new contributor picking up), chain to **Mode 4**.
 
 ---
 
 ### 4. Handoff Documentation
 
-Write a structured handoff from the current repo state — what was done, what's in-flight,
+Write a structured handoff from the current repo state... what was done, what's in-flight,
 what's blocked, and exactly what the next contributor needs to know to pick up without
 losing context.
 
+**Culture fields used:**
+- `handoff.require_handoff_doc` — whether handoffs are mandatory (if true, warn when skipped)
+- `handoff.handoff_template` — path template for the doc (default: `.intentra/handoff-{date}.md`)
+- `handoff.fields_required` — required sections (e.g., `["what_was_built", "decisions_made", "next_steps"]`)
+- `review_standards.labels` — use label names for branch status descriptions
+- `agent_behavior.allowed_auto_actions` — check if "write_handoff_doc" is in the list
+
 **Steps:**
-1. Read recent commit history: `git log --oneline -20`
-2. List open branches and their status (from Mode 2 analysis)
-3. Check for TODO/FIXME/HACK comments in recently touched files
-4. Check for open issues or PRs if platform is available
-5. Read CLAUDE.md and any architecture docs for context
-6. Produce the handoff document
+1. Check autonomy: if "write_handoff_doc" is NOT in `agent_behavior.allowed_auto_actions`, ask for permission before writing any file.
+
+2. Gather context:
+```bash
+# Recent history
+git log --oneline -20
+# Active branches (use branch_map from session state if available, otherwise scan)
+git branch -a --sort=-committerdate --format='%(refname:short)|%(authorname)|%(committerdate:relative)' | head -15
+# Open issues/PRs if platform available
+gh pr list --state open --limit 10 2>/dev/null || echo "NO_PR_DATA"
+gh issue list --state open --limit 10 2>/dev/null || echo "NO_ISSUE_DATA"
+```
+
+3. Scan for loose ends in recently touched files:
+```bash
+# Find TODO/FIXME/HACK in files changed in last 10 commits
+for file in $(git diff --name-only HEAD~10...HEAD 2>/dev/null); do
+  grep -n "TODO\|FIXME\|HACK\|XXX\|TEMP\|REMOVE" "$file" 2>/dev/null | head -5
+done
+```
+
+4. Read architecture docs for context:
+```bash
+cat CLAUDE.md 2>/dev/null | head -50
+cat ARCHITECTURE.md 2>/dev/null | head -50
+cat README.md 2>/dev/null | head -30
+```
+
+5. Build the handoff document. **Mandatory sections** come from `handoff.fields_required`. Map each required field to a section:
+
+| Culture field | Handoff section |
+|--------------|-----------------|
+| `what_was_built` | ## What was built |
+| `decisions_made` | ## Decisions made |
+| `next_steps` | ## Next steps for the next contributor |
+| `current_architecture` | ## Current architecture |
+| `blockers` | ## What's blocked |
+| `gotchas` | ## Gotchas |
+
+If a field is in `fields_required` but no data exists for it, still include the section with "None identified" rather than omitting it. Every required field must be present.
+
+6. Include data from other modes if they ran this session:
+   - `branch_map` from Mode 2 → populate "What's in-flight" table
+   - `reviewer_map` from Mode 3 → note who was assigned to review what
+   - `conflict_files` from Mode 1 → note any recently resolved conflicts
+   - `actions_taken` → append as "Actions taken this session" section
+
+7. Write the handoff:
+```bash
+# Expand the template path
+HANDOFF_PATH=$(echo "{handoff.handoff_template}" | sed "s/{date}/$(date +%Y-%m-%d)/g")
+mkdir -p $(dirname "$HANDOFF_PATH")
+```
 
 **Handoff document format:**
 ```markdown
 # Handoff — {repo} — {date}
 
 ## What was built
-{2-3 sentences on what shipped}
+{2-3 sentences on what shipped or progressed}
 
 ## Decisions made
-- {decision}: {why} (trade-off accepted: {what was deprioritized})
+- {decision}: {why} (trade-off: {what was deprioritized})
 
 ## Current architecture
 {brief description + key files}
 
 ## What's in-flight
-| Branch | Owner | Status | Next step |
-|--------|-------|--------|-----------|
+| Branch | Owner | Status | Label | Next step |
+|--------|-------|--------|-------|-----------|
+{rows from branch_map or git branch scan}
 
 ## What's blocked
-{list blockers with context}
+{list blockers with context, or "None identified"}
 
 ## Next steps for the next contributor
-1. {concrete first action}
+1. {concrete first action — be specific enough that they can start without asking questions}
 2. {concrete second action}
+3. {concrete third action}
 
 ## Gotchas
 - {thing that will bite you if you don't know it}
+
+## Actions taken this session
+{append-only log from actions_taken, or "No git actions executed"}
 ```
 
-Write the handoff to `.intentra/handoff-{date}.md` and also print it to the conversation.
+Write to the culture-specified path and print to conversation.
+
+8. **Chain check:** If handoff reveals messy history (lots of merge commits, unclear ownership), suggest chaining to **Mode 5** (History Untangling).
 
 ---
 
@@ -436,27 +904,101 @@ Write the handoff to `.intentra/handoff-{date}.md` and also print it to the conv
 When a repo's history is a mess (criss-crossing merges, unclear ownership, accidental
 commits to main), diagnose what happened and propose a clean-up plan.
 
-**Steps:**
-1. Get a full picture: `git log --oneline --graph --all -30`
-2. Identify the specific problem: accidental commits to main? Merge vs rebase inconsistency? Orphaned branches? Duplicate work?
-3. Trace ownership confusion: who committed what, when, to which branch
-4. Propose a specific clean-up plan — don't be vague. Name the exact commands
-5. Assess reversibility: rate each proposed action 1-5 (1=one-way door, 5=fully reversible)
-6. If any action is destructive (reset --hard, rebase of shared branch), require explicit user confirmation before proceeding
+**Culture fields used:**
+- `agent_behavior.require_human_approval_for` — hard gate on destructive ops (e.g., `["force_push", "rebase_shared_branch", "delete_branch"]`)
+- `agent_behavior.autonomy_level` — controls whether to execute or just recommend
+- `risk_tolerance.level` — "low" means propose the most conservative clean-up; "high" allows more aggressive rewriting
+- `risk_tolerance.guidelines.breaking_changes` — affects whether history rewriting is acceptable
+- `merge_priorities.conflict_resolution_preference` — "discuss" means always present options before acting
 
-**Reversibility rule:** Never propose a destructive git operation without first explaining
-what data could be lost and confirming the user understands the risk.
+**Steps:**
+1. Get the full picture:
+```bash
+# Visual history
+git log --oneline --graph --all -30
+# Merge commits (often the source of tangles)
+git log --merges --oneline -15
+# Commits directly on main/master that shouldn't be there
+git log --oneline --first-parent origin/<base> -20
+```
+
+2. Diagnose the specific problem. Common patterns:
+
+| Pattern | Symptoms | Typical cause |
+|---------|----------|---------------|
+| **Criss-cross merges** | Diamond patterns in graph, same files resolved multiple times | Branches merged into each other instead of into base |
+| **Accidental main commits** | Commits on main that aren't merge commits | Someone pushed directly to main |
+| **Orphaned branches** | Branches with no merge target, diverged far from base | Feature abandoned or forgotten |
+| **Duplicate work** | Same change on multiple branches, sometimes slightly different | Poor coordination, no branch map |
+| **Rebase/merge inconsistency** | Mix of merge commits and rebased linear history | Team hasn't agreed on strategy |
+
+3. Trace ownership confusion:
+```bash
+# Who committed what to main directly (not via merge)
+git log --oneline --no-merges --first-parent origin/<base> -20
+# Find branches that contain commits not on any other branch
+git branch -a --no-merged origin/<base>
+```
+
+4. Propose a specific clean-up plan. For each action, annotate with:
+   - The exact git command
+   - A reversibility score (1-5)
+   - Whether it requires human approval per culture
+
+```
+HISTORY CLEAN-UP PLAN
+═════════════════════
+Problem: 3 accidental commits on main, 2 orphaned branches, criss-cross merge between feature/auth and feature/ui
+
+  #  ACTION                                           REVERSIBILITY  APPROVAL
+  ─  ───────────────────────────────────────────────  ─────────────  ────────
+  1  git revert abc123 def456 ghi789                  5/5 (safe)     AUTO
+     ↳ Revert 3 accidental commits on main
+  2  git branch -d old/experiment                     3/5 (gone)     REQUIRED
+     ↳ Culture: delete_branch in require_human_approval_for
+  3  git branch -d stale/prototype                    3/5 (gone)     REQUIRED
+     ↳ Culture: delete_branch in require_human_approval_for
+  4  git checkout feature/ui && git rebase feature/auth  2/5 (rewrite)  REQUIRED
+     ↳ Culture: rebase_shared_branch in require_human_approval_for
+     ↳ Risk: rewrites feature/ui history, coordinate with carol first
+
+Risk level: MEDIUM
+Culture check: risk_tolerance.level is "medium" — plan uses reverts (safe) where possible,
+               only rebases where necessary. No force-pushes proposed.
+```
+
+5. **Risk calibration by culture:**
+   - If `risk_tolerance.level` is "low": prefer `git revert` over `git rebase`. Never propose `reset --hard`. Always create a backup branch before destructive ops.
+   - If `risk_tolerance.level` is "medium": use rebase for local branches, revert for shared branches. Propose backup branches for anything rated 3/5 or below.
+   - If `risk_tolerance.level` is "high": rebase and interactive rebase are acceptable. Still require confirmation for `reset --hard` and `force_push`.
+
+6. **Approval gate:** Before executing ANY action rated below 4/5 reversibility:
+   - Check `agent_behavior.require_human_approval_for` — if the action type is listed, STOP and ask
+   - Check `agent_behavior.autonomy_level` — if "suggest", present the entire plan without executing
+   - Even if autonomy is "act", create a safety branch first: `git branch backup/pre-cleanup-{date}`
+
+7. Execute approved actions one at a time. After each action:
+   - Log to `actions_taken`
+   - Run `git log --oneline --graph -5` to show the updated state
+   - If anything unexpected happens, STOP immediately and report
+
+8. **Chain check:** If clean-up reveals merge conflicts (e.g., revert creates conflicts), chain to **Mode 1**. If the cleaned history reveals branches that need coordination, chain to **Mode 2**.
 
 ---
 
 ## Entry Point
 
-When invoked, run Step 0 (platform + base branch detection) first. Then ask:
+When invoked:
+
+1. **Step 0:** Detect platform and base branch
+2. **Step 1:** Load culture context
+3. **Route:** Ask the user what they need
 
 ```
 AskUserQuestion:
   question: "What git collaboration problem can I help with?"
   options:
+    - "Intent — describe what you want in plain English and I'll figure out the git ops"
     - "Merge Conflict — walk me through resolving conflicts"
     - "Branch Coordination — map out our branch landscape"
     - "PR Facilitation — help run a PR from open to merge"
@@ -464,7 +1006,17 @@ AskUserQuestion:
     - "History Untangling — diagnose and clean up a messy git history"
 ```
 
-Then proceed to the relevant mode.
+**If the user picks "Intent":** Ask them to describe what they want. Run the Intent as
+Code Parser on their response. The parser will resolve their intent to concrete git ops
+and may route into one of the 5 core modes automatically if the intent maps cleanly
+(e.g., "resolve the conflicts" routes to Mode 1 after parsing).
+
+**If the user picks a specific mode:** Go directly to that mode. The culture context is
+still loaded and informs the mode's behavior.
+
+**If the user doesn't pick anything but types a natural language request directly:**
+Treat it as an intent. Run the Intent as Code Parser. This is the default path for
+experienced users who skip the menu.
 
 ---
 
