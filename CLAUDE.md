@@ -1,5 +1,38 @@
 # gstack development
 
+## Mobile app progress server (port 7891)
+
+The mobile app runs a progress server at `http://localhost:7891` that tracks agents in real-time.
+Use these curl commands to create and manage tracked agents:
+
+```bash
+# Create a tracked agent (status defaults to "running")
+curl -s -X POST http://localhost:7891/agents \
+  -H "Content-Type: application/json" \
+  -d '{"name": "my-agent", "description": "optional description"}'
+
+# List all tracked agents
+curl -s http://localhost:7891/agents
+
+# Mark an agent as done (use the id from the create response)
+curl -s -X PATCH http://localhost:7891/agents/<id> \
+  -H "Content-Type: application/json" \
+  -d '{"status": "done"}'
+
+# Mark an agent as errored
+curl -s -X PATCH http://localhost:7891/agents/<id> \
+  -H "Content-Type: application/json" \
+  -d '{"status": "error", "message": "something went wrong"}'
+
+# Delete a tracked agent
+curl -s -X DELETE http://localhost:7891/agents/<id>
+
+# Check server health
+curl -s http://localhost:7891/health
+```
+
+Status values: `running`, `done`, `error`.
+
 ## Commands
 
 ```bash

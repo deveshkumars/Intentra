@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.12.13.0] - 2026-03-28 — Mobile App + Progress Server API
+
+You can now monitor your gstack agents from your phone in real time. A React Native Expo app connects to a local Bun server that streams agent activity as Server-Sent Events. See your agents appear, run, and complete — live on your device.
+
+### Added
+
+- **React Native mobile monitor app.** A full Expo app (`mobile-app/app/`) that connects to the progress server and shows a live feed of agent events and tracked agents. Dashboard screen with agent cards, detail screen per session, setup screen for server URL entry.
+- **Real-time progress server.** A Bun server (`mobile-app/server/server.ts`) on port 7891 that accepts agent registrations, streams SSE to connected clients, and watches `skill-usage.jsonl` for skill start/end events.
+- **Tracked agents API.** `POST /agents` to create a named agent, `PATCH /agents/:id` to update status/message, `DELETE /agents/:id` to remove, `GET /agents` to list all. Status values: `running`, `done`, `error`. Broadcast via SSE to all connected mobile clients.
+- **`gstack-progress` CLI binary.** A `bin/gstack-progress` helper for posting progress events from shell scripts and Claude Code hooks.
+- **CLAUDE.md curl reference.** Every Claude Code instance now has curl commands for the progress server API — create agents, mark done/error, delete, list, health check.
+
 ## [0.12.12.0] - 2026-03-27 — Security Audit Compliance
 
 Fixes 20 Socket alerts and 3 Snyk findings from the skills.sh security audit. Your skills are now cleaner, your telemetry is transparent, and 2,000 lines of dead code are gone.
