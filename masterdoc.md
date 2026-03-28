@@ -211,44 +211,87 @@ This MVP is intentionally scoped to be built in **24 hours** by this team becaus
 
 ## 7. User Impact (Measurable)
 
-- **Engineers:** reclaim **~30%** of time previously spent monitoring agents at a desk.
-- **Teams:** reduce merge friction **~50%** by aligning agent actions with culture rules and risk gates.
-- **Junior devs:** learn architecture faster by reading the **intent history** (prompt + decisions) rather than reverse-engineering diffs.
+**Who benefits, concretely:**
+
+- **Individual engineers (primary):** Agents currently demand constant babysitting — developers stay at their desks waiting for a merge to complete or a test to pass before they can approve the next step. Intentra replaces that with async mobile supervision. An engineer running 3 agents in parallel can step away, approve a risky action from their phone, and return to finished work.
+
+- **Teams (secondary):** Every "why did we do it this way?" conversation starts from scratch today — the prompt that drove the decision is gone. With Intent-as-Code, teams get a queryable audit trail. Onboarding a new engineer to a repo with 6 months of intent history is fundamentally different from onboarding to a repo with only diffs.
+
+- **Junior engineers (long-term):** Learning by reading intent logs (what was attempted, why, what failed, what was decided) compresses the feedback loop that normally takes months of code review.
+
+**Rough scale of impact:**
+
+| Pain point | Before Intentra | After |
+|---|---|---|
+| Monitoring an active agent | Tethered to desktop | Mobile async approvals |
+| Recovering context after a handoff | 30-60 min re-orientation | Read the handoff snapshot, start in minutes |
+| Agent violates team standards | Caught in PR review (expensive) | Blocked at runtime by CultureJSON (free) |
+| "Why was this decision made?" | No answer | Query the intent log |
 
 ---
 
 ## 8. Scalability Design (Beyond the Demo)
 
-The system is designed to scale by keeping artifact formats stable and expanding integrations:
+The MVP runs fully local (Claude Code + ngrok). Scaling is a transport and storage swap, not an architecture rewrite, because the artifact formats are stable contracts from day one.
 
-- **Plugin architecture:** add CI/CD (GitHub Actions), issue trackers (Jira), and build systems (Jenkins) via adapters.
-- **Org-wide search:** aggregate intents and handoffs to query “why did we do X?” across repos.
-- **Multi-agent coordination:** add concurrency controls (queues, locks) while keeping the same `IntentSchema`.
+**Scaling path:**
 
-**Key scalability principle:** keep **intent artifacts** and **culture rules** as stable contracts; swap execution environments (local → cloud runners) without changing the intent layer.
+| Stage | What changes | What stays the same |
+|---|---|---|
+| **MVP (24h)** | Local Node.js bridge, ngrok tunnel, `.intentra/` file storage | IntentSchema, CultureJSON, Markdown handoff format |
+| **Team (1-10 devs)** | Move bridge to a persistent server (Fly.io / Railway), replace ngrok with a real domain | Same schemas, same mobile app, same skill |
+| **Org (10-1000 devs)** | Postgres for intent + handoff storage, access control per repo, SSO | Same API surface, now with org-wide intent search |
+| **Platform (1000+ devs)** | Multi-tenant SaaS, intent analytics, agent audit logs, compliance exports | Same artifact formats — third-party tools can consume them |
+
+**Key design decision:** `IntentSchema` and `CultureJSON` are deliberately flat JSON with no vendor-specific fields. This means they survive the migration from “file on disk” to “row in Postgres” to “indexed in Elasticsearch” without changing any consumer code.
+
+**Multi-agent concurrency (beyond demo):** add a lightweight queue in front of the `gStack` orchestrator. Agents acquire a lock per repo before executing write operations. The `IntentSchema` already has an `intent_id` field, so deduplication and ordering come for free.
 
 ---
 
 ## 9. Ecosystem Thinking (Interoperability + Extensibility)
 
-- **LLM-agnostic artifacts:** the handoff and intent formats are plain Markdown/JSON, compatible with Claude, GPT, Llama, and future models.
-- **API-first control plane:** IDEs or tools can integrate through a minimal JSON-RPC / HTTP interface.
+**Intentra is a protocol, not just a product.** The artifacts (IntentSchema, CultureJSON, Markdown handoffs) are designed to be consumed by tools we haven't built yet.
 
-Example JSON-RPC method surface (future):
+**LLM-agnostic by design:** the intent and handoff formats are plain JSON + Markdown. Any model that can read a file can act on them. Switching from Claude to GPT-4o or Llama doesn't require changing the artifact format or the mobile app.
 
-- `intentra.createIntent(prompt, cultureRef)`
-- `intentra.getRunStatus(runId)`
-- `intentra.getHandoffSnapshot(runId)`
-- `intentra.approveAction(runId, actionId)` / `intentra.kill(runId)`
+**Integrations that plug in without forking Intentra:**
+
+| Integration point | How |
+|---|---|
+| **CI/CD (GitHub Actions, CircleCI)** | `POST /control/approve` / `/deny` — any CI system can gate on intent approval |
+| **Issue trackers (Jira, Linear)** | Handoff snapshots include `intent_id` — link a ticket to the exact prompt that caused a change |
+| **IDEs (VS Code, Cursor)** | `intentra.createIntent(prompt, cultureRef)` — one call to kick off a supervised agent run from inside the editor |
+| **HR / Eng Ops tools** | `CultureJSON` is a standardized schema — HR tools can write directly to it to update team standards across all active agents |
+| **Future models / agents** | Any agent that can read `IntentSchema` can resume a handoff without human involvement |
+
+**Extensibility:** new gStack skills are Markdown files. Adding a new collaboration mode (e.g., `/intentra-review` for cross-org code sharing) is hours of work, not weeks. The culture injection system is a JSON schema — third parties can extend it with custom fields without breaking existing consumers.
 
 ---
 
 ## 10. Market Awareness (Competitive Landscape + Positioning)
 
-- **Competitors:** GitHub Copilot Workspace, Devin, Grit.io.
-- **Positioning:** Others optimize “agents write code.” Intentra optimizes “humans and agents collaborate safely at scale.”
+**The category:** “Agentic Management” — the control plane and artifact layer that makes multi-agent software development trustworthy for teams. No current product owns this space.
 
-**Category wedge:** “Agentic Management” — the control plane + artifacts that make multi-agent work trustworthy for teams.
+**Competitive matrix:**
+
+| Product | What they do | What they miss |
+|---|---|---|
+| **GitHub Copilot Workspace** | Single-agent task execution inside GitHub UI | No culture injection, no mobile supervision, no intent persistence |
+| **Devin** | Fully autonomous software agent | Black box — no auditability, no culture guardrails, no team handoffs |
+| **Cursor** | IDE-native AI pair programmer | Single-session, single-developer, no async supervision |
+| **Grit.io** | Automated codemod migrations | Narrow scope (migrations only), no intent layer, no mobile |
+| **Linear / Jira** | Project tracking | Tracks tasks, not agent actions or the reasoning behind them |
+
+**Why incumbents can't just add this:**
+
+- GitHub is a storage and collaboration platform, not a runtime. They can't inject culture at execution time without building the agent layer from scratch.
+- Devin is fully autonomous by design — adding human approval gates and cultural guardrails contradicts their product thesis.
+- IDE-native tools (Cursor, Copilot) are inherently tethered to a desktop session. Mobile supervision is structurally incompatible with their architecture.
+
+**Why now:** The shift from “AI suggests code” to “AI executes code autonomously” is happening now. The risk surface for teams is growing rapidly. The tooling to manage that risk does not yet exist. Intentra is the first product designed for this exact moment.
+
+**Positioning statement:** Intentra is to agentic development what GitHub was to collaborative development — the coordination layer the ecosystem is missing.
 
 ---
 
