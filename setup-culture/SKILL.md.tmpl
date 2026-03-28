@@ -1,0 +1,246 @@
+---
+name: setup-culture
+preamble-tier: 2
+version: 1.0.0
+description: |
+  Configure your organization's culture for Claude Code agents. Asks questions
+  about coding standards, values, risk tolerance, review norms, and team style.
+  Saves to ~/.gstack/culture.json so every gstack skill applies your culture
+  automatically — no repeat setup per project.
+  Use when: "setup culture", "configure culture", "set up org culture",
+  "add coding standards", "what culture does Claude know about my team",
+  "teach Claude our coding standards", "update culture".
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - Edit
+  - AskUserQuestion
+---
+
+{{PREAMBLE}}
+
+# /setup-culture — Configure Organizational Culture for gstack
+
+You are helping the user encode their organization's culture so every gstack skill
+automatically applies it. Your job is to ask the right questions, then write a
+structured `~/.gstack/culture.json` that agents read at session start.
+
+After this runs once, every skill reads the culture file and applies the org's values,
+coding standards, risk tolerance, review norms, and team style — with no per-project
+setup required.
+
+## User-invocable
+When the user types `/setup-culture`, run this skill.
+
+## Instructions
+
+### Step 1: Check existing configuration
+
+```bash
+cat ~/.gstack/culture.json 2>/dev/null || echo "NO_CONFIG"
+```
+
+If configuration already exists, show it formatted and ask:
+
+- **Context:** Culture configuration already exists in `~/.gstack/culture.json`.
+- **RECOMMENDATION:** Choose C if the configuration is current. Choose A to fully reconfigure.
+- A) Reconfigure from scratch (overwrite existing)
+- B) Edit a specific section (show current config, change one area)
+- C) Done — configuration looks correct
+
+If C, skip to Step 8 (show summary and exit).
+If B, ask which section to edit, jump to that step.
+
+### Step 2: Org identity
+
+Use AskUserQuestion:
+
+> **What is your organization's identity?**
+>
+> This context helps agents understand your mission and apply your values when making
+> decisions (naming things, prioritizing tradeoffs, choosing between approaches).
+>
+> - **Org name:** (e.g., "Acme Corp", "Intentra")
+> - **Mission:** One sentence — what does your org exist to do?
+> - **Core values:** 3-5 short phrases (e.g., "ship fast", "quality matters", "own your work")
+>
+> You can type these freeform — I'll parse them.
+
+Record: `org.name`, `org.mission`, `org.values[]`.
+
+### Step 3: Coding standards
+
+Use AskUserQuestion:
+
+> **What are your coding standards?**
+>
+> Agents use this when writing code, reviewing PRs, and suggesting patterns.
+>
+> - **Primary languages:** (e.g., TypeScript, Python, Go)
+> - **Style philosophy:** functional-preferred / OOP / pragmatic (mix of both)
+> - **Minimum test coverage:** (e.g., 80%, or "we don't enforce a number")
+> - **Forbidden patterns:** Things agents should never do (e.g., "no `any` type", "no `console.log` in production", "no raw SQL strings")
+> - **Preferred patterns:** Things agents should favor (e.g., "typed errors", "structured logging", "explicit cleanup in useEffect")
+>
+> Skip any you don't have strong opinions on.
+
+Record: `coding.languages[]`, `coding.style`, `coding.test_coverage_min`, `coding.forbidden_patterns[]`, `coding.preferred_patterns[]`.
+
+### Step 4: Risk tolerance
+
+Use AskUserQuestion:
+
+> **How much risk do you tolerate per area?**
+>
+> Agents use this when deciding how boldly to refactor, whether to suggest
+> experimental approaches, and how cautiously to handle edge cases.
+>
+> Rate each area: **conservative** (prefer stability, avoid surprises) / **moderate** (balance) / **experimental** (move fast, iterate):
+>
+> - Frontend:
+> - Backend / APIs:
+> - Infrastructure / database / config:
+> - New features / greenfield work:
+>
+> RECOMMENDATION: Choose C — most teams are conservative on infra, moderate on backend, and moderate-to-experimental on frontend. Completeness: 9/10.
+> A) All conservative — stability is everything (Completeness: 7/10)
+> B) All moderate — balanced across the board (Completeness: 8/10)
+> C) Mixed — set per area (Completeness: 10/10)
+> D) All experimental — we move fast (Completeness: 7/10)
+
+If C, collect per-area values. Otherwise infer from selection.
+
+Record: `risk.frontend`, `risk.backend`, `risk.infra`, `risk.new_features`.
+
+### Step 5: Review norms
+
+Use AskUserQuestion:
+
+> **What are your code review standards?**
+>
+> Agents use this when reviewing PRs, writing commit messages, and deciding
+> whether something is ready to ship.
+>
+> - **Required approvals before merge:** (e.g., 1, 2, "none")
+> - **Max PR size:** Lines changed before an agent should flag it as too large (e.g., 400)
+> - **Commit style:** conventional commits (feat/fix/chore) / freeform / other
+> - **Merge strategy:** squash / merge commit / rebase
+>
+> Skip any you don't enforce.
+
+Record: `review.required_approvals`, `review.pr_size_max_lines`, `review.conventional_commits` (bool), `review.merge_strategy`.
+
+### Step 6: Priorities
+
+Use AskUserQuestion:
+
+> **What does your team prioritize most?**
+>
+> Agents use this when suggesting tradeoffs — e.g., whether to add tests vs. ship
+> faster, or whether to refactor vs. add a feature.
+>
+> Rank these 1-10 (10 = highest priority, can share ranks):
+>
+> - Stability / correctness:
+> - Performance:
+> - New features:
+> - Refactoring / tech debt:
+> - Documentation:
+>
+> RECOMMENDATION: Choose A — most product teams weight stability and features highest.
+> A) Stability 10, Performance 8, Features 7, Refactoring 5, Docs 4 (Completeness: 9/10)
+> B) Set custom priorities (Completeness: 10/10)
+
+Record: `priorities.stability`, `priorities.performance`, `priorities.features`, `priorities.refactoring`, `priorities.docs`.
+
+### Step 7: Team norms
+
+Use AskUserQuestion:
+
+> **How does your team work?**
+>
+> Agents use this to match your communication style and decision-making model.
+>
+> - **Communication style:** async-first (Slack/issues/PRs) / sync-first (meetings/calls)
+> - **Decision making:** data-driven / intuition-led / consensus-required
+> - **Ownership model:** you-build-it-you-own-it / shared ownership / assigned by area
+> - **Primary timezone:** (e.g., "America/Los_Angeles", "Europe/London", or "distributed")
+>
+> Skip any that don't apply.
+
+Record: `team.communication`, `team.decision_making`, `team.ownership`, `team.timezone`.
+
+### Step 8: Write culture.json
+
+Construct the JSON from all collected values. Use `null` for fields the user skipped.
+Only include sections that were answered.
+
+```bash
+mkdir -p ~/.gstack
+```
+
+Write the JSON to `~/.gstack/culture.json`. Use the schema:
+
+```json
+{
+  "$schema": "https://gstack.dev/schemas/culture/v1.json",
+  "version": "1.0.0",
+  "org": {
+    "name": "<org name>",
+    "mission": "<mission>",
+    "values": ["<value1>", "<value2>"]
+  },
+  "coding": {
+    "languages": ["<language>"],
+    "style": "<style>",
+    "test_coverage_min": <number or null>,
+    "forbidden_patterns": ["<pattern>"],
+    "preferred_patterns": ["<pattern>"]
+  },
+  "risk": {
+    "frontend": "<level>",
+    "backend": "<level>",
+    "infra": "<level>",
+    "new_features": "<level>"
+  },
+  "review": {
+    "required_approvals": <number or null>,
+    "pr_size_max_lines": <number or null>,
+    "conventional_commits": <true/false/null>,
+    "merge_strategy": "<strategy or null>"
+  },
+  "priorities": {
+    "stability": <1-10>,
+    "performance": <1-10>,
+    "features": <1-10>,
+    "refactoring": <1-10>,
+    "docs": <1-10>
+  },
+  "team": {
+    "communication": "<style>",
+    "decision_making": "<style>",
+    "ownership": "<model>",
+    "timezone": "<tz>"
+  }
+}
+```
+
+### Step 9: Confirm
+
+Show a clean summary of the written culture:
+
+```
+Culture configured for: <org name>
+Mission: <mission>
+Values: <values>
+Languages: <languages> | Style: <style> | Coverage: <coverage>%
+Risk: frontend=<> backend=<> infra=<>
+Review: <approvals> approvals | <max lines> max lines | <merge strategy>
+Team: <communication> | <decision making> | <ownership>
+
+Saved to: ~/.gstack/culture.json
+Active in: every gstack skill from this point on.
+
+Run /setup-culture again to update any field.
+```

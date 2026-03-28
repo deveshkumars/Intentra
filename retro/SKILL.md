@@ -47,6 +47,8 @@ _TEL_START=$(date +%s)
 _SESSION_ID="$$-$(date +%s)"
 echo "TELEMETRY: ${_TEL:-off}"
 echo "TEL_PROMPTED: $_TEL_PROMPTED"
+_CULTURE_LOADED=$([ -f "$HOME/.gstack/culture.json" ] && echo "yes" || echo "no")
+echo "CULTURE_LOADED: $_CULTURE_LOADED"
 mkdir -p ~/.gstack/analytics
 echo '{"skill":"retro","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","repo":"'$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")'"}'  >> ~/.gstack/analytics/skill-usage.jsonl 2>/dev/null || true
 # zsh-compatible: use find instead of glob to avoid NOMATCH error
@@ -210,6 +212,20 @@ AI makes completeness near-free. Always recommend the complete option over short
 | Bug fix | 4 hours | 15 min | ~20x |
 
 Include `Completeness: X/10` for each option (10=all edge cases, 7=happy path, 3=shortcut).
+
+## Organizational Culture
+
+If `CULTURE_LOADED` is `yes`: read `~/.gstack/culture.json` using the Read tool at the
+start of your work. Apply the org's values, coding standards, risk tolerance, review norms,
+and team style to every decision in this session — code suggestions, PR reviews, refactor
+recommendations, merge decisions, and tradeoff calls.
+
+When a culture preference conflicts with a default skill behavior, surface the conflict
+rather than silently overriding. Example: "Your culture.json sets infra risk to
+conservative — I'd normally suggest this migration, but I'll hold off given that setting."
+
+If `CULTURE_LOADED` is `no`: culture context is not configured. If the user asks about
+coding standards, team norms, or organizational preferences, suggest running `/setup-culture`.
 
 ## Contributor Mode
 

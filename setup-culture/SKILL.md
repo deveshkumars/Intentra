@@ -1,21 +1,20 @@
 ---
-name: setup-deploy
+name: setup-culture
 preamble-tier: 2
 version: 1.0.0
 description: |
-  Configure deployment settings for /land-and-deploy. Detects your deploy
-  platform (Fly.io, Render, Vercel, Netlify, Heroku, GitHub Actions, custom),
-  production URL, health check endpoints, and deploy status commands. Writes
-  the configuration to CLAUDE.md so all future deploys are automatic.
-  Use when: "setup deploy", "configure deployment", "set up land-and-deploy",
-  "how do I deploy with gstack", "add deploy config".
+  Configure your organization's culture for Claude Code agents. Asks questions
+  about coding standards, values, risk tolerance, review norms, and team style.
+  Saves to ~/.gstack/culture.json so every gstack skill applies your culture
+  automatically — no repeat setup per project.
+  Use when: "setup culture", "configure culture", "set up org culture",
+  "add coding standards", "what culture does Claude know about my team",
+  "teach Claude our coding standards", "update culture".
 allowed-tools:
   - Bash
   - Read
   - Write
   - Edit
-  - Glob
-  - Grep
   - AskUserQuestion
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
@@ -53,7 +52,7 @@ echo "TEL_PROMPTED: $_TEL_PROMPTED"
 _CULTURE_LOADED=$([ -f "$HOME/.gstack/culture.json" ] && echo "yes" || echo "no")
 echo "CULTURE_LOADED: $_CULTURE_LOADED"
 mkdir -p ~/.gstack/analytics
-echo '{"skill":"setup-deploy","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","repo":"'$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")'"}'  >> ~/.gstack/analytics/skill-usage.jsonl 2>/dev/null || true
+echo '{"skill":"setup-culture","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","repo":"'$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")'"}'  >> ~/.gstack/analytics/skill-usage.jsonl 2>/dev/null || true
 # zsh-compatible: use find instead of glob to avoid NOMATCH error
 for _PF in $(find ~/.gstack/analytics -maxdepth 1 -name '.pending-*' 2>/dev/null); do
   if [ -f "$_PF" ]; then
@@ -342,201 +341,227 @@ Then write a `## GSTACK REVIEW REPORT` section to the end of the plan file:
 file you are allowed to edit in plan mode. The plan file review report is part of the
 plan's living status.
 
-# /setup-deploy — Configure Deployment for gstack
+# /setup-culture — Configure Organizational Culture for gstack
 
-You are helping the user configure their deployment so `/land-and-deploy` works
-automatically. Your job is to detect the deploy platform, production URL, health
-checks, and deploy status commands — then persist everything to CLAUDE.md.
+You are helping the user encode their organization's culture so every gstack skill
+automatically applies it. Your job is to ask the right questions, then write a
+structured `~/.gstack/culture.json` that agents read at session start.
 
-After this runs once, `/land-and-deploy` reads CLAUDE.md and skips detection entirely.
+After this runs once, every skill reads the culture file and applies the org's values,
+coding standards, risk tolerance, review norms, and team style — with no per-project
+setup required.
 
 ## User-invocable
-When the user types `/setup-deploy`, run this skill.
+When the user types `/setup-culture`, run this skill.
 
 ## Instructions
 
 ### Step 1: Check existing configuration
 
 ```bash
-grep -A 20 "## Deploy Configuration" CLAUDE.md 2>/dev/null || echo "NO_CONFIG"
+cat ~/.gstack/culture.json 2>/dev/null || echo "NO_CONFIG"
 ```
 
-If configuration already exists, show it and ask:
+If configuration already exists, show it formatted and ask:
 
-- **Context:** Deploy configuration already exists in CLAUDE.md.
-- **RECOMMENDATION:** Choose A to update if your setup changed.
+- **Context:** Culture configuration already exists in `~/.gstack/culture.json`.
+- **RECOMMENDATION:** Choose C if the configuration is current. Choose A to fully reconfigure.
 - A) Reconfigure from scratch (overwrite existing)
-- B) Edit specific fields (show current config, let me change one thing)
+- B) Edit a specific section (show current config, change one area)
 - C) Done — configuration looks correct
 
-If the user picks C, stop.
+If C, skip to Step 8 (show summary and exit).
+If B, ask which section to edit, jump to that step.
 
-### Step 2: Detect platform
+### Step 2: Org identity
 
-Run the platform detection from the deploy bootstrap:
+Use AskUserQuestion:
+
+> **What is your organization's identity?**
+>
+> This context helps agents understand your mission and apply your values when making
+> decisions (naming things, prioritizing tradeoffs, choosing between approaches).
+>
+> - **Org name:** (e.g., "Acme Corp", "Intentra")
+> - **Mission:** One sentence — what does your org exist to do?
+> - **Core values:** 3-5 short phrases (e.g., "ship fast", "quality matters", "own your work")
+>
+> You can type these freeform — I'll parse them.
+
+Record: `org.name`, `org.mission`, `org.values[]`.
+
+### Step 3: Coding standards
+
+Use AskUserQuestion:
+
+> **What are your coding standards?**
+>
+> Agents use this when writing code, reviewing PRs, and suggesting patterns.
+>
+> - **Primary languages:** (e.g., TypeScript, Python, Go)
+> - **Style philosophy:** functional-preferred / OOP / pragmatic (mix of both)
+> - **Minimum test coverage:** (e.g., 80%, or "we don't enforce a number")
+> - **Forbidden patterns:** Things agents should never do (e.g., "no `any` type", "no `console.log` in production", "no raw SQL strings")
+> - **Preferred patterns:** Things agents should favor (e.g., "typed errors", "structured logging", "explicit cleanup in useEffect")
+>
+> Skip any you don't have strong opinions on.
+
+Record: `coding.languages[]`, `coding.style`, `coding.test_coverage_min`, `coding.forbidden_patterns[]`, `coding.preferred_patterns[]`.
+
+### Step 4: Risk tolerance
+
+Use AskUserQuestion:
+
+> **How much risk do you tolerate per area?**
+>
+> Agents use this when deciding how boldly to refactor, whether to suggest
+> experimental approaches, and how cautiously to handle edge cases.
+>
+> Rate each area: **conservative** (prefer stability, avoid surprises) / **moderate** (balance) / **experimental** (move fast, iterate):
+>
+> - Frontend:
+> - Backend / APIs:
+> - Infrastructure / database / config:
+> - New features / greenfield work:
+>
+> RECOMMENDATION: Choose C — most teams are conservative on infra, moderate on backend, and moderate-to-experimental on frontend. Completeness: 9/10.
+> A) All conservative — stability is everything (Completeness: 7/10)
+> B) All moderate — balanced across the board (Completeness: 8/10)
+> C) Mixed — set per area (Completeness: 10/10)
+> D) All experimental — we move fast (Completeness: 7/10)
+
+If C, collect per-area values. Otherwise infer from selection.
+
+Record: `risk.frontend`, `risk.backend`, `risk.infra`, `risk.new_features`.
+
+### Step 5: Review norms
+
+Use AskUserQuestion:
+
+> **What are your code review standards?**
+>
+> Agents use this when reviewing PRs, writing commit messages, and deciding
+> whether something is ready to ship.
+>
+> - **Required approvals before merge:** (e.g., 1, 2, "none")
+> - **Max PR size:** Lines changed before an agent should flag it as too large (e.g., 400)
+> - **Commit style:** conventional commits (feat/fix/chore) / freeform / other
+> - **Merge strategy:** squash / merge commit / rebase
+>
+> Skip any you don't enforce.
+
+Record: `review.required_approvals`, `review.pr_size_max_lines`, `review.conventional_commits` (bool), `review.merge_strategy`.
+
+### Step 6: Priorities
+
+Use AskUserQuestion:
+
+> **What does your team prioritize most?**
+>
+> Agents use this when suggesting tradeoffs — e.g., whether to add tests vs. ship
+> faster, or whether to refactor vs. add a feature.
+>
+> Rank these 1-10 (10 = highest priority, can share ranks):
+>
+> - Stability / correctness:
+> - Performance:
+> - New features:
+> - Refactoring / tech debt:
+> - Documentation:
+>
+> RECOMMENDATION: Choose A — most product teams weight stability and features highest.
+> A) Stability 10, Performance 8, Features 7, Refactoring 5, Docs 4 (Completeness: 9/10)
+> B) Set custom priorities (Completeness: 10/10)
+
+Record: `priorities.stability`, `priorities.performance`, `priorities.features`, `priorities.refactoring`, `priorities.docs`.
+
+### Step 7: Team norms
+
+Use AskUserQuestion:
+
+> **How does your team work?**
+>
+> Agents use this to match your communication style and decision-making model.
+>
+> - **Communication style:** async-first (Slack/issues/PRs) / sync-first (meetings/calls)
+> - **Decision making:** data-driven / intuition-led / consensus-required
+> - **Ownership model:** you-build-it-you-own-it / shared ownership / assigned by area
+> - **Primary timezone:** (e.g., "America/Los_Angeles", "Europe/London", or "distributed")
+>
+> Skip any that don't apply.
+
+Record: `team.communication`, `team.decision_making`, `team.ownership`, `team.timezone`.
+
+### Step 8: Write culture.json
+
+Construct the JSON from all collected values. Use `null` for fields the user skipped.
+Only include sections that were answered.
 
 ```bash
-# Platform config files
-[ -f fly.toml ] && echo "PLATFORM:fly" && cat fly.toml
-[ -f render.yaml ] && echo "PLATFORM:render" && cat render.yaml
-[ -f vercel.json ] || [ -d .vercel ] && echo "PLATFORM:vercel"
-[ -f netlify.toml ] && echo "PLATFORM:netlify" && cat netlify.toml
-[ -f Procfile ] && echo "PLATFORM:heroku"
-[ -f railway.json ] || [ -f railway.toml ] && echo "PLATFORM:railway"
-
-# GitHub Actions deploy workflows
-for f in $(find .github/workflows -maxdepth 1 \( -name '*.yml' -o -name '*.yaml' \) 2>/dev/null); do
-  [ -f "$f" ] && grep -qiE "deploy|release|production|staging|cd" "$f" 2>/dev/null && echo "DEPLOY_WORKFLOW:$f"
-done
-
-# Project type
-[ -f package.json ] && grep -q '"bin"' package.json 2>/dev/null && echo "PROJECT_TYPE:cli"
-find . -maxdepth 1 -name '*.gemspec' 2>/dev/null | grep -q . && echo "PROJECT_TYPE:library"
+mkdir -p ~/.gstack
 ```
 
-### Step 3: Platform-specific setup
+Write the JSON to `~/.gstack/culture.json`. Use the schema:
 
-Based on what was detected, guide the user through platform-specific configuration.
-
-#### Fly.io
-
-If `fly.toml` detected:
-
-1. Extract app name: `grep -m1 "^app" fly.toml | sed 's/app = "\(.*\)"/\1/'`
-2. Check if `fly` CLI is installed: `which fly 2>/dev/null`
-3. If installed, verify: `fly status --app {app} 2>/dev/null`
-4. Infer URL: `https://{app}.fly.dev`
-5. Set deploy status command: `fly status --app {app}`
-6. Set health check: `https://{app}.fly.dev` (or `/health` if the app has one)
-
-Ask the user to confirm the production URL. Some Fly apps use custom domains.
-
-#### Render
-
-If `render.yaml` detected:
-
-1. Extract service name and type from render.yaml
-2. Check for Render API key: `echo $RENDER_API_KEY | head -c 4` (don't expose the full key)
-3. Infer URL: `https://{service-name}.onrender.com`
-4. Render deploys automatically on push to the connected branch — no deploy workflow needed
-5. Set health check: the inferred URL
-
-Ask the user to confirm. Render uses auto-deploy from the connected git branch — after
-merge to main, Render picks it up automatically. The "deploy wait" in /land-and-deploy
-should poll the Render URL until it responds with the new version.
-
-#### Vercel
-
-If vercel.json or .vercel detected:
-
-1. Check for `vercel` CLI: `which vercel 2>/dev/null`
-2. If installed: `vercel ls --prod 2>/dev/null | head -3`
-3. Vercel deploys automatically on push — preview on PR, production on merge to main
-4. Set health check: the production URL from vercel project settings
-
-#### Netlify
-
-If netlify.toml detected:
-
-1. Extract site info from netlify.toml
-2. Netlify deploys automatically on push
-3. Set health check: the production URL
-
-#### GitHub Actions only
-
-If deploy workflows detected but no platform config:
-
-1. Read the workflow file to understand what it does
-2. Extract the deploy target (if mentioned)
-3. Ask the user for the production URL
-
-#### Custom / Manual
-
-If nothing detected:
-
-Use AskUserQuestion to gather the information:
-
-1. **How are deploys triggered?**
-   - A) Automatically on push to main (Fly, Render, Vercel, Netlify, etc.)
-   - B) Via GitHub Actions workflow
-   - C) Via a deploy script or CLI command (describe it)
-   - D) Manually (SSH, dashboard, etc.)
-   - E) This project doesn't deploy (library, CLI, tool)
-
-2. **What's the production URL?** (Free text — the URL where the app runs)
-
-3. **How can gstack check if a deploy succeeded?**
-   - A) HTTP health check at a specific URL (e.g., /health, /api/status)
-   - B) CLI command (e.g., `fly status`, `kubectl rollout status`)
-   - C) Check the GitHub Actions workflow status
-   - D) No automated way — just check the URL loads
-
-4. **Any pre-merge or post-merge hooks?**
-   - Commands to run before merging (e.g., `bun run build`)
-   - Commands to run after merge but before deploy verification
-
-### Step 4: Write configuration
-
-Read CLAUDE.md (or create it). Find and replace the `## Deploy Configuration` section
-if it exists, or append it at the end.
-
-```markdown
-## Deploy Configuration (configured by /setup-deploy)
-- Platform: {platform}
-- Production URL: {url}
-- Deploy workflow: {workflow file or "auto-deploy on push"}
-- Deploy status command: {command or "HTTP health check"}
-- Merge method: {squash/merge/rebase}
-- Project type: {web app / API / CLI / library}
-- Post-deploy health check: {health check URL or command}
-
-### Custom deploy hooks
-- Pre-merge: {command or "none"}
-- Deploy trigger: {command or "automatic on push to main"}
-- Deploy status: {command or "poll production URL"}
-- Health check: {URL or command}
+```json
+{
+  "$schema": "https://gstack.dev/schemas/culture/v1.json",
+  "version": "1.0.0",
+  "org": {
+    "name": "<org name>",
+    "mission": "<mission>",
+    "values": ["<value1>", "<value2>"]
+  },
+  "coding": {
+    "languages": ["<language>"],
+    "style": "<style>",
+    "test_coverage_min": <number or null>,
+    "forbidden_patterns": ["<pattern>"],
+    "preferred_patterns": ["<pattern>"]
+  },
+  "risk": {
+    "frontend": "<level>",
+    "backend": "<level>",
+    "infra": "<level>",
+    "new_features": "<level>"
+  },
+  "review": {
+    "required_approvals": <number or null>,
+    "pr_size_max_lines": <number or null>,
+    "conventional_commits": <true/false/null>,
+    "merge_strategy": "<strategy or null>"
+  },
+  "priorities": {
+    "stability": <1-10>,
+    "performance": <1-10>,
+    "features": <1-10>,
+    "refactoring": <1-10>,
+    "docs": <1-10>
+  },
+  "team": {
+    "communication": "<style>",
+    "decision_making": "<style>",
+    "ownership": "<model>",
+    "timezone": "<tz>"
+  }
+}
 ```
 
-### Step 5: Verify
+### Step 9: Confirm
 
-After writing, verify the configuration works:
-
-1. If a health check URL was configured, try it:
-```bash
-curl -sf "{health-check-url}" -o /dev/null -w "%{http_code}" 2>/dev/null || echo "UNREACHABLE"
-```
-
-2. If a deploy status command was configured, try it:
-```bash
-{deploy-status-command} 2>/dev/null | head -5 || echo "COMMAND_FAILED"
-```
-
-Report results. If anything failed, note it but don't block — the config is still
-useful even if the health check is temporarily unreachable.
-
-### Step 6: Summary
+Show a clean summary of the written culture:
 
 ```
-DEPLOY CONFIGURATION — COMPLETE
-════════════════════════════════
-Platform:      {platform}
-URL:           {url}
-Health check:  {health check}
-Status cmd:    {status command}
-Merge method:  {merge method}
+Culture configured for: <org name>
+Mission: <mission>
+Values: <values>
+Languages: <languages> | Style: <style> | Coverage: <coverage>%
+Risk: frontend=<> backend=<> infra=<>
+Review: <approvals> approvals | <max lines> max lines | <merge strategy>
+Team: <communication> | <decision making> | <ownership>
 
-Saved to CLAUDE.md. /land-and-deploy will use these settings automatically.
+Saved to: ~/.gstack/culture.json
+Active in: every gstack skill from this point on.
 
-Next steps:
-- Run /land-and-deploy to merge and deploy your current PR
-- Edit the "## Deploy Configuration" section in CLAUDE.md to change settings
-- Run /setup-deploy again to reconfigure
+Run /setup-culture again to update any field.
 ```
-
-## Important Rules
-
-- **Never expose secrets.** Don't print full API keys, tokens, or passwords.
-- **Confirm with the user.** Always show the detected config and ask for confirmation before writing.
-- **CLAUDE.md is the source of truth.** All configuration lives there — not in a separate config file.
-- **Idempotent.** Running /setup-deploy multiple times overwrites the previous config cleanly.
-- **Platform CLIs are optional.** If `fly` or `vercel` CLI isn't installed, fall back to URL-based health checks.

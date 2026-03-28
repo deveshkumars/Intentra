@@ -51,6 +51,8 @@ _TEL_START=$(date +%s)
 _SESSION_ID="$$-$(date +%s)"
 echo "TELEMETRY: \${_TEL:-off}"
 echo "TEL_PROMPTED: $_TEL_PROMPTED"
+_CULTURE_LOADED=$([ -f "$HOME/.gstack/culture.json" ] && echo "yes" || echo "no")
+echo "CULTURE_LOADED: $_CULTURE_LOADED"
 mkdir -p ~/.gstack/analytics
 echo '{"skill":"${ctx.skillName}","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","repo":"'$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")'"}'  >> ~/.gstack/analytics/skill-usage.jsonl 2>/dev/null || true
 # zsh-compatible: use find instead of glob to avoid NOMATCH error
@@ -312,6 +314,22 @@ jq -n --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg skill "SKILL_NAME" --arg b
 \`\`\``;
 }
 
+function generateCultureSection(): string {
+  return `## Organizational Culture
+
+If \`CULTURE_LOADED\` is \`yes\`: read \`~/.gstack/culture.json\` using the Read tool at the
+start of your work. Apply the org's values, coding standards, risk tolerance, review norms,
+and team style to every decision in this session — code suggestions, PR reviews, refactor
+recommendations, merge decisions, and tradeoff calls.
+
+When a culture preference conflicts with a default skill behavior, surface the conflict
+rather than silently overriding. Example: "Your culture.json sets infra risk to
+conservative — I'd normally suggest this migration, but I'll hold off given that setting."
+
+If \`CULTURE_LOADED\` is \`no\`: culture context is not configured. If the user asks about
+coding standards, team norms, or organizational preferences, suggest running \`/setup-culture\`.`;
+}
+
 function generateContributorMode(): string {
   return `## Contributor Mode
 
@@ -508,6 +526,7 @@ export function generatePreamble(ctx: TemplateContext): string {
     generateVoiceDirective(tier),
     ...(tier >= 2 ? [generateAskUserFormat(ctx), generateCompletenessSection()] : []),
     ...(tier >= 3 ? [generateRepoModeSection(), generateSearchBeforeBuildingSection(ctx)] : []),
+    generateCultureSection(),
     generateContributorMode(),
     generateCompletionStatus(),
   ];
