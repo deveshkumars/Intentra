@@ -16,7 +16,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { createIntent, listIntents, updateIntentOutcome, isIntentOutcome } from './intent';
+import { createIntent, getIntent, listIntents, updateIntentOutcome, isIntentOutcome } from './intent';
 import { readCultureSnapshot } from './culture';
 import {
   appendIntentraGuardTelemetry,
@@ -533,6 +533,20 @@ const server = Bun.serve({
       });
     }
 
+    // GET /intentra/intent/:id — fetch a single intent artifact by id
+    if (req.method === 'GET' && url.pathname.startsWith('/intentra/intent/')) {
+      const intentId = decodeURIComponent(url.pathname.slice('/intentra/intent/'.length));
+      const intent = getIntent(intentId);
+      if (!intent) {
+        return new Response(JSON.stringify({ error: 'intent not found' }), {
+          status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+      return new Response(JSON.stringify(intent), {
+        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
     // PATCH /intentra/intent — set outcome on an existing intent artifact
     if (req.method === 'PATCH' && url.pathname === '/intentra/intent') {
       let body: { intent_id?: string; outcome?: string } = {};
@@ -558,6 +572,16 @@ const server = Bun.serve({
           status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
       }
+      // Emit SSE so mobile gets notified of resolution
+      addEvent({
+        kind: 'progress',
+        source: 'post',
+        ingest_lane: 'intentra_http',
+        upstream_kind: 'intent_resolved',
+        intent_id: updated.intent_id,
+        outcome: body.outcome as ProgressEvent['outcome'],
+        message: `Intent resolved: ${body.outcome} — ${updated.prompt.slice(0, 60)}`,
+      });
       return new Response(JSON.stringify(updated), {
         status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
@@ -578,6 +602,15 @@ const server = Bun.serve({
         constraints: body.constraints as Record<string, unknown> | undefined,
         culture_ref: body.culture_ref as string | undefined,
         plan: body.plan as Array<{ type: string; [k: string]: unknown }> | undefined,
+      });
+      // Emit SSE so mobile gets notified without polling
+      addEvent({
+        kind: 'progress',
+        source: 'post',
+        ingest_lane: 'intentra_http',
+        upstream_kind: 'intent_created',
+        intent_id: artifact.intent_id,
+        message: `Intent created: ${artifact.prompt.slice(0, 80)}`,
       });
       return new Response(JSON.stringify(artifact), {
         status: 201, headers: { 'Content-Type': 'application/json', ...corsHeaders },

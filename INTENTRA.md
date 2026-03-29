@@ -2,7 +2,7 @@
 
 This repository is primarily **gstack** (Claude Code skills, browse, analytics). **Intentra** is the collaboration and observability layer on top: mobile feed, repo-local intent artifacts, and HTTP APIs that tie them together.
 
-**Canonical master plan:** [`masterdoc3.md`](masterdoc3.md). Shorter summary: [`masterdoc.md`](masterdoc.md). **Deep dive (diagrams, routes, auth, 10‑minute verify):** [`docs/intentra-architecture.md`](docs/intentra-architecture.md).
+**Canonical master plan:** [`masterdoc3.md`](masterdoc3.md). Shorter summary: [`masterdoc.md`](masterdoc.md). **Deep dive (diagrams, routes, auth, 10‑minute verify):** [`docs/intentra-architecture.md`](docs/intentra-architecture.md). **Intent lifecycle:** [`docs/intent-lifecycle.md`](docs/intent-lifecycle.md). **Guard engine:** [`docs/guard-engine.md`](docs/guard-engine.md).
 
 ## How to review code changes
 
@@ -24,7 +24,8 @@ Intentra-related code is spread across `mobile-app/`, `.intentra/`, and root doc
 | Tracked agents | `GET` / `POST` / `PATCH` / `DELETE` `/agents` | same |
 | Bearer auth | When `INTENTRA_TOKEN` is set, all `POST`, `PATCH`, and `DELETE` require `Authorization: Bearer <token>` | same (`checkAuth`) |
 | Cross-session link | Optional `intent_id` on progress payloads (client + server types) | [`mobile-app/app/src/types.ts`](mobile-app/app/src/types.ts), `server.ts` |
-| Intent-as-Code files | `POST /intentra/intent`, `PATCH /intentra/intent` (set `outcome`), `GET /intentra/intents` → JSON under `.intentra/` | [`mobile-app/server/intent.ts`](mobile-app/server/intent.ts) |
+| Intent-as-Code files | `POST /intentra/intent`, `PATCH /intentra/intent` (set `outcome`), `GET /intentra/intents`, `GET /intentra/intent/:id` → JSON under `.intentra/` | [`mobile-app/server/intent.ts`](mobile-app/server/intent.ts) |
+| Intent SSE events | `POST` and `PATCH /intentra/intent` emit SSE events (`upstream_kind: intent_created` / `intent_resolved`) so mobile gets notified without polling | [`mobile-app/server/server.ts`](mobile-app/server/server.ts) |
 | Intentra file API | `GET /intentra/files`, `GET /intentra/latest` | [`mobile-app/server/server.ts`](mobile-app/server/server.ts) |
 | Culture audit API | `GET /intentra/culture` — reads `culture.json` from `GSTACK_STATE_DIR` (same file gstack skills load) | [`mobile-app/server/culture.ts`](mobile-app/server/culture.ts) |
 | Telemetry provenance | `ingest_lane` + `upstream_kind` on `ProgressEvent`; `hook_fire` kind from JSONL `event: hook_fire` | [`mobile-app/server/server.ts`](mobile-app/server/server.ts), app [`types.ts`](mobile-app/app/src/types.ts) |

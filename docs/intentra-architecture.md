@@ -1,6 +1,6 @@
 # Intentra progress server — architecture
 
-Single reference for the Bun server in `mobile-app/server/` (port **7891**): event pipeline, guard engine, routes, and auth. Quick start and curl recipes: [`INTENTRA.md`](../INTENTRA.md), [`mobile-app/README.md`](../mobile-app/README.md). Deploy: [`DEPLOY.md`](../DEPLOY.md).
+Single reference for the Bun server in `mobile-app/server/` (port **7891**): event pipeline, guard engine, routes, and auth. Quick start and curl recipes: [`INTENTRA.md`](../INTENTRA.md), [`mobile-app/README.md`](../mobile-app/README.md). Deploy: [`DEPLOY.md`](../DEPLOY.md). Intent lifecycle: [`intent-lifecycle.md`](intent-lifecycle.md). Guard deep-dive: [`guard-engine.md`](guard-engine.md).
 
 ## Event pipeline (JSONL + HTTP → SSE)
 
@@ -65,6 +65,7 @@ When **`INTENTRA_TOKEN`** is unset, the server is open. When set, every **POST**
 | GET | `/intentra/latest` | No | — |
 | POST | `/intentra/intent` | Bearer | JSON intent artifact |
 | PATCH | `/intentra/intent` | Bearer | JSON `{ intent_id, outcome }` — `outcome`: `success` \| `error` \| `cancelled` |
+| GET | `/intentra/intent/:id` | No | Single intent artifact by id |
 | GET | `/intentra/intents` | No | — |
 | GET | `/intentra/culture` | No | — |
 | GET | `/intentra/guard/rules` | No | — |
