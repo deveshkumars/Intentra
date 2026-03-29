@@ -1,5 +1,7 @@
 # Conductor Session Streaming API Proposal
 
+> **Status: Design draft — not a shipped API in this repository.** This document explores a possible SSE/session API for third-party orchestration tools (e.g. Conductor). For what Intentra actually exposes today, see [`INTENTRA.md`](../../INTENTRA.md), [`docs/intentra-architecture.md`](../intentra-architecture.md), and [`docs/openapi/intentra-progress.json`](../openapi/intentra-progress.json).
+
 ## Problem
 
 When Claude controls your real browser via CDP (gstack `$B connect`), you look at two

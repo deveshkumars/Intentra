@@ -22,6 +22,15 @@ GET requests and `/health` are always public. Without `INTENTRA_TOKEN`, all endp
 { "error": "unauthorized" }
 ```
 
+### Mobile client behavior
+
+The Expo app stores the server **base URL** and optional **bearer token** from the Setup screen (AsyncStorage). For API calls after setup:
+
+- If a token was saved, requests that need auth include `Authorization: Bearer <token>` (same value the user entered in Setup).
+- **Setup-time probe:** before completing setup, the app calls `GET /health`, then issues a **mutating probe** (`POST /agents` with body `{}`) using the same auth headers. If the server has `INTENTRA_TOKEN` set and the token field is empty, setup fails with a clear error; if a token was entered but returns 401, setup reports a token mismatch. This mirrors server rules: writes require a valid bearer when `INTENTRA_TOKEN` is set.
+
+Ngrok: the app sends the `ngrok-skip-browser-warning: true` header on fetches where applicable so HTML interstitial pages do not break JSON parsing.
+
 ---
 
 ## Health & Monitoring
