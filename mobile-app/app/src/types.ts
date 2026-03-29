@@ -6,6 +6,7 @@ export interface ProgressEvent {
   kind: EventKind;
   source: 'jsonl_watcher' | 'post' | 'hook';
   session_id?: string;
+  intent_id?: string;
   skill?: string;
   message?: string;
   step?: string;
