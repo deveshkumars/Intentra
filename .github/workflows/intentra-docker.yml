@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'mobile-app/server/**'
+      - 'mobile-app/shared/**'
       - '.github/workflows/intentra-docker.yml'
   workflow_dispatch:
 
@@ -43,7 +44,8 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          context: ./mobile-app/server
+          context: .
+          file: mobile-app/server/Dockerfile
           push: true
           tags: |
             ${{ steps.img.outputs.IMAGE }}:latest

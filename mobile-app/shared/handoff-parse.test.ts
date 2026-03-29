@@ -4,6 +4,7 @@ import {
   parseEntries,
   formatDate,
   countHandoffBlocks,
+  isHandoffMarkdownFile,
 } from './handoff-parse';
 
 describe('parseEntry', () => {
@@ -60,5 +61,14 @@ describe('countHandoffBlocks', () => {
     expect(countHandoffBlocks('only one')).toBe(1);
     expect(countHandoffBlocks('')).toBe(0);
     expect(countHandoffBlocks('  \n  ')).toBe(0);
+  });
+});
+
+describe('isHandoffMarkdownFile', () => {
+  test('recognizes narrative files', () => {
+    expect(isHandoffMarkdownFile('HANDOFFS.md')).toBe(true);
+    expect(isHandoffMarkdownFile('PROMPTS.md')).toBe(true);
+    expect(isHandoffMarkdownFile('PLANS.md')).toBe(true);
+    expect(isHandoffMarkdownFile('README.md')).toBe(false);
   });
 });

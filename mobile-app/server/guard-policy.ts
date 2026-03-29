@@ -21,7 +21,7 @@
 import type { CommandContext, GuardRule, GuardVerdict } from './guard-types';
 
 /** Bump when rule set or matching semantics change (mirror in telemetry + /health). */
-export const GUARD_ENGINE_VERSION = 2;
+export const GUARD_ENGINE_VERSION = 3;
 
 export const GUARD_ENGINE = {
   version: GUARD_ENGINE_VERSION,

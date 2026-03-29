@@ -45,6 +45,7 @@ flowchart TD
 
 - **Registry:** [`guard-policy.ts`](../mobile-app/server/guard-policy.ts) — `GUARD_RULES`, `GUARD_ENGINE_VERSION`, `GUARD_RULE_IDS`.
 - **Tokenizer:** [`guard-command.ts`](../mobile-app/server/guard-command.ts).
+- **Segmentation:** [`guard-segment.ts`](../mobile-app/server/guard-segment.ts) — split on `&&` / `;` outside quotes before per-segment matching.
 - **Facade:** [`guard.ts`](../mobile-app/server/guard.ts) — `evaluateCommandGuard`, telemetry append on deny/warn.
 
 **Culture:** Optional `culture.json` slice `intentra.risk_gates` — keys must match rule ids. JSON Schema fragment: [`mobile-app/server/schemas/culture-intentra.fragment.json`](../mobile-app/server/schemas/culture-intentra.fragment.json). Introspection: `GET /intentra/guard/schema`.
@@ -64,6 +65,7 @@ When **`INTENTRA_TOKEN`** is unset, the server is open. When set, every **POST**
 | GET | `/events/stream` | No | SSE |
 | GET | `/events/history` | No | `?limit=` (max 200) |
 | GET | `/intentra/files` | No | — |
+| GET | `/intentra/handoffs/summary` | No | Parsed `HANDOFFS.md` entries (shared parser with mobile) |
 | GET | `/intentra/latest` | No | — |
 | POST | `/intentra/intent` | Bearer | JSON intent artifact |
 | PATCH | `/intentra/intent` | Bearer | JSON `{ intent_id, outcome }` — `outcome`: `success` \| `error` \| `cancelled` |
@@ -80,7 +82,7 @@ When **`INTENTRA_TOKEN`** is unset, the server is open. When set, every **POST**
 
 **Cross-session linkage:** Include optional **`intent_id`** on `POST /progress` (and in `bin/gstack-progress` via `--intent-id` or `INTENTRA_INTENT_ID`) so mobile can filter the live feed by intent; artifacts live under `.intentra/{intent_id}.json`.
 
-**Handoffs tab:** Mobile **Handoffs** screen consumes **`GET /intentra/files`** for `HANDOFFS.md` / `PROMPTS.md` / `PLANS.md`; entry splitting matches `\n---\n`. Parsing is tested in [`mobile-app/app/src/handoff-parse.test.ts`](../mobile-app/app/src/handoff-parse.test.ts). See [`handoffs-mobile.md`](handoffs-mobile.md).
+**Handoffs tab:** Mobile **Handoffs** screen consumes **`GET /intentra/files`** for `HANDOFFS.md` / `PROMPTS.md` / `PLANS.md`; entry splitting matches `\n---\n`. Parsing lives in [`mobile-app/shared/handoff-parse.ts`](../mobile-app/shared/handoff-parse.ts) (tests: [`mobile-app/shared/handoff-parse.test.ts`](../mobile-app/shared/handoff-parse.test.ts)); **`GET /intentra/handoffs/summary`** uses the same module on the server. See [`handoffs-mobile.md`](handoffs-mobile.md).
 
 ## Evaluator playbook (~10 minutes)
 
@@ -93,6 +95,7 @@ When **`INTENTRA_TOKEN`** is unset, the server is open. When set, every **POST**
 7. Open `GET /events/stream` in a browser or `curl -N` while posting `POST /progress` to see SSE.
 8. `curl -s -X PATCH http://127.0.0.1:7891/intentra/intent -H 'Content-Type: application/json' -d '{"intent_id":"<from POST /intentra/intent>","outcome":"success"}' | jq` (use Bearer if `INTENTRA_TOKEN` is set).
 9. With `INTENTRA_REPO_ROOT=<repo>`: `curl -s http://127.0.0.1:7891/intentra/files | jq '.files[].name'` — expect `HANDOFFS.md` when `.intentra/` exists in that repo.
+10. Same env: `curl -s http://127.0.0.1:7891/intentra/handoffs/summary | jq '.count, .entries[0].summary'`.
 
 ## Roadmap (out of scope today)
 

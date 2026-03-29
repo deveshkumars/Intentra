@@ -4,6 +4,8 @@ Base URL: `http://localhost:7891` (configurable via `GSTACK_PROGRESS_PORT`).
 
 All responses are JSON with `Content-Type: application/json` unless noted. CORS headers are included on every response.
 
+**Machine-readable contract:** OpenAPI 3 subset at [`openapi/intentra-progress.json`](openapi/intentra-progress.json). CI runs `bun run scripts/check-intentra-contracts.ts` (also part of `bun run test:progress-server`) so spec drift fails the build.
+
 ## Authentication
 
 When `INTENTRA_TOKEN` is set, all `POST`, `PATCH`, and `DELETE` requests require:
@@ -38,7 +40,7 @@ Server health check. No auth required.
   "subscribers": 2,
   "uptime": 3600,
   "jsonl": "/Users/you/.gstack/analytics/skill-usage.jsonl",
-  "guard_engine_version": 2,
+  "guard_engine_version": 3,
   "rule_count": 8,
   "metrics": {
     "post_progress_total": 87,
@@ -327,6 +329,28 @@ List all files in `.intentra/` with contents.
 }
 ```
 
+### `GET /intentra/handoffs/summary`
+
+Structured parse of `.intentra/HANDOFFS.md` using the same `parseEntries` implementation as the mobile Handoffs tab (`mobile-app/shared/handoff-parse.ts`).
+
+**Response (200):**
+
+```json
+{
+  "count": 3,
+  "block_count": 3,
+  "entries": [
+    {
+      "date": "2026-03-28",
+      "author": "Session title",
+      "summary": "First line of body used as preview…"
+    }
+  ]
+}
+```
+
+`count` matches `entries.length` (newest first). `block_count` uses `countHandoffBlocks` (delimiter semantics for `---` blocks). If `HANDOFFS.md` is missing: `{ "entries": [], "count": 0, "block_count": 0 }`.
+
 ### `GET /intentra/latest`
 
 Get the latest handoff entry from `HANDOFFS.md`.
@@ -375,9 +399,15 @@ Debug mode can also be triggered via `X-Intentra-Guard-Debug: 1` header.
     "baseRisk": 82,
     "cwe_hints": ["CWE-183"]
   },
-  "risk_score": 82
+  "risk_score": 82,
+  "compound": {
+    "segment_count": 1,
+    "decisive_segment_index": 1
+  }
 }
 ```
+
+Compound commands (`&&`, `;` outside quotes) set `compound.segment_count` ≥ 1 and `decisive_segment_index` to the 1-based segment that first produced **warn** or **deny** (or `null` if all segments **allow**). `risk_score` is the **maximum** across segments.
 
 **Response (200) — allow:**
 
@@ -385,7 +415,8 @@ Debug mode can also be triggered via `X-Intentra-Guard-Debug: 1` header.
 {
   "verdict": "allow",
   "source": "intentra_guard",
-  "risk_score": 0
+  "risk_score": 0,
+  "compound": { "segment_count": 1, "decisive_segment_index": null }
 }
 ```
 
@@ -396,12 +427,14 @@ Debug mode can also be triggered via `X-Intentra-Guard-Debug: 1` header.
   "verdict": "allow",
   "source": "intentra_guard",
   "risk_score": 0,
+  "compound": { "segment_count": 1, "decisive_segment_index": null },
   "trace": [
-    { "phase": "normalize", "detail": "nfkc+ws; len=5" },
-    { "phase": "tokenize", "detail": "tokens=2" },
-    { "phase": "rule:rm_recursive", "detail": "skip" },
-    { "phase": "rule:drop_table", "detail": "skip" },
-    { "phase": "match", "detail": "no_rule_matched" }
+    { "phase": "compound", "detail": "segments=1;split=&&|;quote_aware" },
+    { "phase": "s1:normalize", "detail": "nfkc+ws; len=5" },
+    { "phase": "s1:tokenize", "detail": "tokens=2" },
+    { "phase": "s1:rule:rm_recursive", "detail": "skip" },
+    { "phase": "s1:rule:drop_table", "detail": "skip" },
+    { "phase": "s1:match", "detail": "no_rule_matched" }
   ]
 }
 ```
@@ -414,7 +447,7 @@ Inspect the guard rule registry (metadata only, no matcher functions).
 
 ```json
 {
-  "engine": { "version": 2, "tokenizer": "shell_quote_aware_v1", "normalization": "NFKC_whitespace_collapse" },
+  "engine": { "version": 3, "tokenizer": "shell_quote_aware_v1", "normalization": "NFKC_whitespace_collapse" },
   "rules": [
     {
       "id": "rm_recursive",
@@ -439,7 +472,7 @@ Get the culture fragment JSON Schema and rule IDs for configuration tooling.
   "culture_fragment_schema": { "title": "intentra risk gates", "..." : "..." },
   "culture_fragment_schema_path": "mobile-app/server/schemas/culture-intentra.fragment.json",
   "rule_ids": ["docker_destructive", "drop_table", "git_discard", "git_force_push", "git_reset_hard", "kubectl_delete", "rm_recursive", "truncate"],
-  "engine": { "version": 2 },
+  "engine": { "version": 3 },
   "rule_count": 8
 }
 ```

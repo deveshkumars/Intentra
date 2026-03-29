@@ -7,14 +7,20 @@ on:
     paths:
       - 'mobile-app/server/**'
       - 'mobile-app/app/**'
+      - 'mobile-app/shared/**'
       - 'mobile-app/fixtures/**'
+      - 'docs/openapi/**'
+      - 'scripts/check-intentra-contracts.ts'
       - 'package.json'
       - '.github/workflows/intentra-progress-server.yml'
   pull_request:
     paths:
       - 'mobile-app/server/**'
       - 'mobile-app/app/**'
+      - 'mobile-app/shared/**'
       - 'mobile-app/fixtures/**'
+      - 'docs/openapi/**'
+      - 'scripts/check-intentra-contracts.ts'
       - 'package.json'
       - '.github/workflows/intentra-progress-server.yml'
 

@@ -38,7 +38,7 @@ Expected response:
   "buffered": 0,
   "subscribers": 0,
   "uptime": 3,
-  "guard_engine_version": 2,
+  "guard_engine_version": 3,
   "rule_count": 8,
   "metrics": {
     "post_progress_total": 0,

@@ -3,8 +3,8 @@
 services:
   progress:
     build:
-      context: ./mobile-app/server
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: mobile-app/server/Dockerfile
     ports:
       - "7891:7891"
     environment:

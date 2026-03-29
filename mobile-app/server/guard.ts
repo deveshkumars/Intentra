@@ -5,6 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import { buildCommandContext } from './guard-command';
+import { splitGuardSegments } from './guard-segment';
 import {
   findFirstMatchingRule,
   GUARD_RULE_IDS,
@@ -21,6 +22,7 @@ import type {
 export type { GuardEvaluation, GuardVerdict, GuardEvaluationOptions } from './guard-types';
 export { listGuardRulePublicMeta } from './guard-policy';
 export { buildCommandContext, normalizeCommand, tokenizeShell } from './guard-command';
+export { splitGuardSegments } from './guard-segment';
 
 const SOURCE = 'intentra_guard' as const;
 
@@ -81,25 +83,21 @@ function buildTrace(
   return [...head, ...phases, ...tail];
 }
 
-export function evaluateCommandGuard(
-  command: string,
+type SegmentEval = {
+  verdict: GuardVerdict;
+  pattern?: string;
+  message?: string;
+  rule?: GuardEvaluation['rule'];
+  risk_score: number;
+  trace?: Array<{ phase: string; detail: string }>;
+};
+
+/** One segment after compound split — same rule scan as legacy single-string guard. */
+function evaluateSegmentInner(
+  raw: string,
   culture: unknown | null,
-  options?: GuardEvaluationOptions,
-): GuardEvaluation {
-  const debug = options?.debug === true;
-  const culture_warnings = validateRiskGateKeys(culture ?? undefined);
-
-  const raw = command.trim();
-  if (!raw) {
-    return {
-      verdict: 'allow',
-      source: SOURCE,
-      risk_score: 0,
-      culture_warnings: culture_warnings.length ? culture_warnings : undefined,
-      trace: debug ? [{ phase: 'empty', detail: 'allow' }] : undefined,
-    };
-  }
-
+  debug: boolean,
+): SegmentEval {
   const ctx = buildCommandContext(raw);
   const phases: Array<{ phase: string; detail: string }> = [];
 
@@ -119,16 +117,13 @@ export function evaluateCommandGuard(
   if (!rule) {
     return {
       verdict: 'allow',
-      source: SOURCE,
       risk_score: 0,
-      culture_warnings: culture_warnings.length ? culture_warnings : undefined,
       trace: debug ? buildTrace(ctx, null, phases) : undefined,
     };
   }
 
   const gate = resolveVerdictFromCulture(culture, rule.id, rule.defaultVerdict);
   const risk_score = computeRiskScore(rule.baseRisk, gate);
-
   const baseMsg = rule.description;
   const ruleMeta = {
     id: rule.id,
@@ -142,10 +137,8 @@ export function evaluateCommandGuard(
       verdict: 'allow',
       pattern: rule.id,
       message: `${baseMsg} (culture allows this pattern.)`,
-      source: SOURCE,
       rule: ruleMeta,
       risk_score,
-      culture_warnings: culture_warnings.length ? culture_warnings : undefined,
       trace: debug ? buildTrace(ctx, rule.id, phases) : undefined,
     };
   }
@@ -154,10 +147,8 @@ export function evaluateCommandGuard(
       verdict: 'warn',
       pattern: rule.id,
       message: `[intentra guard] WARN: ${baseMsg}`,
-      source: SOURCE,
       rule: ruleMeta,
       risk_score,
-      culture_warnings: culture_warnings.length ? culture_warnings : undefined,
       trace: debug ? buildTrace(ctx, rule.id, phases) : undefined,
     };
   }
@@ -165,11 +156,105 @@ export function evaluateCommandGuard(
     verdict: 'deny',
     pattern: rule.id,
     message: `[intentra guard] DENY: ${baseMsg}`,
-    source: SOURCE,
     rule: ruleMeta,
     risk_score,
-    culture_warnings: culture_warnings.length ? culture_warnings : undefined,
     trace: debug ? buildTrace(ctx, rule.id, phases) : undefined,
+  };
+}
+
+export function evaluateCommandGuard(
+  command: string,
+  culture: unknown | null,
+  options?: GuardEvaluationOptions,
+): GuardEvaluation {
+  const debug = options?.debug === true;
+  const culture_warnings = validateRiskGateKeys(culture ?? undefined);
+
+  const raw = command.trim();
+  if (!raw) {
+    return {
+      verdict: 'allow',
+      source: SOURCE,
+      risk_score: 0,
+      culture_warnings: culture_warnings.length ? culture_warnings : undefined,
+      trace: debug ? [{ phase: 'empty', detail: 'allow' }] : undefined,
+    };
+  }
+
+  const split = splitGuardSegments(raw);
+  const nonEmpty = split.map((s) => s.trim()).filter(Boolean);
+  const segmentsToEval = nonEmpty.length > 0 ? nonEmpty : [raw];
+
+  let worst: GuardVerdict = 'allow';
+  let rep: SegmentEval | null = null;
+  let decisiveIdx: number | null = null;
+  let maxRisk = 0;
+  /** First segment that matched a rule but resolved to allow (culture/default) — surfaces pattern like single-string guard */
+  let allowRep: SegmentEval | null = null;
+  const allTraces: Array<{ phase: string; detail: string }> = [];
+
+  if (debug) {
+    allTraces.push({
+      phase: 'compound',
+      detail: `segments=${segmentsToEval.length};split=&&|;quote_aware`,
+    });
+  }
+
+  for (let si = 0; si < segmentsToEval.length; si++) {
+    const seg = segmentsToEval[si]!;
+    const e = evaluateSegmentInner(seg, culture, debug);
+    maxRisk = Math.max(maxRisk, e.risk_score);
+    if (e.verdict === 'allow' && e.pattern && !allowRep) {
+      allowRep = e;
+    }
+    if (e.verdict === 'deny') {
+      if (worst !== 'deny') {
+        worst = 'deny';
+        rep = e;
+        decisiveIdx = si + 1;
+      }
+    } else if (e.verdict === 'warn' && worst === 'allow') {
+      worst = 'warn';
+      rep = e;
+      decisiveIdx = si + 1;
+    }
+    if (debug && e.trace) {
+      for (const t of e.trace) {
+        allTraces.push({ phase: `s${si + 1}:${t.phase}`, detail: t.detail });
+      }
+    }
+  }
+
+  const compound = {
+    segment_count: segmentsToEval.length,
+    decisive_segment_index: worst === 'allow' ? null : decisiveIdx,
+  };
+
+  if (worst === 'allow') {
+    return {
+      verdict: 'allow',
+      pattern: allowRep?.pattern,
+      message: allowRep?.message,
+      rule: allowRep?.rule,
+      source: SOURCE,
+      risk_score: maxRisk,
+      culture_warnings: culture_warnings.length ? culture_warnings : undefined,
+      compound,
+      trace: debug ? allTraces : undefined,
+    };
+  }
+
+  const e = rep!;
+  return {
+    verdict: worst,
+    pattern: e.pattern,
+    message: e.message,
+    source: SOURCE,
+    rule: e.rule,
+    risk_score: maxRisk,
+    culture_warnings: culture_warnings.length ? culture_warnings : undefined,
+    compound,
+    trace: debug ? allTraces : undefined,
   };
 }
 

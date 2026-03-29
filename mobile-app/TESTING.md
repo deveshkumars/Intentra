@@ -21,7 +21,7 @@ Integration tests that spawn a real server process on a random port and hit actu
 | `GET /health` | Server starts, returns health shape with guard engine version, rule count, and metrics |
 | `GET /intentra/intents` | Lists intent artifacts (returns array + count) |
 | `GET /intentra/culture` | Culture snapshot shape (path, loaded, culture, note) |
-| `GET /intentra/guard/rules` | Rule registry returns 8+ rules with engine metadata |
+| `GET /intentra/guard/rules` | Rule registry returns 8+ rules with engine metadata (version ≥ 3) |
 | `GET /intentra/guard/schema` | Schema endpoint returns rule_ids, culture fragment schema, and rule count |
 | `GET /health metrics` | POST /progress increments `post_progress_total` counter |
 | `PATCH /intentra/intent` | Create intent → PATCH outcome → verify outcome persists |
@@ -33,15 +33,15 @@ Integration tests that spawn a real server process on a random port and hit actu
 | `POST /intentra/intent SSE` | Creating an intent increments the event counter (SSE emission) |
 | `INTENTRA_TOKEN auth` | Restarts server with token → POST without header returns 401 → with header returns 201 |
 
-### Handoff markdown parsing (`app/src/handoff-parse.test.ts`)
+### Handoff markdown parsing (`shared/handoff-parse.test.ts`)
 
-Pure unit tests for `parseEntry`, `parseEntries`, `formatDate`, and `countHandoffBlocks` — the same logic the **Handoffs** tab uses for `HANDOFFS.md` / `PROMPTS.md` / `PLANS.md`. Run from repo root:
+Pure unit tests for `parseEntry`, `parseEntries`, `formatDate`, and `countHandoffBlocks` — the same logic the **Handoffs** tab and **`GET /intentra/handoffs/summary`** use for `HANDOFFS.md` / `PROMPTS.md` / `PLANS.md`. Run from repo root:
 
 ```bash
-bun test mobile-app/app/src/handoff-parse.test.ts
+bun test mobile-app/shared/handoff-parse.test.ts
 ```
 
-Smoke tests also restart the server with **`INTENTRA_REPO_ROOT`** set to the git repo root and assert **`GET /intentra/files`** returns **`HANDOFFS.md`** whose content parses to at least one entry (end-to-end with committed `.intentra/`).
+Smoke tests also restart the server with **`INTENTRA_REPO_ROOT`** set to the git repo root and assert **`GET /intentra/files`** returns **`HANDOFFS.md`** whose content parses to at least one entry, and **`GET /intentra/handoffs/summary`** returns a matching `count` (end-to-end with committed `.intentra/`).
 
 ### Guard tests
 

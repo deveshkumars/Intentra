@@ -21,7 +21,9 @@ This repository is primarily **gstack** (Claude Code skills, browse, analytics).
 | **[Scaling](docs/scaling.md)** | Ring buffer limits, subscriber capacity, resource usage |
 | **[Security](docs/security.md)** | Auth model, CORS policy, data protection, threat model |
 | **[Testing Guide](mobile-app/TESTING.md)** | Running and extending smoke tests |
-| **[Handoffs (mobile)](docs/handoffs-mobile.md)** | Handoffs tab, `handoff-parse`, `GET /intentra/files` contract |
+| **[Handoffs (mobile)](docs/handoffs-mobile.md)** | Handoffs tab, shared `handoff-parse`, `GET /intentra/files` + `GET /intentra/handoffs/summary` |
+| **[OpenAPI subset](docs/openapi/intentra-progress.json)** | Machine-readable contract for core routes (`bun run scripts/check-intentra-contracts.ts`) |
+| **[ADRs](docs/adr/)** | Shared handoff module, guard segmentation limits, first-match registry |
 | **[Deploy](DEPLOY.md)** | Docker, docker-compose, Fly.io, GHCR image tags |
 
 ## How to review code changes
@@ -74,7 +76,7 @@ Intentra-related code is spread across `mobile-app/`, `.intentra/`, and root doc
 
 See **[`DEPLOY.md`](DEPLOY.md)** for Docker, `docker compose`, Fly.io, and GHCR image tags.
 
-- **Docker:** from repo root, `docker build -f mobile-app/server/Dockerfile -t intentra-progress mobile-app/server` then run with `-p 7891:7891` and volumes for `GSTACK_STATE_DIR` (e.g. host `~/.gstack` → `/data/gstack`) and `INTENTRA_REPO_ROOT` (host repo → `/repo`). See comments in the Dockerfile.
+- **Docker:** from repo root, `docker build -f mobile-app/server/Dockerfile -t intentra-progress .` then run with `-p 7891:7891` and volumes for `GSTACK_STATE_DIR` (e.g. host `~/.gstack` → `/data/gstack`) and `INTENTRA_REPO_ROOT` (host repo → `/repo`). See comments in the Dockerfile.
 - **CI:** GitHub Actions runs `bun run test:progress-server` when server files change; Docker workflow pushes to GHCR after the same tests pass.
 - **Hosted SaaS:** not in-repo; use any container host with the same env vars as local.
 

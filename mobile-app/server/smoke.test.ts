@@ -5,7 +5,7 @@
 import path from 'node:path';
 import { describe, test, expect, afterAll } from 'bun:test';
 import { spawn, type Subprocess } from 'bun';
-import { parseEntries } from '../app/src/handoff-parse.ts';
+import { parseEntries } from '../shared/handoff-parse.ts';
 
 const PORT = 18000 + Math.floor(Math.random() * 2000);
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -100,7 +100,7 @@ describe('progress server smoke', () => {
     const j = (await r.json()) as { rules?: unknown[]; engine?: { version?: number } };
     expect(Array.isArray(j.rules)).toBe(true);
     expect((j.rules as []).length).toBeGreaterThanOrEqual(8);
-    expect(j.engine?.version).toBeGreaterThanOrEqual(2);
+    expect(j.engine?.version).toBeGreaterThanOrEqual(3);
   });
 
   test('GET /intentra/guard/schema returns rule_ids and schema', async () => {
@@ -280,6 +280,18 @@ describe('progress server smoke', () => {
     const handoff = j.files.find(f => f.name === 'HANDOFFS.md');
     expect(handoff?.content.length).toBeGreaterThan(20);
     expect(parseEntries(handoff!.content).length).toBeGreaterThan(0);
+
+    const sr = await fetch(`${BASE}/intentra/handoffs/summary`);
+    expect(sr.ok).toBe(true);
+    const sj = (await sr.json()) as {
+      count: number;
+      block_count: number;
+      entries: Array<{ date: string | null; summary: string }>;
+    };
+    expect(sj.count).toBeGreaterThan(0);
+    expect(sj.block_count).toBeGreaterThan(0);
+    expect(Array.isArray(sj.entries)).toBe(true);
+    expect(sj.entries.length).toBe(sj.count);
   });
 
   test('INTENTRA_TOKEN rejects POST without Bearer', async () => {

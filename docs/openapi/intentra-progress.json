@@ -1,0 +1,293 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Intentra Progress Server API (subset)",
+    "description": "Machine-readable subset of the Bun progress server. Authoritative narrative: docs/api-reference.md.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health and metrics",
+        "responses": {
+          "200": {
+            "description": "Server OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/progress": {
+      "post": {
+        "summary": "Ingest progress event",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProgressPostBody" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OkResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized when INTENTRA_TOKEN set" }
+        }
+      }
+    },
+    "/events/history": {
+      "get": {
+        "summary": "Recent events (REST backfill)",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "maximum": 200, "default": 50 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event slice",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EventsHistoryResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/intentra/files": {
+      "get": {
+        "summary": "List .intentra markdown files with full text",
+        "responses": {
+          "200": {
+            "description": "File bundle",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/IntentraFilesResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/intentra/handoffs/summary": {
+      "get": {
+        "summary": "Parsed HANDOFFS.md entries (shared parser with mobile)",
+        "responses": {
+          "200": {
+            "description": "Parsed entries newest-first",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HandoffsSummaryResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/intentra/guard": {
+      "post": {
+        "summary": "Evaluate shell-like command (compound-aware on && and ;)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GuardRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Guard verdict",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GuardEvaluation" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": ["ok", "events", "buffered", "subscribers", "uptime", "guard_engine_version", "rule_count", "metrics"],
+        "properties": {
+          "ok": { "type": "boolean" },
+          "events": { "type": "integer" },
+          "buffered": { "type": "integer" },
+          "subscribers": { "type": "integer" },
+          "uptime": { "type": "integer" },
+          "jsonl": { "type": "string" },
+          "guard_engine_version": { "type": "integer", "minimum": 1 },
+          "rule_count": { "type": "integer", "minimum": 1 },
+          "metrics": {
+            "type": "object",
+            "additionalProperties": { "type": "number" }
+          }
+        }
+      },
+      "OkResponse": {
+        "type": "object",
+        "properties": { "ok": { "type": "boolean" } }
+      },
+      "ProgressPostBody": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string" },
+          "message": { "type": "string" },
+          "session_id": { "type": "string" },
+          "intent_id": { "type": "string" },
+          "skill": { "type": "string" },
+          "step": { "type": "string" },
+          "pct": { "type": "number" },
+          "tool_name": { "type": "string" },
+          "outcome": { "type": "string", "enum": ["success", "error", "unknown"] },
+          "duration_s": { "type": "number" },
+          "ingest_lane": { "type": "string" }
+        }
+      },
+      "ProgressEvent": {
+        "type": "object",
+        "required": ["id", "ts", "kind", "source"],
+        "properties": {
+          "id": { "type": "string" },
+          "ts": { "type": "string", "format": "date-time" },
+          "kind": {
+            "type": "string",
+            "enum": ["skill_start", "skill_end", "progress", "tool_use", "hook_fire"]
+          },
+          "source": {
+            "type": "string",
+            "enum": ["jsonl_watcher", "post", "hook"]
+          },
+          "session_id": { "type": "string" },
+          "intent_id": { "type": "string" },
+          "skill": { "type": "string" },
+          "message": { "type": "string" },
+          "step": { "type": "string" },
+          "pct": { "type": "number" },
+          "tool_name": { "type": "string" },
+          "outcome": { "type": "string" },
+          "duration_s": { "type": "number" },
+          "ingest_lane": { "type": "string" },
+          "upstream_kind": { "type": "string" }
+        }
+      },
+      "EventsHistoryResponse": {
+        "type": "object",
+        "required": ["events", "total"],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ProgressEvent" }
+          },
+          "total": { "type": "integer" }
+        }
+      },
+      "IntentraFileEntry": {
+        "type": "object",
+        "required": ["name", "content"],
+        "properties": {
+          "name": { "type": "string" },
+          "content": { "type": "string" }
+        }
+      },
+      "IntentraFilesResponse": {
+        "type": "object",
+        "required": ["files"],
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/IntentraFileEntry" }
+          }
+        }
+      },
+      "HandoffSummaryEntry": {
+        "type": "object",
+        "properties": {
+          "date": { "type": "string", "nullable": true },
+          "author": { "type": "string", "nullable": true },
+          "summary": { "type": "string" }
+        }
+      },
+      "HandoffsSummaryResponse": {
+        "type": "object",
+        "required": ["count", "block_count", "entries"],
+        "properties": {
+          "count": { "type": "integer" },
+          "block_count": { "type": "integer" },
+          "entries": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/HandoffSummaryEntry" }
+          }
+        }
+      },
+      "GuardRequest": {
+        "type": "object",
+        "required": ["command"],
+        "properties": {
+          "command": { "type": "string" },
+          "session_id": { "type": "string" },
+          "debug": { "type": "boolean" }
+        }
+      },
+      "GuardRuleMeta": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "category": { "type": "string" },
+          "baseRisk": { "type": "integer" },
+          "cwe_hints": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "GuardCompoundMeta": {
+        "type": "object",
+        "required": ["segment_count", "decisive_segment_index"],
+        "properties": {
+          "segment_count": { "type": "integer", "minimum": 1 },
+          "decisive_segment_index": { "type": "integer", "nullable": true, "minimum": 1 }
+        }
+      },
+      "GuardEvaluation": {
+        "type": "object",
+        "required": ["verdict", "source", "risk_score"],
+        "properties": {
+          "verdict": { "type": "string", "enum": ["allow", "warn", "deny"] },
+          "pattern": { "type": "string" },
+          "message": { "type": "string" },
+          "source": { "type": "string", "const": "intentra_guard" },
+          "rule": { "$ref": "#/components/schemas/GuardRuleMeta" },
+          "risk_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "culture_warnings": { "type": "array", "items": { "type": "string" } },
+          "trace": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["phase", "detail"],
+              "properties": {
+                "phase": { "type": "string" },
+                "detail": { "type": "string" }
+              }
+            }
+          },
+          "compound": { "$ref": "#/components/schemas/GuardCompoundMeta" }
+        }
+      }
+    }
+  }
+}

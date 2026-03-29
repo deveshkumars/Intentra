@@ -13,7 +13,7 @@ The Bun server in [`mobile-app/server/`](mobile-app/server/) exposes SSE, Intent
 ## 1. Docker locally or on any host
 
 ```bash
-docker build -f mobile-app/server/Dockerfile -t intentra-progress mobile-app/server
+docker build -f mobile-app/server/Dockerfile -t intentra-progress .
 docker run --rm -p 7891:7891 \
   -v "$HOME/.gstack:/data/gstack" \
   -v "$(pwd):/repo" \
