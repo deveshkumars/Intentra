@@ -150,3 +150,10 @@ This means guard activations appear in the mobile feed alongside agent events.
 ## Roadmap
 
 Full shell grammar (AST), SQL AST parsing, and signed policy bundles are documented as future work. The current regex + tokenizer model is sufficient for the common destructive patterns targeted today.
+
+## See also
+
+- **[Guard Rules Reference](guard-rules-reference.md)** — detailed trigger examples and safe targets for all 8 rules
+- **[Culture Config](culture-config.md)** — customize guard verdicts via `culture.json` risk_gates
+- **[API Reference](api-reference.md)** — HTTP endpoints for guard evaluation
+- **[Architecture](intentra-architecture.md)** — route/auth matrix and event pipeline

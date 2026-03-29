@@ -2,7 +2,21 @@
 
 This repository is primarily **gstack** (Claude Code skills, browse, analytics). **Intentra** is the collaboration and observability layer on top: mobile feed, repo-local intent artifacts, and HTTP APIs that tie them together.
 
-**Canonical master plan:** [`masterdoc3.md`](masterdoc3.md). Shorter summary: [`masterdoc.md`](masterdoc.md). **Deep dive (diagrams, routes, auth, 10‑minute verify):** [`docs/intentra-architecture.md`](docs/intentra-architecture.md). **Intent lifecycle:** [`docs/intent-lifecycle.md`](docs/intent-lifecycle.md). **Guard engine:** [`docs/guard-engine.md`](docs/guard-engine.md).
+**Canonical master plan:** [`masterdoc3.md`](masterdoc3.md). Shorter summary: [`masterdoc.md`](masterdoc.md).
+
+### Documentation index
+
+| Doc | What it covers |
+|-----|---------------|
+| **[Quickstart](docs/quickstart.md)** | 5-minute local setup: install → server → ngrok → mobile app |
+| **[API Reference](docs/api-reference.md)** | Every endpoint with request/response schemas and JSON examples |
+| **[Architecture](docs/intentra-architecture.md)** | Route/auth matrix, event pipeline diagram, evaluator playbook |
+| **[Intent Lifecycle](docs/intent-lifecycle.md)** | Create → track → resolve workflow with mermaid diagrams |
+| **[Guard Engine](docs/guard-engine.md)** | Pipeline deep-dive: normalization, tokenization, rule matching |
+| **[Guard Rules Reference](docs/guard-rules-reference.md)** | All 8 rules with trigger examples and safe targets |
+| **[Culture Config](docs/culture-config.md)** | Customize guard verdicts via `culture.json` risk_gates |
+| **[Testing Guide](mobile-app/TESTING.md)** | Running and extending smoke tests |
+| **[Deploy](DEPLOY.md)** | Docker, docker-compose, Fly.io, GHCR image tags |
 
 ## How to review code changes
 

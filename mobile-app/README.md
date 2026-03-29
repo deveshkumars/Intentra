@@ -4,6 +4,8 @@ Real-time agent activity feed for gstack skills. Watch Claude work from your pho
 
 **Intentra:** Progress server routes, auth, and `/intentra/*` APIs are inventoried in [`INTENTRA.md`](../INTENTRA.md). Architecture diagrams + full route/auth matrix: [`docs/intentra-architecture.md`](../docs/intentra-architecture.md). Deploy: [`DEPLOY.md`](../DEPLOY.md). The canonical product plan is [`masterdoc3.md`](../masterdoc3.md).
 
+**New here?** Start with the [Quickstart](../docs/quickstart.md). Full endpoint schemas: [API Reference](../docs/api-reference.md). Testing: [TESTING.md](TESTING.md).
+
 ```
 Claude Code (running a skill)
         │

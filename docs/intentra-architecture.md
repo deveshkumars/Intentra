@@ -1,6 +1,8 @@
 # Intentra progress server — architecture
 
-Single reference for the Bun server in `mobile-app/server/` (port **7891**): event pipeline, guard engine, routes, and auth. Quick start and curl recipes: [`INTENTRA.md`](../INTENTRA.md), [`mobile-app/README.md`](../mobile-app/README.md). Deploy: [`DEPLOY.md`](../DEPLOY.md). Intent lifecycle: [`intent-lifecycle.md`](intent-lifecycle.md). Guard deep-dive: [`guard-engine.md`](guard-engine.md).
+Single reference for the Bun server in `mobile-app/server/` (port **7891**): event pipeline, guard engine, routes, and auth.
+
+**Related docs:** [Quickstart](quickstart.md) · [API Reference](api-reference.md) · [Intent Lifecycle](intent-lifecycle.md) · [Guard Engine](guard-engine.md) · [Guard Rules Reference](guard-rules-reference.md) · [Culture Config](culture-config.md) · [Testing](../mobile-app/TESTING.md) · [Deploy](../DEPLOY.md)
 
 ## Event pipeline (JSONL + HTTP → SSE)
 

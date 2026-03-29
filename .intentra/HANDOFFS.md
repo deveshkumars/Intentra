@@ -36,3 +36,26 @@ Session state — where things stand, decisions made, what's next. Newest at the
 1. Update `/handoff` skill to write to three files
 2. Regenerate and commit
 3. Test end-to-end on a real task
+
+---
+
+**2026-03-29 — Improve documentation and completeness from evaluator feedback**
+**Author:** Claude (via Gordon Beckler)
+**Branch:** `further-cp`
+**Status:** in-progress
+
+**Last commit:** `90fcfcb` feat: single-intent lookup, SSE lifecycle events, docs + tests
+**Uncommitted changes:** handoff entries in `.intentra/`, further doc improvements in progress
+
+**Decisions:**
+- Single-intent lookup returns 404 JSON (not empty 200) for unknown IDs — matches REST conventions
+- SSE events use `upstream_kind` field (`intent_created`, `intent_resolved`) to distinguish lifecycle events from normal progress
+- Guard engine docs written as deep-dive reference, not tutorial — matches existing doc style
+- Intent lifecycle docs include mermaid diagrams for visual learners and curl examples for quick-start
+
+**Next actions:**
+1. Add CONTRIBUTORS.md with contribution guidelines and architecture overview
+2. Add inline JSDoc to key server functions for API reference generation
+3. Add fixtures README explaining test data structure
+4. Improve INTENTRA.md with quickstart tutorial section
+5. Run smoke tests, commit, and push

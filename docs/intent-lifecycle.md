@@ -146,3 +146,10 @@ The `intent_id` field creates a cross-cutting link:
 4. **Mobile feed** (SSE filtered by `intent_id`) — real-time view
 
 This means you can answer: "For intent X, what progress events fired, which guard rules triggered, and what was the outcome?" — all queryable through the API.
+
+## See also
+
+- **[API Reference](api-reference.md)** — full request/response schemas for all intent endpoints
+- **[Quickstart](quickstart.md)** — create your first intent in 5 minutes
+- **[Architecture](intentra-architecture.md)** — route/auth matrix and event pipeline diagram
+- **[Guard Engine](guard-engine.md)** — how guard telemetry links to intents
