@@ -102,7 +102,7 @@ export default function App() {
             ) : activeTab === 'handoffs' ? (
               <HandoffScreen serverUrl={serverUrl} authToken={authToken} />
             ) : (
-              <IntentScreen serverUrl={serverUrl} authToken={authToken} />
+              <IntentScreen serverUrl={serverUrl} authToken={authToken} events={events} />
             )}
           </View>
 
