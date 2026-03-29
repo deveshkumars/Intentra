@@ -1,4 +1,4 @@
-# Smoke-test the Bun progress server (SSE + Intentra routes) on PRs touching mobile-app/server.
+# Smoke-test the Bun progress server (SSE + Intentra routes) + mobile handoff-parse unit tests.
 name: Intentra progress server
 
 on:
@@ -6,12 +6,16 @@ on:
     branches: [main]
     paths:
       - 'mobile-app/server/**'
+      - 'mobile-app/app/**'
       - 'mobile-app/fixtures/**'
+      - 'package.json'
       - '.github/workflows/intentra-progress-server.yml'
   pull_request:
     paths:
       - 'mobile-app/server/**'
+      - 'mobile-app/app/**'
       - 'mobile-app/fixtures/**'
+      - 'package.json'
       - '.github/workflows/intentra-progress-server.yml'
 
 jobs:

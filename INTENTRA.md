@@ -21,6 +21,7 @@ This repository is primarily **gstack** (Claude Code skills, browse, analytics).
 | **[Scaling](docs/scaling.md)** | Ring buffer limits, subscriber capacity, resource usage |
 | **[Security](docs/security.md)** | Auth model, CORS policy, data protection, threat model |
 | **[Testing Guide](mobile-app/TESTING.md)** | Running and extending smoke tests |
+| **[Handoffs (mobile)](docs/handoffs-mobile.md)** | Handoffs tab, `handoff-parse`, `GET /intentra/files` contract |
 | **[Deploy](DEPLOY.md)** | Docker, docker-compose, Fly.io, GHCR image tags |
 
 ## How to review code changes
@@ -53,7 +54,7 @@ Intentra-related code is spread across `mobile-app/`, `.intentra/`, and root doc
 | **Culture schema** | `GET /intentra/guard/schema` + [`schemas/culture-intentra.fragment.json`](mobile-app/server/schemas/culture-intentra.fragment.json) | same |
 | **Intentra guard telemetry** | Append-only `.intentra/telemetry/intentra-guard.jsonl` (gitignored at runtime) + SSE `hook_fire` with `upstream_kind: intentra_guard` | same |
 | **Committed hook fixture** | Synthetic `skill-usage` sample (20+ `hook_fire` lines) for evaluators / tests | [`mobile-app/fixtures/skill-usage-evaluator-sample.jsonl`](mobile-app/fixtures/skill-usage-evaluator-sample.jsonl) |
-| Mobile app | Expo UI, SSE hook, setup, dashboard, detail, Intent screen (culture + artifacts) | [`mobile-app/app/`](mobile-app/app/) |
+| Mobile app | Expo UI, SSE hook, setup, dashboard, detail, **Handoffs** tab (`.intentra` Markdown via `GET /intentra/files`), Intent screen (culture + artifacts) | [`mobile-app/app/`](mobile-app/app/) |
 | Markdown intent layer | Append-only `PROMPTS.md`, `PLANS.md`, `HANDOFFS.md` | [`.intentra/`](.intentra/) |
 | Container | `Dockerfile` in `mobile-app/server/` | [`mobile-app/server/Dockerfile`](mobile-app/server/Dockerfile) |
 | CI | Smoke tests on `mobile-app/server/**` changes | [`.github/workflows/intentra-progress-server.yml`](.github/workflows/intentra-progress-server.yml) |

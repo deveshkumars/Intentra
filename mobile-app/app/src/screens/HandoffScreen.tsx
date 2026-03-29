@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl,
 } from 'react-native';
+import { parseEntries, formatDate, countHandoffBlocks } from '../handoff-parse';
 
 interface Props {
   serverUrl: string | null;
@@ -11,18 +12,6 @@ interface Props {
 interface IntentFile {
   name: string;
   content: string;
-}
-
-/** A single parsed entry from a --- separated markdown file */
-interface HandoffEntry {
-  /** Raw text of this entry block */
-  body: string;
-  /** Extracted date string (if found) */
-  date: string | null;
-  /** Extracted author (if found) */
-  author: string | null;
-  /** First meaningful line after date/author — used as summary */
-  summary: string;
 }
 
 type DocType = 'HANDOFFS' | 'PROMPTS' | 'PLANS';
@@ -52,65 +41,6 @@ const DOC_LABELS: Record<DocType, { title: string; icon: string; description: st
 };
 
 const DOC_ORDER: DocType[] = ['HANDOFFS', 'PROMPTS', 'PLANS'];
-
-/** Parse a date like "2026-03-29" or "**2026-03-29 — Author Name**" from the first lines */
-function parseEntry(raw: string): HandoffEntry {
-  const lines = raw.trim().split('\n');
-  let date: string | null = null;
-  let author: string | null = null;
-  let summaryStart = 0;
-
-  for (let i = 0; i < Math.min(lines.length, 4); i++) {
-    const line = lines[i]!.trim();
-    // Match patterns like "**2026-03-29 — Gordon Beckler**" or "2026-03-29 — Gordon"
-    const dateMatch = line.match(/\*{0,2}(\d{4}-\d{2}-\d{2})\s*[—–-]\s*(.+?)\*{0,2}$/);
-    if (dateMatch) {
-      date = dateMatch[1]!;
-      author = dateMatch[2]!.replace(/\*+$/, '').trim();
-      summaryStart = i + 1;
-      break;
-    }
-    // Match plain date
-    const plainDate = line.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (plainDate) {
-      date = plainDate[1]!;
-      summaryStart = i + 1;
-      break;
-    }
-  }
-
-  // Find first non-empty, non-header line for summary
-  let summary = '';
-  for (let i = summaryStart; i < lines.length; i++) {
-    const l = lines[i]!.trim();
-    if (!l) continue;
-    // Skip blockquote markers, headers
-    const cleaned = l.replace(/^[>#*\-\s]+/, '').trim();
-    if (cleaned.length > 5) {
-      summary = cleaned.length > 120 ? cleaned.slice(0, 117) + '…' : cleaned;
-      break;
-    }
-  }
-
-  return { body: raw.trim(), date, author, summary: summary || '(no content)' };
-}
-
-/** Split a markdown file into entries separated by \n---\n */
-function parseEntries(content: string): HandoffEntry[] {
-  const blocks = content.split(/\n---\n/).map(b => b.trim()).filter(Boolean);
-  return blocks.map(parseEntry).reverse(); // newest first
-}
-
-function formatDate(dateStr: string): string {
-  try {
-    const d = new Date(dateStr + 'T00:00:00');
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-  } catch {
-    return dateStr;
-  }
-}
 
 export function HandoffScreen({ serverUrl }: Props) {
   const [files, setFiles] = useState<Record<string, string>>({});
@@ -168,7 +98,7 @@ export function HandoffScreen({ serverUrl }: Props) {
   const meta = DOC_LABELS[activeDoc];
   const totalEntries = DOC_ORDER.reduce((sum, doc) => {
     const c = files[DOC_FILES[doc]] ?? '';
-    return sum + (c ? c.split(/\n---\n/).filter(b => b.trim()).length : 0);
+    return sum + countHandoffBlocks(c);
   }, 0);
 
   return (
@@ -187,7 +117,7 @@ export function HandoffScreen({ serverUrl }: Props) {
           const isActive = activeDoc === doc;
           const label = DOC_LABELS[doc];
           const fileContent = files[DOC_FILES[doc]] ?? '';
-          const count = fileContent ? fileContent.split(/\n---\n/).filter(b => b.trim()).length : 0;
+          const count = countHandoffBlocks(fileContent);
           return (
             <TouchableOpacity
               key={doc}

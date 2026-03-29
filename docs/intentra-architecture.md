@@ -80,6 +80,8 @@ When **`INTENTRA_TOKEN`** is unset, the server is open. When set, every **POST**
 
 **Cross-session linkage:** Include optional **`intent_id`** on `POST /progress` (and in `bin/gstack-progress` via `--intent-id` or `INTENTRA_INTENT_ID`) so mobile can filter the live feed by intent; artifacts live under `.intentra/{intent_id}.json`.
 
+**Handoffs tab:** Mobile **Handoffs** screen consumes **`GET /intentra/files`** for `HANDOFFS.md` / `PROMPTS.md` / `PLANS.md`; entry splitting matches `\n---\n`. Parsing is tested in [`mobile-app/app/src/handoff-parse.test.ts`](../mobile-app/app/src/handoff-parse.test.ts). See [`handoffs-mobile.md`](handoffs-mobile.md).
+
 ## Evaluator playbook (~10 minutes)
 
 1. From repo root: `bun run test:progress-server` (smoke + guard + fixtures).
@@ -90,6 +92,7 @@ When **`INTENTRA_TOKEN`** is unset, the server is open. When set, every **POST**
 6. `curl -s -X POST http://127.0.0.1:7891/intentra/guard -H 'Content-Type: application/json' -d '{"command":"git push --force"}' | jq`.
 7. Open `GET /events/stream` in a browser or `curl -N` while posting `POST /progress` to see SSE.
 8. `curl -s -X PATCH http://127.0.0.1:7891/intentra/intent -H 'Content-Type: application/json' -d '{"intent_id":"<from POST /intentra/intent>","outcome":"success"}' | jq` (use Bearer if `INTENTRA_TOKEN` is set).
+9. With `INTENTRA_REPO_ROOT=<repo>`: `curl -s http://127.0.0.1:7891/intentra/files | jq '.files[].name'` — expect `HANDOFFS.md` when `.intentra/` exists in that repo.
 
 ## Roadmap (out of scope today)
 

@@ -33,7 +33,7 @@
     "eval:select": "bun run scripts/eval-select.ts",
     "analytics": "bun run scripts/analytics.ts",
     "test:audit": "bun test test/audit-compliance.test.ts",
-    "test:progress-server": "bun test mobile-app/server/smoke.test.ts mobile-app/server/guard.test.ts mobile-app/server/guard-perf.test.ts mobile-app/server/guard-command.test.ts mobile-app/fixtures/fixture-parse.test.ts",
+    "test:progress-server": "bun test mobile-app/server/smoke.test.ts mobile-app/server/guard.test.ts mobile-app/server/guard-perf.test.ts mobile-app/server/guard-command.test.ts mobile-app/fixtures/fixture-parse.test.ts mobile-app/app/src/handoff-parse.test.ts",
     "redact:skill-usage": "bun run scripts/redact-skill-usage-sample.ts"
   },
   "dependencies": {
