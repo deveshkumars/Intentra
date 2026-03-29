@@ -237,17 +237,13 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 **Priority:** P3
 **Depends on:** None
 
-### Ship log — persistent record of /ship runs
+### Ship log — persistent record of /ship runs — SHIPPED
 
-**What:** Append structured JSON entry to `.gstack/ship-log.json` at end of every /ship run (version, date, branch, PR URL, review findings, Greptile stats, todos completed, test results).
+~~**What:** Append structured JSON entry to `.gstack/ship-log.json` at end of every /ship run (version, date, branch, PR URL, review findings, Greptile stats, todos completed, test results).~~
 
-**Why:** /retro has no structured data about shipping velocity. Ship log enables: PRs-per-week trending, review finding rates, Greptile signal over time, test suite growth.
+Step 8.8 added to ship/SKILL.md.tmpl. Appends one JSONL line to `.gstack/ship-log.jsonl` per run with: version, date, branch, PR URL, tests_passed, coverage_pct, plan completion ratio, todos_completed, review_status, greptile_findings. Zero-config — always runs automatically.
 
-**Context:** /retro already reads greptile-history.md — same pattern. Eval persistence (eval-store.ts) shows the JSON append pattern exists in the codebase. ~15 lines in ship template.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** None
+**Completed:** feature/completeness-p2-impl (2026-03-29)
 
 
 ### Visual verification with screenshots in PR body
@@ -264,29 +260,21 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 
 ## Review
 
-### Inline PR annotations
+### Inline PR annotations — SHIPPED
 
-**What:** /ship and /review post inline review comments at specific file:line locations using `gh api` to create pull request review comments.
+~~**What:** /ship and /review post inline review comments at specific file:line locations using `gh api` to create pull request review comments.~~
 
-**Why:** Line-level annotations are more actionable than top-level comments. The PR thread becomes a line-by-line conversation between Greptile, Claude, and human reviewers.
+Step 5.75 added to review/SKILL.md.tmpl. After Fix-First review completes, unresolved findings with specific file:line are posted as inline GitHub PR comments via `gh api /pulls/{n}/comments` (max 20 per run, CRITICAL first). Submitted as a single COMMENT review. Gracefully skips if no PR exists, gh api fails, or line is not in the diff.
 
-**Context:** GitHub supports inline review comments via `gh api repos/$REPO/pulls/$PR/reviews`. Pairs naturally with Phase 3.6 visual annotations.
+**Completed:** feature/completeness-p2-impl (2026-03-29)
 
-**Effort:** S
-**Priority:** P2
-**Depends on:** None
+### Greptile training feedback export — SHIPPED
 
-### Greptile training feedback export
+~~**What:** Aggregate greptile-history.md into machine-readable JSON summary of false positive patterns, exportable to the Greptile team for model improvement.~~
 
-**What:** Aggregate greptile-history.md into machine-readable JSON summary of false positive patterns, exportable to the Greptile team for model improvement.
+`bin/gstack-greptile-export` script added. Reads all greptile-history.md files (global + per-project), aggregates by type and category, identifies top-20 FP patterns. Run via `bun run greptile:export` (full JSON) or `bun run greptile:stats` (summary). Supports `--repo owner/repo` filter and `--output path` flag.
 
-**Why:** Closes the feedback loop — Greptile can use FP data to stop making the same mistakes on your codebase.
-
-**Context:** Was a P3 Future Idea. Upgraded to P2 now that greptile-history.md data infrastructure exists. The signal data is already being collected; this just makes it exportable. ~40 lines.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** Enough FP data accumulated (10+ entries)
+**Completed:** feature/completeness-p2-impl (2026-03-29)
 
 ### Visual review with annotated screenshots
 
@@ -302,16 +290,13 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 
 ## QA
 
-### QA trend tracking
+### QA trend tracking — SHIPPED
 
-**What:** Compare baseline.json over time, detect regressions across QA runs.
+~~**What:** Compare baseline.json over time, detect regressions across QA runs.~~
 
-**Why:** Spot quality trends — is the app getting better or worse?
+Phase 9.5 added to qa/SKILL.md.tmpl. After each run: extracts health scores from previous reports, renders a trend table (date/health/issues/fixes/tier), fires a regression alert if score drops >5 pts, and notes a best-score milestone if applicable. Reports now write structured `Tier:` / `Health Score:` headers to enable cross-run parsing.
 
-**Context:** QA already writes structured reports. This adds cross-run comparison.
-
-**Effort:** S
-**Priority:** P2
+**Completed:** feature/completeness-p2-impl (2026-03-29)
 
 ### CI/CD QA integration
 
@@ -322,14 +307,13 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 **Effort:** M
 **Priority:** P2
 
-### Smart default QA tier
+### Smart default QA tier — SHIPPED
 
-**What:** After a few runs, check index.md for user's usual tier pick, skip the AskUserQuestion.
+~~**What:** After a few runs, check index.md for user's usual tier pick, skip the AskUserQuestion.~~
 
-**Why:** Reduces friction for repeat users.
+Added to qa/SKILL.md.tmpl Setup section. When user does not specify a tier, reads `Tier:` header lines from previous reports. If ≥70% of 3+ past runs used the same tier, auto-selects it with an override hint. Reports now emit a `Tier:` header to feed this detection in future runs.
 
-**Effort:** S
-**Priority:** P2
+**Completed:** feature/completeness-p2-impl (2026-03-29)
 
 ### Accessibility audit mode
 
