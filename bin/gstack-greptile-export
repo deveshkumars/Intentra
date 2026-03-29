@@ -1,0 +1,136 @@
+#!/usr/bin/env bun
+// gstack-greptile-export — aggregate greptile-history.md files into a structured
+// JSON summary of false positive patterns for model improvement feedback.
+//
+// Usage:
+//   gstack-greptile-export [--repo owner/repo] [--output path/to/out.json]
+//   gstack-greptile-export --stats      # print aggregate stats to stdout
+//
+// Output format:
+//   {
+//     "generated": "ISO 8601 timestamp",
+//     "total_entries": N,
+//     "repos": ["owner/repo", ...],
+//     "by_type": { "fp": N, "fix": N, "already-fixed": N },
+//     "by_category": { "race-condition": N, ... },
+//     "false_positive_patterns": [
+//       { "date": "YYYY-MM-DD", "repo": "owner/repo", "file_pattern": "...", "category": "...", "count": N }
+//     ],
+//     "top_false_positives": [
+//       { "category": "...", "file_pattern": "...", "count": N, "repos": ["..."] }
+//     ]
+//   }
+
+import { readFileSync, existsSync, writeFileSync } from "fs";
+import { homedir } from "os";
+import { join } from "path";
+
+const GSTACK_HOME = process.env.GSTACK_HOME ?? join(homedir(), ".gstack");
+
+// Parse CLI flags
+const args = process.argv.slice(2);
+const statsOnly = args.includes("--stats");
+const repoFilter = args.includes("--repo") ? args[args.indexOf("--repo") + 1] : null;
+const outputPath = args.includes("--output") ? args[args.indexOf("--output") + 1] : null;
+
+// Collect all greptile-history.md files
+const historyFiles: string[] = [];
+const globalHistory = join(GSTACK_HOME, "greptile-history.md");
+if (existsSync(globalHistory)) historyFiles.push(globalHistory);
+
+// Per-project files
+try {
+  const projectsDir = join(GSTACK_HOME, "projects");
+  if (existsSync(projectsDir)) {
+    const { readdirSync } = await import("fs");
+    for (const slug of readdirSync(projectsDir)) {
+      const p = join(projectsDir, slug, "greptile-history.md");
+      if (existsSync(p) && p !== globalHistory) historyFiles.push(p);
+    }
+  }
+} catch {
+  // ok — no projects dir yet
+}
+
+type Entry = {
+  date: string;
+  repo: string;
+  type: "fp" | "fix" | "already-fixed";
+  file_pattern: string;
+  category: string;
+};
+
+const entries: Entry[] = [];
+
+for (const file of historyFiles) {
+  const text = readFileSync(file, "utf-8");
+  for (const line of text.split("\n")) {
+    const parts = line.split("|").map((p) => p.trim());
+    if (parts.length !== 5) continue;
+    const [date, repo, type, file_pattern, category] = parts;
+    if (!date.match(/^\d{4}-\d{2}-\d{2}$/) || !repo || !type || !file_pattern || !category) continue;
+    if (repoFilter && repo !== repoFilter) continue;
+    if (type !== "fp" && type !== "fix" && type !== "already-fixed") continue;
+    entries.push({ date, repo, type: type as Entry["type"], file_pattern, category });
+  }
+}
+
+// Aggregate stats
+const byType: Record<string, number> = {};
+const byCategory: Record<string, number> = {};
+const repos = new Set<string>();
+const fpPatterns = new Map<string, { category: string; file_pattern: string; count: number; repos: Set<string> }>();
+
+for (const e of entries) {
+  byType[e.type] = (byType[e.type] ?? 0) + 1;
+  byCategory[e.category] = (byCategory[e.category] ?? 0) + 1;
+  repos.add(e.repo);
+
+  if (e.type === "fp") {
+    const key = `${e.category}::${e.file_pattern}`;
+    const existing = fpPatterns.get(key) ?? { category: e.category, file_pattern: e.file_pattern, count: 0, repos: new Set() };
+    existing.count++;
+    existing.repos.add(e.repo);
+    fpPatterns.set(key, existing);
+  }
+}
+
+const topFalsePositives = Array.from(fpPatterns.values())
+  .sort((a, b) => b.count - a.count)
+  .slice(0, 20)
+  .map(({ category, file_pattern, count, repos }) => ({
+    category,
+    file_pattern,
+    count,
+    repos: Array.from(repos),
+  }));
+
+const fpEntries = entries
+  .filter((e) => e.type === "fp")
+  .map((e) => ({ date: e.date, repo: e.repo, file_pattern: e.file_pattern, category: e.category, count: 1 }));
+
+const output = {
+  generated: new Date().toISOString(),
+  total_entries: entries.length,
+  repos: Array.from(repos),
+  by_type: byType,
+  by_category: byCategory,
+  false_positive_patterns: fpEntries,
+  top_false_positives: topFalsePositives,
+};
+
+if (statsOnly) {
+  console.log(`Greptile history: ${entries.length} entries across ${repos.size} repos`);
+  console.log(`By type: ${JSON.stringify(byType)}`);
+  console.log(`Top FP categories: ${topFalsePositives.slice(0, 5).map((p) => `${p.category}(${p.count})`).join(", ") || "none"}`);
+  process.exit(0);
+}
+
+const json = JSON.stringify(output, null, 2);
+
+if (outputPath) {
+  writeFileSync(outputPath, json, { mode: 0o600 });
+  console.log(`Exported ${entries.length} entries to ${outputPath}`);
+} else {
+  console.log(json);
+}

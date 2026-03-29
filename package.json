@@ -36,7 +36,9 @@
     "analytics": "bun run scripts/analytics.ts",
     "test:audit": "bun test test/audit-compliance.test.ts",
     "test:progress-server": "bun run scripts/check-intentra-contracts.ts && bun test mobile-app/server/smoke.test.ts mobile-app/server/guard.test.ts mobile-app/server/guard-perf.test.ts mobile-app/server/guard-command.test.ts mobile-app/server/guard-compound.test.ts mobile-app/server/guard-fuzz.test.ts mobile-app/fixtures/fixture-parse.test.ts mobile-app/shared/handoff-parse.test.ts",
-    "redact:skill-usage": "bun run scripts/redact-skill-usage-sample.ts"
+    "redact:skill-usage": "bun run scripts/redact-skill-usage-sample.ts",
+    "greptile:export": "bun run bin/gstack-greptile-export",
+    "greptile:stats": "bun run bin/gstack-greptile-export --stats"
   },
   "dependencies": {
     "diff": "^7.0.0",
