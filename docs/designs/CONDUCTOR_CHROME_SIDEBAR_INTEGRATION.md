@@ -1,5 +1,7 @@
 # Chrome Sidebar + Conductor: What We Need
 
+> **Status: Design draft — not shipped end-to-end in this repo.** Describes integration goals between external orchestration (Conductor) and the gstack Chrome extension. Shipped browse + extension behavior lives under [`browse/`](../../browse/) and [`connect-chrome/`](../../connect-chrome/).
+
 ## What we're building
 
 Right now when Claude is working in a Conductor workspace — editing files, running tests, browsing your app — you can only watch from Conductor's chat window. If Claude is doing QA on your website, you see tool calls scrolling by but you can't actually *see* the browser.
