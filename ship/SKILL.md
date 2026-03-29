@@ -1946,6 +1946,36 @@ This step is automatic — never skip it, never ask for confirmation.
 
 ---
 
+## Step 8.8: Append to ship log
+
+Write a structured entry to the project-level ship log so shipping velocity, coverage trends, and review findings are queryable across all branches:
+
+```bash
+mkdir -p .gstack
+```
+
+Append one JSON line to `.gstack/ship-log.jsonl` (create if absent):
+
+```bash
+echo '{"version":"VERSION","date":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","branch":"BRANCH","pr_url":"PR_URL","tests_passed":TESTS_PASSED,"coverage_pct":COVERAGE_PCT,"plan_items_done":PLAN_DONE,"plan_items_total":PLAN_TOTAL,"todos_completed":TODOS_COMPLETED,"review_status":"REVIEW_STATUS","greptile_findings":GREPTILE_FINDINGS}' >> .gstack/ship-log.jsonl
+```
+
+Substitute from earlier steps:
+- **VERSION**: from the VERSION file
+- **BRANCH**: current branch name
+- **PR_URL**: the PR/MR URL from Step 8 (empty string if unavailable)
+- **TESTS_PASSED**: `true` if Step 3 tests passed, `false` if they were pre-existing failures
+- **COVERAGE_PCT**: integer from Step 3.4 diagram, or -1 if undetermined
+- **PLAN_DONE** / **PLAN_TOTAL**: from Step 3.45 (0 if no plan file)
+- **TODOS_COMPLETED**: count of TODOS.md items marked complete in Step 5.5 (0 if none)
+- **REVIEW_STATUS**: `"clean"` if pre-landing review had no unresolved findings, `"issues_found"` otherwise
+- **GREPTILE_FINDINGS**: integer count of valid Greptile comments found in Step 3.5 (0 if none)
+
+If any substitution value is unavailable, use its default (empty string, -1, 0, or `false`).
+This step is automatic — never skip it, never ask for confirmation.
+
+---
+
 ## Important Rules
 
 - **Never skip tests.** If tests fail, stop.
