@@ -89,6 +89,9 @@ const serverMetrics = {
   jsonl_lines_ingested_total: 0,
   sse_subscriber_opens_total: 0,
   sse_subscriber_closes_total: 0,
+  hook_fires_total: 0,
+  guard_evaluations_total: 0,
+  intents_created_total: 0,
 };
 
 type SSEController = ReadableStreamDefaultController<Uint8Array>;
@@ -175,6 +178,7 @@ function readNewJsonlLines(): void {
         const entry = JSON.parse(line) as Record<string, unknown>;
         // gstack hook telemetry (careful/freeze) — Intentra normalizes into the shared feed
         if (entry.event === 'hook_fire') {
+          serverMetrics.hook_fires_total++;
           const pattern = typeof entry.pattern === 'string' ? entry.pattern : 'unknown';
           const hookSkill = typeof entry.skill === 'string' ? entry.skill : 'hook';
           addEvent({
@@ -630,6 +634,7 @@ const server = Bun.serve({
         culture_ref: body.culture_ref as string | undefined,
         plan: body.plan as Array<{ type: string; [k: string]: unknown }> | undefined,
       });
+      serverMetrics.intents_created_total++;
       // Emit SSE so mobile gets notified without polling
       addEvent({
         kind: 'progress',
@@ -695,8 +700,10 @@ const server = Bun.serve({
         body.debug === true || req.headers.get('x-intentra-guard-debug') === '1';
       const snap = readCultureSnapshot();
       const result = evaluateCommandGuard(body.command, snap.culture, { debug });
+      serverMetrics.guard_evaluations_total++;
       const ts = now();
       if (result.verdict === 'deny' || result.verdict === 'warn') {
+        serverMetrics.hook_fires_total++;
         appendIntentraGuardTelemetry({
           event: 'intentra_guard',
           verdict: result.verdict,
