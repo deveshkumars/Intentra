@@ -58,7 +58,7 @@ describe('evaluateCommandGuard', () => {
 
   test('debug mode emits per-rule trace', () => {
     const r = evaluateCommandGuard('ls', null, { debug: true });
-    expect(r.trace?.some((t) => t.phase === 'rule:rm_recursive')).toBe(true);
-    expect(r.trace?.some((t) => t.phase === 'match')).toBe(true);
+    expect(r.trace?.some((t) => t.phase.includes('rule:rm_recursive'))).toBe(true);
+    expect(r.trace?.some((t) => t.phase.includes('match'))).toBe(true);
   });
 });

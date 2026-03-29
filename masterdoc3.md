@@ -301,10 +301,10 @@ The guard engine evaluates commands against an ordered rule registry, resolving 
 **Module decomposition:**
 - `guard-types.ts` — shared interfaces: `CommandContext`, `GuardRule`, `GuardEvaluation`, `GuardVerdict` (`allow` | `warn` | `deny`)
 - `guard-command.ts` — `normalizeCommand()` (NFKC), `tokenizeShell()` (quote-aware, no command substitution), `buildCommandContext()`
-- `guard-policy.ts` — `GUARD_RULES` ordered registry (8 rules), `GUARD_ENGINE` metadata (`GUARD_ENGINE_VERSION = 2`), `findFirstMatchingRule()`, `listGuardRulePublicMeta()`
+- `guard-policy.ts` — `GUARD_RULES` ordered registry (8 rules), `GUARD_ENGINE` metadata (`GUARD_ENGINE_VERSION = 3`), `findFirstMatchingRule()`, `listGuardRulePublicMeta()`
 - `guard.ts` — facade: `evaluateCommandGuard(command, culture, options?)`, culture `risk_gates` resolution, risk scoring, telemetry write to `.intentra/telemetry/intentra-guard.jsonl`
 
-**8 registered rules (`GUARD_ENGINE_VERSION = 2`):**
+**8 registered rules (`GUARD_ENGINE_VERSION = 3`):**
 
 | Rule ID | Category | Base Risk | Description |
 |---------|----------|-----------|-------------|

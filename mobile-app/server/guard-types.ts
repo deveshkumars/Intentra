@@ -56,4 +56,10 @@ export interface GuardEvaluation {
   culture_warnings?: string[];
   /** Ordered pipeline steps (debug only) */
   trace?: Array<{ phase: string; detail: string }>;
+  /** Set when input was split on `&&` / `;` outside quotes (see guard-segment) */
+  compound?: {
+    segment_count: number;
+    /** 1-based index of segment that drove warn/deny; null if all allow */
+    decisive_segment_index: number | null;
+  };
 }

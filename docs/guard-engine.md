@@ -31,7 +31,11 @@ A shell-aware tokenizer splits the normalized string into tokens, respecting:
 
 This is intentionally not a full shell parser — no command substitution, no variable expansion. The goal is accurate token boundaries for pattern matching, not shell execution.
 
-**Implementation:** `tokenize()` in [`guard-command.ts`](../mobile-app/server/guard-command.ts).
+**Implementation:** `tokenizeShell()` in [`guard-command.ts`](../mobile-app/server/guard-command.ts).
+
+### Stage 2b: Compound segmentation (engine v3+)
+
+Before building `CommandContext`, the engine may split the trimmed command on `&&` and `;` **outside** quotes (`splitGuardSegments` in [`guard-segment.ts`](../mobile-app/server/guard-segment.ts)). Each segment is evaluated independently; results are aggregated (deny > warn > allow, max `risk_score`). See [ADR-002](adr/002-guard-segmentation-limits.md).
 
 ### Stage 3: Rule matching
 
@@ -61,7 +65,7 @@ Each rule has:
 | `cweHints` | `string[]?` | Documentation-only CWE references |
 | `match` | function | Pattern matcher against `CommandContext` |
 
-### Current rules (engine v2)
+### Current rules (engine v3)
 
 | Rule ID | Category | Risk | Default | What it catches |
 |---------|----------|------|---------|----------------|

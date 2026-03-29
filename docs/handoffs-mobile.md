@@ -6,7 +6,7 @@ The Expo app’s **Handoffs** tab reads the same append-only Markdown that [`mas
 
 1. Progress server: **`GET /intentra/files`** returns each file’s `name` and `content`.
 2. **HandoffScreen** keeps `HANDOFFS.md` / `PROMPTS.md` / `PLANS.md` and splits entries on `\n---\n` (same convention as `GET /intentra/latest`).
-3. Parsing logic lives in **[`mobile-app/app/src/handoff-parse.ts`](../mobile-app/app/src/handoff-parse.ts)** (pure TypeScript, covered by **`handoff-parse.test.ts`**).
+3. Parsing logic lives in **[`mobile-app/shared/handoff-parse.ts`](../mobile-app/shared/handoff-parse.ts)** (pure TypeScript, covered by [`handoff-parse.test.ts`](../mobile-app/shared/handoff-parse.test.ts)). The server exposes **`GET /intentra/handoffs/summary`** using the same module.
 
 ## UX
 
@@ -30,7 +30,7 @@ The Expo app’s **Handoffs** tab reads the same append-only Markdown that [`mas
 4. Run tests:
 
    ```bash
-   bun test mobile-app/app/src/handoff-parse.test.ts
+   bun test mobile-app/shared/handoff-parse.test.ts
    bun run test:progress-server   # includes smoke: GET /intentra/files + parseEntries(HANDOFFS)
    ```
 

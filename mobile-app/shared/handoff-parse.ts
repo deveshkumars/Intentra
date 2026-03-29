@@ -1,6 +1,7 @@
 /**
  * Pure parsing for `.intentra` HANDOFFS / PROMPTS / PLANS markdown.
- * Shared by HandoffScreen and unit tests (no React Native dependency).
+ * Shared by Expo HandoffScreen, Bun server (`/intentra/handoffs/summary`), and tests.
+ * No React / Node-only APIs — safe for any TS consumer.
  */
 
 export interface HandoffEntry {
@@ -8,6 +9,13 @@ export interface HandoffEntry {
   date: string | null;
   author: string | null;
   summary: string;
+}
+
+const HANDOFF_MARKDOWN_FILES = ['HANDOFFS.md', 'PROMPTS.md', 'PLANS.md'] as const;
+export type HandoffMarkdownName = (typeof HANDOFF_MARKDOWN_FILES)[number];
+
+export function isHandoffMarkdownFile(name: string): name is HandoffMarkdownName {
+  return (HANDOFF_MARKDOWN_FILES as readonly string[]).includes(name);
 }
 
 /** Parse a date/author line like "**2026-03-29 — Gordon Beckler**" from the first lines */
@@ -67,7 +75,7 @@ export function formatDate(dateStr: string): string {
   }
 }
 
-/** Count `---`-separated blocks (matches HandoffScreen badge logic) */
+/** Count `---`-separated blocks */
 export function countHandoffBlocks(content: string): number {
   if (!content.trim()) return 0;
   return content.split(/\n---\n/).filter(b => b.trim()).length;

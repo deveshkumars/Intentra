@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl,
 } from 'react-native';
-import { parseEntries, formatDate, countHandoffBlocks } from '../handoff-parse';
+import { parseEntries, formatDate, countHandoffBlocks } from '../../../shared/handoff-parse';
 
 interface Props {
   serverUrl: string | null;

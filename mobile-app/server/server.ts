@@ -23,6 +23,7 @@ import {
   evaluateCommandGuard,
   listGuardRulePublicMeta,
 } from './guard';
+import { countHandoffBlocks, parseEntries } from '../shared/handoff-parse.ts';
 import { GUARD_ENGINE, GUARD_RULE_COUNT, GUARD_RULE_IDS } from './guard-policy';
 
 // ─── CircularBuffer (copied verbatim from browse/src/buffers.ts) ───────────
@@ -542,6 +543,35 @@ const server = Bun.serve({
         content: fs.readFileSync(path.join(dir, name), 'utf-8'),
       }));
       return new Response(JSON.stringify({ files }), {
+        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    /**
+     * GET /intentra/handoffs/summary — parsed HANDOFFS.md entries (same parser as mobile Handoffs tab).
+     * Uses shared `parseEntries` / `countHandoffBlocks` from `mobile-app/shared/handoff-parse.ts`.
+     */
+    if (req.method === 'GET' && url.pathname === '/intentra/handoffs/summary') {
+      const handoffsPath = path.join(
+        process.env.INTENTRA_REPO_ROOT ?? process.cwd(), '.intentra', 'HANDOFFS.md'
+      );
+      if (!fs.existsSync(handoffsPath)) {
+        return new Response(JSON.stringify({ entries: [], count: 0, block_count: 0 }), {
+          status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+      const raw = fs.readFileSync(handoffsPath, 'utf-8');
+      const entries = parseEntries(raw);
+      const slim = entries.map(e => ({
+        date: e.date,
+        author: e.author,
+        summary: e.summary,
+      }));
+      return new Response(JSON.stringify({
+        count: entries.length,
+        block_count: countHandoffBlocks(raw),
+        entries: slim,
+      }), {
         status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }

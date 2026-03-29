@@ -203,7 +203,7 @@ Dedicated visibility for append-only handoff Markdown (aligned with masterdoc �
 - **Source:** `GET /intentra/files` — same `.intentra/` directory as the Intent tab, but focused on the three narrative files.
 - **Chips:** Switch between Handoffs, Prompts, and Plans; badge shows `---`-separated entry count per file.
 - **Cards:** Newest entry first; **LATEST** on the top card; tap to expand full body text.
-- **Parsing:** Implemented in [`app/src/handoff-parse.ts`](app/src/handoff-parse.ts) (unit-tested — see [`TESTING.md`](TESTING.md)).
+- **Parsing:** Implemented in [`shared/handoff-parse.ts`](shared/handoff-parse.ts) (unit-tested — see [`TESTING.md`](TESTING.md)). Optional API: `GET /intentra/handoffs/summary` (same parser on the server).
 
 Set **`INTENTRA_REPO_ROOT`** to your git repo root when running the server so `.intentra/` resolves to the project you care about.
 
@@ -355,7 +355,7 @@ Events from the JSONL watcher include **`ingest_lane`: `intentra_jsonl_bridge`**
 ### Docker (optional)
 
 ```bash
-docker build -f mobile-app/server/Dockerfile -t intentra-progress mobile-app/server
+docker build -f mobile-app/server/Dockerfile -t intentra-progress .
 docker run --rm -p 7891:7891 \
   -v "$HOME/.gstack:/data/gstack" \
   -v "$(pwd):/repo" \
