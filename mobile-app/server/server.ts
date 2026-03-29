@@ -159,10 +159,13 @@ function now(): string {
 }
 
 function addEvent(partial: Omit<ProgressEvent, 'id' | 'ts'> & { ts?: string }): ProgressEvent {
+  // Destructure ts out before spreading so `ts: undefined` in partial
+  // cannot override the computed timestamp.
+  const { ts: partialTs, ...rest } = partial;
   const event: ProgressEvent = {
     id: makeId(),
-    ts: partial.ts ?? now(),
-    ...partial,
+    ts: partialTs ?? now(),
+    ...rest,
   };
   eventBuffer.push(event);
   broadcast(event);
