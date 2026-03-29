@@ -3,14 +3,15 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { setServerUrl } from '../storage';
+import { setServerUrl, setAuthToken } from '../storage';
 
 interface Props {
-  onConnected: (url: string) => void;
+  onConnected: (url: string, token: string | null) => void;
 }
 
 export function SetupScreen({ onConnected }: Props) {
   const [url, setUrl] = useState('');
+  const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +33,9 @@ export function SetupScreen({ onConnected }: Props) {
       clearTimeout(timer);
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       await setServerUrl(trimmed);
-      onConnected(trimmed);
+      const resolvedToken = token.trim() || null;
+      await setAuthToken(token.trim());
+      onConnected(trimmed, resolvedToken);
     } catch (err: unknown) {
       clearTimeout(timer);
       const msg = err instanceof Error ? err.message : String(err);
@@ -62,6 +65,18 @@ export function SetupScreen({ onConnected }: Props) {
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="url"
+          returnKeyType="next"
+        />
+
+        <TextInput
+          style={styles.input}
+          value={token}
+          onChangeText={setToken}
+          placeholder="Bearer token (optional, if INTENTRA_TOKEN is set)"
+          placeholderTextColor="#475569"
+          autoCapitalize="none"
+          autoCorrect={false}
+          secureTextEntry
           returnKeyType="go"
           onSubmitEditing={handleConnect}
         />

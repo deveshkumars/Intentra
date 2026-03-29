@@ -28,7 +28,16 @@ interface UseEventStreamResult {
   reconnect: () => void;
 }
 
-export function useEventStream(serverUrl: string | null): UseEventStreamResult {
+function makeHeaders(authToken: string | null): Record<string, string> {
+  const h: Record<string, string> = { ...NGROK_HEADERS };
+  if (authToken) h['Authorization'] = `Bearer ${authToken}`;
+  return h;
+}
+
+export function useEventStream(
+  serverUrl: string | null,
+  authToken: string | null = null,
+): UseEventStreamResult {
   const [events, setEvents] = useState<ProgressEvent[]>([]);
   const [trackedAgents, setTrackedAgents] = useState<TrackedAgent[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
@@ -38,6 +47,9 @@ export function useEventStream(serverUrl: string | null): UseEventStreamResult {
   const backoffRef = useRef(1000);
   const seenIds = useRef(new Set<string>());
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track current token for backfill requests
+  const authTokenRef = useRef(authToken);
+  authTokenRef.current = authToken;
 
   const addEvents = useCallback((incoming: ProgressEvent[]) => {
     const fresh = incoming.filter(e => !seenIds.current.has(e.id));
@@ -60,9 +72,10 @@ export function useEventStream(serverUrl: string | null): UseEventStreamResult {
 
   const backfill = useCallback(async (url: string) => {
     try {
+      const headers = makeHeaders(authTokenRef.current);
       const [eventsRes, agentsRes] = await Promise.all([
-        fetch(`${url}/events/history?limit=200`, { headers: NGROK_HEADERS }),
-        fetch(`${url}/agents`, { headers: NGROK_HEADERS }),
+        fetch(`${url}/events/history?limit=200`, { headers }),
+        fetch(`${url}/agents`, { headers }),
       ]);
       if (eventsRes.ok) {
         const data = await eventsRes.json() as { events: ProgressEvent[] };
@@ -83,9 +96,11 @@ export function useEventStream(serverUrl: string | null): UseEventStreamResult {
     setStatus('connecting');
     esRef.current?.close();
 
-    const es = new EventSource<'progress' | 'agent_update' | 'agent_delete'>(`${serverUrl}/events/stream`, {
-      headers: NGROK_HEADERS,
-    });
+    const headers = makeHeaders(authTokenRef.current);
+    const es = new EventSource<'progress' | 'agent_update' | 'agent_delete'>(
+      `${serverUrl}/events/stream`,
+      { headers },
+    );
     esRef.current = es as unknown as EventSource;
 
     es.addEventListener('progress', (e: CustomEvent<'progress'>) => {
