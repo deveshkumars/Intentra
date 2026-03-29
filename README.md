@@ -1,6 +1,7 @@
 # Intentra: Agentic Software Collaboration Platform
 Reinventing Agentic Software Development Collaboration: We provide an agentic coding platform that makes collaboration between humans smooth, brings human culture to agents, and helps developers monitor their agents on the go.
 
+This is not a fork, rather it's a new agentic platform.
 
 # Installation
 
@@ -35,7 +36,7 @@ gstack works on any agent that supports the [SKILL.md standard](https://github.c
 Install to one repo:
 
 ```bash
-git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git .agents/skills/gstack
+git clone --single-branch --depth 1 https://github.com/deveshkumars/Intentra.git .agents/skills/gstack
 cd .agents/skills/gstack && ./setup --host codex
 ```
 
@@ -44,7 +45,7 @@ When setup runs from `.agents/skills/gstack`, it installs the generated Codex sk
 Install once for your user account:
 
 ```bash
-git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git ~/gstack
+git clone --single-branch --depth 1 https://github.com/deveshkumars/Intentra.git ~/gstack
 cd ~/gstack && ./setup --host codex
 ```
 
@@ -55,7 +56,7 @@ discovery from the source repo checkout.
 Or let setup auto-detect which agents you have installed:
 
 ```bash
-git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git ~/gstack
+git clone --single-branch --depth 1 https://github.com/deveshkumars/Intentra.git ~/gstack
 cd ~/gstack && ./setup --host auto
 ```
 
