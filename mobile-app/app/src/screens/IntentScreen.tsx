@@ -16,6 +16,7 @@ interface IntentArtifact {
 
 interface Props {
   serverUrl: string | null;
+  authToken?: string | null;
 }
 
 interface CulturePayload {
@@ -26,7 +27,7 @@ interface CulturePayload {
   note?: string;
 }
 
-export function IntentScreen({ serverUrl }: Props) {
+export function IntentScreen({ serverUrl, authToken }: Props) {
   const [intents, setIntents] = useState<IntentArtifact[]>([]);
   const [culture, setCulture] = useState<CulturePayload | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -75,12 +76,14 @@ export function IntentScreen({ serverUrl }: Props) {
   ) => {
     if (!serverUrl) return;
     try {
+      const patchHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      };
+      if (authToken) patchHeaders['Authorization'] = `Bearer ${authToken}`;
       const r = await fetch(`${serverUrl}/intentra/intent`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
+        headers: patchHeaders,
         body: JSON.stringify({ intent_id: intent.intent_id, outcome }),
       });
       const body = await r.text();

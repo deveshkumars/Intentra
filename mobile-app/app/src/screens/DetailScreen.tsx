@@ -1,9 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { TrackedAgent } from '../types';
+import {
+  View, Text, StyleSheet, TouchableOpacity,
+  ScrollView, FlatList,
+} from 'react-native';
+import { TrackedAgent, ProgressEvent } from '../types';
+import { EventRow } from '../components/EventRow';
 
 interface Props {
   agent: TrackedAgent;
+  events: ProgressEvent[];
   onBack: () => void;
 }
 
@@ -27,8 +32,27 @@ const STATUS_COLOR = {
   error: '#f87171',
 };
 
-export function DetailScreen({ agent, onBack }: Props) {
+/** Filter events relevant to this agent.
+ * Priority: session_id match → time-window fallback.
+ * Time window: events between created_at and (updated_at + 5s buffer).
+ */
+function filterAgentEvents(agent: TrackedAgent, events: ProgressEvent[]): ProgressEvent[] {
+  if (agent.session_id) {
+    const bySession = events.filter(e => e.session_id === agent.session_id);
+    if (bySession.length > 0) return bySession;
+  }
+  // Time-window fallback: events that occurred while the agent was running
+  const start = new Date(agent.created_at).getTime();
+  const end = new Date(agent.updated_at).getTime() + 5_000;
+  return events.filter(e => {
+    const t = new Date(e.ts).getTime();
+    return t >= start && t <= end;
+  });
+}
+
+export function DetailScreen({ agent, events, onBack }: Props) {
   const statusColor = STATUS_COLOR[agent.status];
+  const agentEvents = filterAgentEvents(agent, events);
 
   return (
     <View style={styles.container}>
@@ -71,6 +95,12 @@ export function DetailScreen({ agent, onBack }: Props) {
             <Text style={styles.metaKey}>Agent ID</Text>
             <Text style={styles.metaVal}>{agent.id}</Text>
           </View>
+          {agent.session_id && (
+            <View style={styles.metaRow}>
+              <Text style={styles.metaKey}>Session</Text>
+              <Text style={styles.metaVal}>{agent.session_id}</Text>
+            </View>
+          )}
           <View style={styles.metaRow}>
             <Text style={styles.metaKey}>Started</Text>
             <Text style={styles.metaVal}>{absoluteTime(agent.created_at)}</Text>
@@ -83,6 +113,37 @@ export function DetailScreen({ agent, onBack }: Props) {
             <View style={styles.metaRow}>
               <Text style={styles.metaKey}>Duration</Text>
               <Text style={styles.metaVal}>{duration(agent.created_at, agent.updated_at)}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Event timeline */}
+        <View style={styles.timelineSection}>
+          <Text style={styles.timelineLabel}>
+            Event Timeline
+            {agentEvents.length > 0 && (
+              <Text style={styles.timelineCount}> · {agentEvents.length}</Text>
+            )}
+          </Text>
+
+          {agentEvents.length === 0 ? (
+            <View style={styles.noEvents}>
+              <Text style={styles.noEventsText}>
+                {agent.session_id
+                  ? 'No events for this session yet'
+                  : 'No events in this time window'}
+              </Text>
+              {!agent.session_id && (
+                <Text style={styles.noEventsHint}>
+                  Pass session_id when creating agent to link events precisely
+                </Text>
+              )}
+            </View>
+          ) : (
+            <View style={styles.eventList}>
+              {agentEvents.map(event => (
+                <EventRow key={event.id} event={event} />
+              ))}
             </View>
           )}
         </View>
@@ -145,7 +206,33 @@ const styles = StyleSheet.create({
   },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between' },
   metaKey: { color: '#475569', fontSize: 12 },
-  metaVal: { color: '#94a3b8', fontSize: 12, fontFamily: 'monospace' },
+  metaVal: { color: '#94a3b8', fontSize: 12, fontFamily: 'monospace', flex: 1, textAlign: 'right' },
+  timelineSection: { gap: 8 },
+  timelineLabel: {
+    color: '#475569',
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  timelineCount: {
+    color: '#4ade80',
+    fontWeight: '700',
+  },
+  noEvents: {
+    backgroundColor: '#1e293b',
+    borderRadius: 10,
+    padding: 16,
+    gap: 6,
+    alignItems: 'center',
+  },
+  noEventsText: { color: '#475569', fontSize: 13 },
+  noEventsHint: { color: '#334155', fontSize: 11, textAlign: 'center', lineHeight: 16 },
+  eventList: {
+    backgroundColor: '#1e293b',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
   hint: {
     backgroundColor: '#0f1923',
     borderRadius: 10,
