@@ -1,11 +1,11 @@
 ---
 name: handoff
 preamble-tier: 2
-version: 0.1.0
+version: 0.2.0
 description: |
-  Stateful Markdown handoffs — English as code. Writes a single Markdown file
-  that captures prompt, plan, and handoff state so that handoffs between humans
-  and agents are lossless. Along with code, you share the prompts + plans + handoff docs.
+  Stateful Markdown handoffs — English as code. Appends to two files:
+  PROMPTS.md (exact prompts, verbatim) and HANDOFFS.md (prompt + plan + state).
+  Along with code, you share the prompts + plans + handoff docs.
   Use when asked to "write a handoff", "save my progress", "hand off to the next
   agent", "create a resume point", or "snapshot this session".
   Proactively suggest when a session is ending, work is blocked, or a decision
@@ -345,11 +345,13 @@ plan's living status.
 
 # Stateful Markdown Handoff — English as Code
 
-You are running the `/handoff` skill. Your job: capture the current session into
-a single Markdown file — **prompt, plan, and state** — so the handoff is lossless.
+You are running the `/handoff` skill. Your job: capture the current session by
+appending to two files:
 
-The handoff file is a program written in English. Along with code, you share the
-prompts + plans + handoff docs. That's the whole idea.
+- **`.intentra/PROMPTS.md`** — just the prompts, verbatim
+- **`.intentra/HANDOFFS.md`** — full session snapshot (prompt + plan + state)
+
+Along with code, you share the prompts + plans + handoff docs. That's the whole idea.
 
 ---
 
@@ -357,7 +359,6 @@ prompts + plans + handoff docs. That's the whole idea.
 
 - `/handoff` or `/handoff write` → **Write mode** (default)
 - `/handoff resume` → **Resume mode**
-- `/handoff list` → **List mode**
 - `/handoff check` → **Check mode**
 
 ---
@@ -394,12 +395,6 @@ If that fails, fall back:
 
 ```bash
 git branch -a | grep -E '(main|master)' | head -1 | sed 's/.*\///'
-```
-
-Commits ahead/behind:
-
-```bash
-git rev-list --left-right --count <base>...HEAD 2>/dev/null || echo "0	0"
 ```
 
 ### Step 1: Gather the exact prompt
@@ -439,7 +434,7 @@ Use AskUserQuestion:
 git diff --stat
 ```
 
-2. Read the full branch diff for the "Plan / What Was Done" section:
+2. Read the full branch diff for the plan section:
 
 ```bash
 git diff <base>...HEAD --stat
@@ -449,131 +444,101 @@ git diff <base>...HEAD --stat
 git log <base>..HEAD --oneline
 ```
 
-3. Check for culture context:
+### Step 3: Ensure `.intentra/` exists
 
 ```bash
-cat ~/.gstack/culture.json 2>/dev/null | head -20
+mkdir -p .intentra
 ```
 
-### Step 3: Write the handoff file
+If `PROMPTS.md` doesn't exist, create it with this header:
 
-Generate a filename:
+```markdown
+# Prompts
 
-```bash
-date -u +%Y-%m-%d
+Every prompt that drove this project, verbatim. Newest at the bottom.
 ```
 
-Write to `.intentra/handoffs/<date>-<slug>.md` where `<slug>` is a 2-4 word
-kebab-case description of the task (e.g., `2026-03-28-bearer-token-auth.md`).
+If `HANDOFFS.md` doesn't exist, create it with this header:
 
-Create the directory if it doesn't exist:
+```markdown
+# Handoffs
 
-```bash
-mkdir -p .intentra/handoffs
+Session snapshots — prompt, plan, and state. Newest at the bottom. Each `---` separator marks a new handoff entry.
 ```
 
-The file format is below. Write every section using real data gathered in
-Steps 0-2. **No section should contain guesses — verify everything with git.**
+### Step 4: Append to PROMPTS.md
+
+Append the exact prompt(s) to the bottom of `.intentra/PROMPTS.md`. Use the Edit
+tool to append after the last line of the file. Format:
+
+```markdown
 
 ---
 
-### Handoff file format
+**<YYYY-MM-DD> — <Author>**
+
+> <exact prompt, verbatim>
+```
+
+If there were multiple prompts in this session, add each one as a separate
+blockquote under the same date/author header, separated by blank lines.
+
+### Step 5: Append to HANDOFFS.md
+
+Append a new handoff entry to the bottom of `.intentra/HANDOFFS.md`. Use the Edit
+tool to append after the last line of the file. Format:
 
 ```markdown
-# <Brief title of the work>
+
+---
+
+## <Brief title of the work>
 
 **Author:** <name>
 **Date:** <YYYY-MM-DD>
-**Branch:** `<branch>` (<N> ahead of `<base>`)
+**Branch:** `<branch>`
 **Status:** <done | blocked | needs-decision | in-progress>
 
----
+### Prompt
 
-## Prompt
+> <exact prompt, verbatim — same text as PROMPTS.md>
 
-> Exact words. Copy-paste the literal prompt that started this work.
-> This is not a summary. This is the actual text the human typed.
+### Plan
 
-<The exact prompt, verbatim. If multiple prompts led to this work,
-include all of them in order, separated by blank lines.>
+1. <step>
+2. <step>
+3. <step>
 
-## Plan
-
-<How the work was (or will be) done. Write this as a numbered list of steps
-with enough detail that a reader understands the approach.
-
-If the work is done, this is what WAS done.
-If the work is in progress, this is what IS being done.
-If the work is blocked, this is what was PLANNED.>
-
-1. ...
-2. ...
-3. ...
-
-## State
-
-<The current verifiable state of the repository.>
+### State
 
 **Last commit:** `<hash>` <message>
 **Uncommitted changes:** <list or "none">
 **Tests:** <passing / failing / not run>
 
-Verify:
-​```bash
-git log --oneline -3
-git status --short
-​```
-
-## Decisions
-
-<Key choices made and why. Skip if none.>
+### Decisions
 
 - **<Decision>:** <Choice>. <One-line reason.>
-- ...
 
-## Risks
+### Next actions
 
-<Anything that could go wrong or was deferred. Skip if none.>
-
-- ...
-
-## Blocked on
-
-<Required if status is blocked or needs-decision. Skip otherwise.
-Be specific — what exactly is needed to unblock.>
-
-## Next actions
-
-<Required if status is NOT done. Ordered, specific, executable.
-Each item should be concrete enough for a cold-start agent to run.>
-
-1. ...
-2. ...
-3. ...
-
-## Resume instructions
-
-To pick up this work:
-
-1. Read this file.
-2. Run the verify commands in "State" to confirm nothing has diverged.
-3. Start from "Next actions" step 1.
-4. If the state has diverged, describe what changed before proceeding.
+1. <specific, executable step>
+2. <step>
+3. <step>
 ```
 
----
+**Omit empty subsections.** If there are no decisions, skip "Decisions." If status
+is done, skip "Next actions." If status is blocked, add a "Blocked on" subsection.
 
-### Step 4: Output
-
-After writing the file, output:
+### Step 6: Output
 
 ```
-Handoff written: .intentra/handoffs/<filename>.md
-Status: <status>
-Branch: <branch> (<N> ahead of <base>)
+Handoff appended:
+  PROMPTS.md:  +1 entry
+  HANDOFFS.md: +1 entry
+  Status: <status>
+  Branch: <branch>
 
-To resume:  /handoff resume
-To commit:  git add .intentra/ && git commit -m "handoff: <brief description>"
+To commit: git add .intentra/ && git commit -m "handoff: <brief description>"
 ```
 
 ### Ground-truth rule
@@ -586,24 +551,25 @@ read the output, then write the claim. Never guess.
 
 ## Resume mode
 
-### Step R1: Find the latest handoff
+### Step R1: Read the latest handoff
+
+Read `.intentra/HANDOFFS.md`. The latest entry is at the bottom — find the last
+`---` separator and read everything after it.
+
+If the file doesn't exist: "No handoffs found. Run `/handoff` to create one."
+
+### Step R2: Verify state
+
+Run the verify commands implicit in the "State" subsection:
 
 ```bash
-ls -1t .intentra/handoffs/*.md 2>/dev/null | head -1
+git branch --show-current
+git log --oneline -3
+git status --short
 ```
 
-If none exist: "No handoff files found. Run `/handoff` to create one."
-
-### Step R2: Read and parse
-
-Read the full handoff file.
-
-### Step R3: Verify state
-
-Run the verify commands from the "State" section. Compare:
-- Is the branch the same?
-- Is HEAD the same or ahead?
-- Any unexpected changes?
+Compare against what the handoff says. Is the branch the same? Is HEAD the same
+or ahead? Any unexpected changes?
 
 **If it matches:** "State verified. Resuming from handoff."
 
@@ -612,9 +578,9 @@ Run the verify commands from the "State" section. Compare:
 - B) Show me the differences
 - C) Abort
 
-### Step R4: Execute
+### Step R3: Execute
 
-Present the "Next actions" list. AskUserQuestion:
+Present the "Next actions" list from the handoff. AskUserQuestion:
 - Header: "Resume"
 - Question: "Ready to execute these actions?"
 - Options:
@@ -624,25 +590,13 @@ Present the "Next actions" list. AskUserQuestion:
 
 ---
 
-## List mode
-
-```bash
-ls -1t .intentra/handoffs/*.md 2>/dev/null
-```
-
-For each file, read the first 6 lines and extract title, date, branch, status.
-Output a table.
-
-If none: "No handoff files found."
-
----
-
 ## Check mode
 
-Find the latest handoff. Run its verify commands. Output pass/fail:
+Read the latest entry from `.intentra/HANDOFFS.md`. Run state verification.
+Output pass/fail:
 
 ```
-Handoff check: <filename>
+Handoff check (latest entry):
   Branch:  ✓ matches
   HEAD:    ✓ matches
   Changes: ✗ 2 new unstaged files
@@ -657,11 +611,12 @@ Verdict: DIVERGED — run /handoff to write a fresh one.
   typed. Not a summary. Not a paraphrase. The literal prompt. If there were
   multiple prompts, include all of them. This is the most important section —
   it's the raw intent, preserved verbatim.
+- **Append only.** Never edit old entries. Add new entries at the bottom.
+  Old entries document what was true at a point in time.
 - **Ground truth.** Verify every claim with a real command. Never guess.
-- **No empty sections.** Omit sections that have no content.
+- **No empty sections.** Omit subsections that have no content.
 - **Executable Next Actions.** Each step must be specific enough for a cold-start
   agent. Bad: "Fix the tests." Good: "Run `bun test`. The failure is in
   `test/auth.test.ts:42` — the middleware isn't applied to POST /agents."
-- **One file per snapshot.** Never edit an existing handoff. Write a new one.
-- **All Markdown, all the time.** No JSON, no YAML files, no schemas. The
-  handoff document IS the format. Human-readable is machine-readable.
+- **All Markdown, all the time.** No JSON, no YAML, no schemas. Two `.md` files.
+  Human-readable is machine-readable.
