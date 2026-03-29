@@ -429,6 +429,43 @@ const server = Bun.serve({
       });
     }
 
+    // GET /intentra/files — list all .intentra/ files with contents
+    if (req.method === 'GET' && url.pathname === '/intentra/files') {
+      const dir = path.join(process.env.INTENTRA_REPO_ROOT ?? process.cwd(), '.intentra');
+      if (!fs.existsSync(dir)) {
+        return new Response(JSON.stringify({ files: [] }), {
+          status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+      const entries = fs.readdirSync(dir).filter(f => !f.startsWith('.')).sort();
+      const files = entries.map(name => ({
+        name,
+        content: fs.readFileSync(path.join(dir, name), 'utf-8'),
+      }));
+      return new Response(JSON.stringify({ files }), {
+        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // GET /intentra/latest — latest handoff entry from HANDOFFS.md
+    if (req.method === 'GET' && url.pathname === '/intentra/latest') {
+      const handoffsPath = path.join(
+        process.env.INTENTRA_REPO_ROOT ?? process.cwd(), '.intentra', 'HANDOFFS.md'
+      );
+      if (!fs.existsSync(handoffsPath)) {
+        return new Response(JSON.stringify({ latest: null }), {
+          status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+      const raw = fs.readFileSync(handoffsPath, 'utf-8');
+      // Entries are separated by "\n---\n". Last non-empty block is the latest.
+      const blocks = raw.split(/\n---\n/).map(b => b.trim()).filter(Boolean);
+      const latest = blocks.length > 0 ? blocks[blocks.length - 1] : null;
+      return new Response(JSON.stringify({ latest }), {
+        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
     // POST /intentra/intent — create a new intent artifact
     if (req.method === 'POST' && url.pathname === '/intentra/intent') {
       let body: Record<string, unknown> = {};
