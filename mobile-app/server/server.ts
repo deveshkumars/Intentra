@@ -22,6 +22,7 @@ import {
   appendIntentraGuardTelemetry,
   evaluateCommandGuard,
   listGuardRulePublicMeta,
+  intentraRepoRoot,
 } from './guard';
 import { countHandoffBlocks, parseEntries } from '../shared/handoff-parse.ts';
 import { GUARD_ENGINE, GUARD_RULE_COUNT, GUARD_RULE_IDS } from './guard-policy';
@@ -717,6 +718,42 @@ const server = Bun.serve({
         });
       }
       return jsonOk(result, corsHeaders);
+    }
+
+    /**
+     * GET /intentra/guard/telemetry?limit=N — recent guard evaluations from
+     * .intentra/telemetry/intentra-guard.jsonl. Default limit 50, max 500.
+     * Returns: { entries: GuardTelemetryEntry[], stats: { total, deny, warn, allow, by_pattern } }
+     */
+    if (req.method === 'GET' && url.pathname === '/intentra/guard/telemetry') {
+      const limitParam = parseInt(url.searchParams.get('limit') ?? '50', 10);
+      const limit = Math.min(Math.max(1, isNaN(limitParam) ? 50 : limitParam), 500);
+      const telemetryFile = path.join(
+        intentraRepoRoot(),
+        '.intentra', 'telemetry', 'intentra-guard.jsonl',
+      );
+      const entries: unknown[] = [];
+      try {
+        const raw = fs.readFileSync(telemetryFile, 'utf-8');
+        for (const line of raw.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try { entries.push(JSON.parse(trimmed)); } catch { /* skip malformed */ }
+        }
+      } catch {
+        /* file doesn't exist yet — return empty */
+      }
+      const recent = entries.slice(-limit);
+      // Aggregate stats across all entries (not just the returned slice)
+      const stats = { total: entries.length, deny: 0, warn: 0, allow: 0, by_pattern: {} as Record<string, number> };
+      for (const e of entries) {
+        const entry = e as { verdict?: string; pattern?: string };
+        if (entry.verdict === 'deny') stats.deny++;
+        else if (entry.verdict === 'warn') stats.warn++;
+        else stats.allow++;
+        if (entry.pattern) stats.by_pattern[entry.pattern] = (stats.by_pattern[entry.pattern] ?? 0) + 1;
+      }
+      return jsonOk({ entries: recent, stats }, corsHeaders);
     }
 
     /** GET /intentra/culture — re-serve gstack's culture.json for mobile audit and intent linkage (read-only). */
