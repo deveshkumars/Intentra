@@ -25,53 +25,7 @@ import {
 } from './guard';
 import { countHandoffBlocks, parseEntries } from '../shared/handoff-parse.ts';
 import { GUARD_ENGINE, GUARD_RULE_COUNT, GUARD_RULE_IDS } from './guard-policy';
-
-// ─── CircularBuffer (copied verbatim from browse/src/buffers.ts) ───────────
-
-class CircularBuffer<T> {
-  private buffer: (T | undefined)[];
-  private head: number = 0;
-  private _size: number = 0;
-  private _totalAdded: number = 0;
-  readonly capacity: number;
-
-  constructor(capacity: number) {
-    this.capacity = capacity;
-    this.buffer = new Array(capacity);
-  }
-
-  push(entry: T): void {
-    const index = (this.head + this._size) % this.capacity;
-    this.buffer[index] = entry;
-    if (this._size < this.capacity) {
-      this._size++;
-    } else {
-      this.head = (this.head + 1) % this.capacity;
-    }
-    this._totalAdded++;
-  }
-
-  toArray(): T[] {
-    const result: T[] = [];
-    for (let i = 0; i < this._size; i++) {
-      result.push(this.buffer[(this.head + i) % this.capacity] as T);
-    }
-    return result;
-  }
-
-  last(n: number): T[] {
-    const count = Math.min(n, this._size);
-    const result: T[] = [];
-    const start = (this.head + this._size - count) % this.capacity;
-    for (let i = 0; i < count; i++) {
-      result.push(this.buffer[(start + i) % this.capacity] as T);
-    }
-    return result;
-  }
-
-  get length(): number { return this._size; }
-  get totalAdded(): number { return this._totalAdded; }
-}
+import { CircularBuffer } from '../../browse/src/buffers.ts';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
