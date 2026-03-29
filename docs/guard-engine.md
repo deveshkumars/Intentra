@@ -4,6 +4,15 @@ The guard engine intercepts destructive shell commands before they execute, usin
 
 **Related:** [Documentation hub](README.md) · [Guard rules reference](guard-rules-reference.md) · [Culture config](culture-config.md) · [API: POST /intentra/guard](api-reference.md#post-intentraguard)
 
+## Assurance scope and limits
+
+Understanding what the engine **does not** guarantee avoids false confidence in automated blocking.
+
+- **Heuristic policy engine, not a shell:** Input is a single string that is NFKC-normalized and tokenized with **POSIX-ish** quote rules (`guard-command.ts`). It is **not** a full `sh` / `bash` parser: command substitution, here-documents, alias expansion, and platform-specific builtins may evade or mis-trigger pattern rules relative to what a real shell would run.
+- **Compound commands:** Lines containing `&&` or `;` outside quotes are split into segments (`guard-segment.ts`). Each segment is evaluated; the **strictest** verdict wins (e.g. one `deny` dominates cojoined `allow` segments). Order is preserved for debugging traces but semantics are “max risk,” not short-circuit evaluation as in a shell.
+- **Culture overrides:** `culture.json` may only **relabel** known rule IDs via `intentra.risk_gates` (see schema from `GET /intentra/guard/schema`). Operators cannot define arbitrary new matchers through culture alone — that requires code changes in `guard-policy.ts`.
+- **Downstream enforcement:** `POST /intentra/guard` returns a verdict to the caller (e.g. a Claude Code hook). **The HTTP API does not kill an already-running local shell**; enforcement is cooperative.
+
 ## Pipeline stages
 
 ```mermaid
