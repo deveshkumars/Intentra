@@ -2,7 +2,7 @@
 
 All environment variables used by the Intentra progress server, mobile app, and CLI tooling. This is the single source of truth — other docs link here.
 
-**Related docs:** [Quickstart](quickstart.md) · [Security](security.md) · [Troubleshooting](troubleshooting.md) · [Deploy](../DEPLOY.md)
+**Related docs:** [Documentation hub](README.md) · [Quickstart](quickstart.md) · [Security](security.md) · [Troubleshooting](troubleshooting.md) · [Deploy](../DEPLOY.md) · [INTENTRA.md](../INTENTRA.md)
 
 ---
 

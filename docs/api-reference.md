@@ -6,6 +6,8 @@ All responses are JSON with `Content-Type: application/json` unless noted. CORS 
 
 **Machine-readable contract:** OpenAPI 3 subset at [`openapi/intentra-progress.json`](openapi/intentra-progress.json). CI runs `bun run scripts/check-intentra-contracts.ts` (also part of `bun run test:progress-server`) so spec drift fails the build.
 
+**Related:** [INTENTRA.md](../INTENTRA.md) (shipped surface) · [Architecture](intentra-architecture.md) · [Documentation hub](README.md) · [Root README](../README.md) (Intentra section)
+
 ## Authentication
 
 When `INTENTRA_TOKEN` is set, all `POST`, `PATCH`, and `DELETE` requests require:

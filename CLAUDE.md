@@ -24,7 +24,7 @@ five features that sort-of work.
 
 ## Mobile app progress server (port 7891)
 
-Architecture, HTTP route + auth matrix, and a short evaluator playbook: [`docs/intentra-architecture.md`](docs/intentra-architecture.md). Deploy artifacts: [`DEPLOY.md`](DEPLOY.md).
+Architecture, HTTP route + auth matrix, and a short evaluator playbook: [`docs/intentra-architecture.md`](docs/intentra-architecture.md). Deploy artifacts: [`DEPLOY.md`](DEPLOY.md). Grouped doc index + maintenance rule: [`docs/README.md`](docs/README.md).
 
 The mobile app runs a progress server at `http://localhost:7891` that tracks agents in real-time.
 Use these curl commands to create and manage tracked agents:

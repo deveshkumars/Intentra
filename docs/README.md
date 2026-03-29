@@ -8,6 +8,8 @@ Maintenance rule: when you change **progress server routes** or **auth behavior*
 
 CI runs `bun run scripts/check-intentra-contracts.ts` (also part of `bun run test:progress-server`) so OpenAPI drift fails the build.
 
+**Narrative tour:** [Root README](../README.md) — gstack positioning, install copy-paste prompts, sprint skill table, Intentra overview.
+
 ---
 
 ## Intentra runtime
@@ -47,6 +49,7 @@ CI runs `bun run scripts/check-intentra-contracts.ts` (also part of `bun run tes
 |---------------|----------|
 | [`../CLAUDE.md`](../CLAUDE.md) | `bun test`, `test:progress-server`, eval commands |
 | `bun run test:progress-server` | Contract check + server + guard tests |
+| [`openapi/intentra-progress.json`](openapi/intentra-progress.json) | OpenAPI subset (`check-intentra-contracts` in CI) |
 
 ## ADRs
 
@@ -62,3 +65,9 @@ Proposals and explorations (not shipped specs): [`designs/README.md`](designs/RE
 |-----|----------|
 | [`skills.md`](skills.md) | Deep dives per skill |
 | [`../AGENTS.md`](../AGENTS.md) | Full slash-command inventory |
+
+## Contributing
+
+| Doc | Contents |
+|-----|----------|
+| [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Dev setup, eval tiers, **documentation PR checklist** |

@@ -118,12 +118,18 @@ GET endpoints (`/health`, `/events/stream`, `/agents`, etc.) remain public.
 
 ## What's next
 
+- **[Documentation hub](README.md)** — grouped links + route/OpenAPI maintenance rule
+- **[Root README](../README.md)** — gstack install, sprint table, Intentra tour
 - **[API Reference](api-reference.md)** — full endpoint docs with request/response schemas
+- **[OpenAPI contract](openapi/intentra-progress.json)** — machine-readable subset (CI-checked)
 - **[Intent Lifecycle](intent-lifecycle.md)** — create → track → resolve workflow
 - **[Handoffs (mobile)](handoffs-mobile.md)** — Handoffs tab + `handoff-parse` tests
+- **[Mobile app architecture](mobile-app.md)** — screens, SSE, linking events to agents
+- **[Claude Code hooks](claude-code-hooks.md)** — progress + guard wiring
 - **[Guard Engine](guard-engine.md)** — command safety policy engine
 - **[Culture Config](culture-config.md)** — customize guard rules via `culture.json`
 - **[Architecture](intentra-architecture.md)** — route matrix, auth model, evaluator playbook
 - **[Troubleshooting](troubleshooting.md)** — common issues and diagnostic commands
 - **[Env Reference](env-reference.md)** — all environment variables with defaults
 - **[Security](security.md)** — auth model and data protection
+- **[CONTRIBUTING](../CONTRIBUTING.md)** — contributor flow + documentation PR checklist

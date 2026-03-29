@@ -2,7 +2,7 @@
 
 Common issues and how to fix them. Each section is self-contained — jump to the one that matches your symptom.
 
-**Related docs:** [Quickstart](quickstart.md) · [API Reference](api-reference.md) · [Architecture](intentra-architecture.md) · [Env Reference](env-reference.md) · [Scaling](scaling.md)
+**Related docs:** [Documentation hub](README.md) · [Quickstart](quickstart.md) · [API Reference](api-reference.md) · [Architecture](intentra-architecture.md) · [Env Reference](env-reference.md) · [Scaling](scaling.md) · [Root README](../README.md)
 
 ---
 

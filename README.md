@@ -14,6 +14,8 @@ On top of the skills layer sits **Intentra** — an observability and collaborat
 - **Architecture & ops:** [`docs/intentra-architecture.md`](docs/intentra-architecture.md), [`DEPLOY.md`](DEPLOY.md)
 - **ADRs:** [`docs/adr/`](docs/adr/)
 - **Full docs index:** [`docs/README.md`](docs/README.md)
+- **Contributing (incl. doc PR checklist):** [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- **Mobile UI + hooks (deep dives):** [`docs/mobile-app.md`](docs/mobile-app.md), [`docs/claude-code-hooks.md`](docs/claude-code-hooks.md)
 
 **Product vision** in `masterdoc3.md` is not a shipped API spec; for routes and behavior, use `INTENTRA.md` and `docs/intentra-architecture.md`.
 

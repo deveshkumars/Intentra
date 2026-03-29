@@ -2,7 +2,7 @@
 
 How the Intentra progress server communicates errors, and how clients should handle them.
 
-**Related docs:** [API Reference](api-reference.md) · [Troubleshooting](troubleshooting.md) · [Architecture](intentra-architecture.md) · [Security](security.md)
+**Related docs:** [Documentation hub](README.md) · [API Reference](api-reference.md) · [Troubleshooting](troubleshooting.md) · [Architecture](intentra-architecture.md) · [Security](security.md)
 
 ---
 

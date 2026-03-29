@@ -2,7 +2,7 @@
 
 Security model, authentication, data protection, and best practices for the Intentra progress server.
 
-**Related docs:** [Env Reference](env-reference.md) · [Architecture](intentra-architecture.md) · [Error Handling](error-handling.md) · [Troubleshooting](troubleshooting.md)
+**Related docs:** [Documentation hub](README.md) · [Env Reference](env-reference.md) · [Architecture](intentra-architecture.md) · [Error Handling](error-handling.md) · [Troubleshooting](troubleshooting.md) · [API Reference](api-reference.md)
 
 ---
 
