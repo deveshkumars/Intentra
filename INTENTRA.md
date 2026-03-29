@@ -24,6 +24,8 @@ This repository is primarily **gstack** (Claude Code skills, browse, analytics).
 | **[Handoffs (mobile)](docs/handoffs-mobile.md)** | Handoffs tab, shared `handoff-parse`, `GET /intentra/files` + `GET /intentra/handoffs/summary` |
 | **[OpenAPI subset](docs/openapi/intentra-progress.json)** | Machine-readable contract for core routes (`bun run scripts/check-intentra-contracts.ts`) |
 | **[ADRs](docs/adr/)** | Shared handoff module, guard segmentation limits, first-match registry |
+| **[Mobile App Architecture](docs/mobile-app.md)** | Screen layout, data model, SSE hook, event-to-agent linking |
+| **[Claude Code Hooks](docs/claude-code-hooks.md)** | Wire `gstack-progress` + `intentra-guard-http` into Claude Code hooks |
 | **[Deploy](DEPLOY.md)** | Docker, docker-compose, Fly.io, GHCR image tags |
 
 ## How to review code changes
