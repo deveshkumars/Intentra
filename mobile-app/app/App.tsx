@@ -14,8 +14,8 @@ import { useEventStream } from './src/useEventStream';
 import { getServerUrl, getAuthToken } from './src/storage';
 import { TrackedAgent } from './src/types';
 
-type Screen = 'loading' | 'setup' | 'dashboard' | 'intent' | 'handoffs' | 'guard' | 'detail';
-type Tab = 'dashboard' | 'handoffs' | 'intent' | 'guard';
+type Screen = 'loading' | 'setup' | 'dashboard' | 'intent' | /* 'handoffs' | */ 'guard' | 'detail';
+type Tab = 'dashboard' | /* 'handoffs' | */ 'intent' | 'guard';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('loading');
@@ -117,8 +117,8 @@ export default function App() {
                 }}
                 onSetupPress={() => setScreen('setup')}
               />
-            ) : activeTab === 'handoffs' ? (
-              <HandoffScreen serverUrl={serverUrl} authToken={authToken} events={events} />
+            // } : activeTab === 'handoffs' ? (
+            //   <HandoffScreen serverUrl={serverUrl} authToken={authToken} events={events} />
             ) : activeTab === 'guard' ? (
               <GuardScreen serverUrl={serverUrl} authToken={authToken} events={events} />
             ) : (
@@ -138,7 +138,7 @@ export default function App() {
                 activeTab === 'dashboard' && tabStyles.tabLabelActive,
               ]}>Dashboard</Text>
             </TouchableOpacity>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={tabStyles.tab}
               onPress={() => setActiveTab('handoffs')}
               activeOpacity={0.7}
@@ -147,7 +147,7 @@ export default function App() {
                 tabStyles.tabLabel,
                 activeTab === 'handoffs' && tabStyles.tabLabelActive,
               ]}>Handoffs</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TouchableOpacity
               style={tabStyles.tab}
               onPress={() => setActiveTab('intent')}
