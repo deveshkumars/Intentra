@@ -211,7 +211,7 @@ export function IntentScreen({ serverUrl, authToken }: Props) {
                     >
                       {intent.outcome ?? 'open'}
                     </Text>
-                    {intent.constraints?.risk_tolerance && (
+                    {!!intent.constraints?.risk_tolerance && (
                       <Text style={styles.metaLabel}>
                         risk: {String(intent.constraints.risk_tolerance)}
                       </Text>
