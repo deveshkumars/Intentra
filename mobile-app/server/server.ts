@@ -16,6 +16,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { createIntent, listIntents } from './intent';
 
 // ─── CircularBuffer (copied verbatim from browse/src/buffers.ts) ───────────
 
@@ -278,7 +279,7 @@ const server = Bun.serve({
     const origin = req.headers.get('origin') ?? '*';
     const corsHeaders = {
       'Access-Control-Allow-Origin': origin,
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, ngrok-skip-browser-warning',
     };
 
@@ -425,6 +426,35 @@ const server = Bun.serve({
         jsonl: JSONL_PATH,
       }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // POST /intentra/intent — create a new intent artifact
+    if (req.method === 'POST' && url.pathname === '/intentra/intent') {
+      let body: Record<string, unknown> = {};
+      try { body = await req.json(); } catch { /* ignore */ }
+      if (!body.prompt || typeof body.prompt !== 'string') {
+        return new Response(JSON.stringify({ error: 'prompt is required' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+      const artifact = createIntent({
+        prompt: body.prompt as string,
+        repo: body.repo as { path?: string; branch?: string } | undefined,
+        constraints: body.constraints as Record<string, unknown> | undefined,
+        culture_ref: body.culture_ref as string | undefined,
+        plan: body.plan as Array<{ type: string; [k: string]: unknown }> | undefined,
+      });
+      return new Response(JSON.stringify(artifact), {
+        status: 201, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // GET /intentra/intents — list all intent artifacts
+    if (req.method === 'GET' && url.pathname === '/intentra/intents') {
+      const intents = listIntents();
+      return new Response(JSON.stringify({ intents, count: intents.length }), {
+        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
 
