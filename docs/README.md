@@ -29,6 +29,8 @@ CI runs `bun run scripts/check-intentra-contracts.ts` (also part of `bun run tes
 | [`quickstart.md`](quickstart.md) | Local server, ngrok, first events, mobile connect |
 | [`api-reference.md`](api-reference.md) | Endpoints, schemas, errors |
 | [`intent-lifecycle.md`](intent-lifecycle.md) | Intents under `.intentra/` |
+| [`use-cases.md`](use-cases.md) | Real-world scenarios, walkthroughs, curl examples |
+| [`risks-and-benefits.md`](risks-and-benefits.md) | Trade-off analysis for every major feature |
 | [`handoffs-mobile.md`](handoffs-mobile.md) | Handoffs tab, parsing |
 | [`mobile-app.md`](mobile-app.md) | Screen layout, SSE, event-to-agent linking |
 | [`claude-code-hooks.md`](claude-code-hooks.md) | Claude Code hooks for progress + guard |

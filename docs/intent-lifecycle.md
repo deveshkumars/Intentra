@@ -147,6 +147,36 @@ The `intent_id` field creates a cross-cutting link:
 
 This means you can answer: "For intent X, what progress events fired, which guard rules triggered, and what was the outcome?" — all queryable through the API.
 
+## When to use intents vs. direct progress events
+
+Not every task needs a formal intent. Use this guide:
+
+| Situation | Use intent? | Why |
+|-----------|-------------|-----|
+| Multi-step feature (3+ steps, 1+ hours) | **Yes** | Provides structure, plan tracking, and cross-session links |
+| Quick bug fix (1 step, 15 minutes) | **No** | Just use `POST /progress` directly — the overhead of creating an intent is not worth it |
+| Agent session you want to audit later | **Yes** | The intent artifact persists on disk and in git — the ring buffer events are ephemeral |
+| Automated CI/CD pipeline | **Yes** | Intent → progress events → outcome creates a full audit trail per deployment |
+| Manual ad-hoc debugging | **No** | Progress events are sufficient for real-time monitoring |
+| Work that spans multiple days | **Yes** | Intent artifacts persist between server restarts; the event buffer does not |
+
+**Rule of thumb:** If you would write a HANDOFFS.md entry about this task, it probably deserves an intent artifact too. If it is too small for a handoff entry, just use progress events.
+
+## Benefits and risks
+
+**Benefits:**
+- Full audit trail from prompt → plan → execution → outcome
+- Git-trackable: intent files can be committed alongside the code they describe
+- Cross-session correlation via `intent_id` on progress events and guard telemetry
+- Machine-queryable JSON enables dashboards and analytics
+
+**Risks:**
+- Disk accumulation: each intent creates a new JSON file with no built-in cleanup
+- Prompt exposure: intent files contain exact prompts in plain text
+- Timestamp-based IDs: theoretical collision if two intents are created in the same second
+
+For a detailed trade-off analysis, see **[Risks and Benefits](risks-and-benefits.md#intent-artifacts-intentrajson)**.
+
 ## See also
 
 - **[API Reference](api-reference.md)** — full request/response schemas for all intent endpoints
