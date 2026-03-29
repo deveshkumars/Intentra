@@ -43,9 +43,65 @@ bun test mobile-app/shared/handoff-parse.test.ts
 
 Smoke tests also restart the server with **`INTENTRA_REPO_ROOT`** set to the git repo root and assert **`GET /intentra/files`** returns **`HANDOFFS.md`** whose content parses to at least one entry, and **`GET /intentra/handoffs/summary`** returns a matching `count` (end-to-end with committed `.intentra/`).
 
+### Agent CRUD tests (`agents.test.ts`)
+
+Full coverage of the tracked agent lifecycle — POST, GET, PATCH, DELETE with error cases, ordering, auth gates, and multi-agent roundtrips.
+
+### Events and CircularBuffer tests (`events.test.ts`)
+
+Ring buffer capacity verification (200 cap, FIFO eviction), history endpoint limit/ordering, SSE headers, subscriber metrics, and field passthrough on POST /progress.
+
+### SSE live event flow tests (`sse-live.test.ts`)
+
+End-to-end SSE verification — events POSTed to /progress flow through SSE to connected subscribers, agent lifecycle events (create/update/delete) broadcast correctly, buffer replay on reconnect, and multiple concurrent subscribers receive the same events.
+
+### CORS and HTTP contract tests (`cors-http.test.ts`)
+
+CORS headers on all endpoints, OPTIONS preflight 204 responses with correct Allow headers, 404 handling for unknown paths, health endpoint shape validation, Content-Type verification, and uptime counter progression.
+
+### Intent HTTP validation tests (`intent-http.test.ts`)
+
+POST /intentra/intent validation (missing prompt, empty string, wrong type), PATCH validation (missing intent_id, invalid outcome), full create→patch→verify lifecycle through HTTP, all three outcomes via API, and guard validation edge cases.
+
 ### Guard tests
 
 Unit tests for the guard policy engine modules (tokenizer, normalizer, rule matching). Located alongside the guard source files.
+
+### Guard culture integration tests (`guard-culture.test.ts`)
+
+Exhaustive allow/warn/deny override testing for all 8 guard rules via culture risk_gates, risk score formula verification, validateRiskGateKeys for unknown keys, and culture_warnings surfacing in guard responses.
+
+### Guard segment advanced tests (`guard-segment-advanced.test.ts`)
+
+Compound command splitting edge cases — pipe passthrough, nested quotes, escaped characters, trailing operators, real-world compound chains, and multi-segment guard evaluation with culture overrides.
+
+### Guard telemetry tests (`guard-telemetry.test.ts`)
+
+Verifies appendIntentraGuardTelemetry creates directories, writes JSONL entries, appends multiple entries correctly, includes repo basename, and never throws on unwritable paths.
+
+### Guard edge cases (`guard-edge.test.ts`)
+
+Exact risk score formulas, rm_recursive with quoted/safe/mixed paths, git_force_push flag variants, SQL edge cases (DROP IF EXISTS, bare truncate, word boundaries), empty/boundary commands, Unicode NFKC normalization, and culture.ts readCultureSnapshot.
+
+### Guard fuzz tests (`guard-fuzz.test.ts`)
+
+Random input fuzzing for normalizeCommand, tokenizeShell, buildCommandContext, splitGuardSegments, and evaluateCommandGuard — verifies no crashes and verdict/risk_score invariants hold across 900+ random inputs.
+
+### Guard performance tests (`guard-perf.test.ts`)
+
+Benchmark: 50 iterations × 7 representative commands complete within budget (<10ms per batch).
+
+### Guard compound tests (`guard-compound.test.ts`)
+
+Compound command evaluation — deny propagation across segments, debug trace prefixes, max risk_score aggregation.
+
+### Handoff parse advanced tests (`shared/handoff-parse-advanced.test.ts`)
+
+Complex markdown scenarios — en-dash/hyphen separators, multi-line body preservation, long summary truncation, code block handling, all 12 months in formatDate, block counting edge cases, and case-sensitive filename matching.
+
+### Fixture integration tests (`fixtures/`)
+
+Cross-validates real telemetry fixtures against the live guard engine rule registry — ensures hook_fire patterns map to actual rules and all 8 categories are covered.
 
 ## Architecture
 
