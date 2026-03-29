@@ -118,6 +118,8 @@ GET endpoints (`/health`, `/events/stream`, `/agents`, etc.) remain public.
 
 ## What's next
 
+- **[Use Cases](use-cases.md)** — 7 real-world scenarios with full curl commands and mobile expectations
+- **[Risks and Benefits](risks-and-benefits.md)** — trade-off analysis for every major feature
 - **[Documentation hub](README.md)** — grouped links + route/OpenAPI maintenance rule
 - **[Root README](../README.md)** — gstack install, sprint table, Intentra tour
 - **[API Reference](api-reference.md)** — full endpoint docs with request/response schemas

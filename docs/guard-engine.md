@@ -31,6 +31,16 @@ flowchart TD
 
 Unicode **NFKC** normalization strips homoglyphs and compatibility characters. Whitespace is collapsed to single spaces. This prevents evasion via unusual Unicode or extra whitespace.
 
+**Why this matters:** Without normalization, an attacker (or a copy-paste error) could evade the guard using fullwidth Unicode characters. For example, `ｒｍ -rf ./src` uses fullwidth `ｒ` (U+FF52) and `ｍ` (U+FF4D) which look identical to ASCII `rm` in many fonts but would bypass a naive string match. NFKC normalization collapses these to standard ASCII before matching:
+
+```bash
+# Fullwidth Unicode characters — still caught after NFKC normalization
+curl -s -X POST http://localhost:7891/intentra/guard \
+  -H "Content-Type: application/json" \
+  -d '{"command": "ｒｍ -rf ./src"}'
+# → { "verdict": "deny", "pattern": "rm_recursive" }
+```
+
 **Implementation:** `normalizeCommand()` in [`guard-command.ts`](../mobile-app/server/guard-command.ts).
 
 ### Stage 2: Tokenization
@@ -46,7 +56,22 @@ This is intentionally not a full shell parser — no command substitution, no va
 
 ### Stage 2b: Compound segmentation (engine v3+)
 
-Before building `CommandContext`, the engine may split the trimmed command on `&&` and `;` **outside** quotes (`splitGuardSegments` in [`guard-segment.ts`](../mobile-app/server/guard-segment.ts)). Each segment is evaluated independently; results are aggregated (deny > warn > allow, max `risk_score`). See [ADR-002](adr/002-guard-segmentation-limits.md).
+Before building `CommandContext`, the engine splits the trimmed command on `&&` and `;` **outside** quotes (`splitGuardSegments` in [`guard-segment.ts`](../mobile-app/server/guard-segment.ts)). Each segment is evaluated independently; results are aggregated (deny > warn > allow, max `risk_score`). See [ADR-002](adr/002-guard-segmentation-limits.md).
+
+**How compound evaluation works in practice:**
+
+```
+Input:  "git add . && git commit -m 'fix' && git push --force"
+         ─────────   ──────────────────────   ────────────────
+         segment 1   segment 2                segment 3
+         → allow     → allow                  → deny (git_force_push)
+
+Result: verdict=deny, decisive_segment_index=3, risk_score=82
+```
+
+A single `deny` in any segment causes the entire compound command to be denied. The response includes `compound.segment_count` and `compound.decisive_segment_index` so you can see which part triggered the block.
+
+**Pipes are NOT split.** `cat file | grep foo` is treated as one segment. The rationale (ADR-002): pipes transform output and rarely introduce new destructive commands, while splitting on `|` would create misleading segments.
 
 ### Stage 3: Rule matching
 
@@ -170,6 +195,8 @@ Full shell grammar (AST), SQL AST parsing, and signed policy bundles are documen
 
 - **[Guard Rules Reference](guard-rules-reference.md)** — detailed trigger examples and safe targets for all 8 rules
 - **[Culture Config](culture-config.md)** — customize guard verdicts via `culture.json` risk_gates
+- **[Risks and Benefits](risks-and-benefits.md#guard-engine)** — trade-off analysis: false positives, cooperative enforcement, evasion risks
+- **[Use Cases](use-cases.md#scenario-4-debugging-a-guard-false-positive)** — walkthrough: debug a false positive with trace + culture override
 - **[API Reference](api-reference.md)** — HTTP endpoints for guard evaluation
 - **[Architecture](intentra-architecture.md)** — route/auth matrix and event pipeline
 - **[Troubleshooting](troubleshooting.md)** — guard false positives and debug trace walkthrough

@@ -113,6 +113,8 @@ If a rule ID is not listed in `risk_gates`, the guard uses the rule's `defaultVe
 }
 ```
 
+**Why this works:** During development, force-pushing to feature branches is common (rebasing before merge). `warn` lets the command run but creates a visible event on mobile and in telemetry. SQL data loss rules stay on `deny` because there is rarely a good reason for an agent to drop tables during development.
+
 **Strict production** — deny everything, including containers:
 
 ```json
@@ -131,6 +133,76 @@ If a rule ID is not listed in `risk_gates`, the guard uses the rule's `defaultVe
   }
 }
 ```
+
+**Why this works:** In production, any destructive command should be blocked and reviewed by a human. The guard prevents automated agents from accidentally deleting Kubernetes pods, wiping Docker images, or rewriting git history.
+
+## Team policy recipes
+
+Real-world configurations for common team situations. See **[Risks and Benefits](risks-and-benefits.md)** for the full trade-off analysis.
+
+### Recipe 1: DevOps team that regularly cleans Docker
+
+```json
+{
+  "intentra": {
+    "risk_gates": {
+      "docker_destructive": "warn",
+      "kubectl_delete": "deny",
+      "rm_recursive": "deny"
+    }
+  }
+}
+```
+
+Docker cleanup runs but you see a warning event each time. Kubernetes deletions stay blocked.
+
+### Recipe 2: Data team with staging table truncation
+
+```json
+{
+  "intentra": {
+    "risk_gates": {
+      "truncate": "warn",
+      "drop_table": "deny"
+    }
+  }
+}
+```
+
+`TRUNCATE` runs with a warning (risk score: 85 × 0.72 = 61). `DROP TABLE` is fully blocked (risk score: 92). Warning events create an audit trail of every truncation.
+
+### Recipe 3: Solo developer, maximum velocity
+
+```json
+{
+  "intentra": {
+    "risk_gates": {
+      "rm_recursive": "warn",
+      "git_force_push": "warn",
+      "git_reset_hard": "warn",
+      "git_discard": "warn",
+      "docker_destructive": "allow",
+      "kubectl_delete": "warn",
+      "drop_table": "deny",
+      "truncate": "warn"
+    }
+  }
+}
+```
+
+Most operations run freely with warnings for visibility. SQL `DROP TABLE` stays denied (consequences are irreversible). Docker cleanup is fully allowed (risk score: 75 × 0.12 = 9).
+
+### Recipe 4: Onboarding a new team member
+
+Omit the `intentra.risk_gates` section entirely (or use `{}`). All 8 rules use their default verdict (`deny`). The new developer sees clear error messages explaining why commands are blocked.
+
+### Risk score quick reference
+
+| Verdict | Formula | rm (88) | DROP (92) | docker (75) |
+|---------|---------|---------|-----------|-------------|
+| `deny` | baseRisk | 88 | 92 | 75 |
+| `warn` | round(base × 0.72) | 63 | 66 | 54 |
+| `allow` | round(base × 0.12) | 11 | 11 | 9 |
 
 ## Validation
 
