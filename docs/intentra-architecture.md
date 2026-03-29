@@ -64,6 +64,7 @@ When **`INTENTRA_TOKEN`** is unset, the server is open. When set, every **POST**
 | GET | `/intentra/files` | No | — |
 | GET | `/intentra/latest` | No | — |
 | POST | `/intentra/intent` | Bearer | JSON intent artifact |
+| PATCH | `/intentra/intent` | Bearer | JSON `{ intent_id, outcome }` — `outcome`: `success` \| `error` \| `cancelled` |
 | GET | `/intentra/intents` | No | — |
 | GET | `/intentra/culture` | No | — |
 | GET | `/intentra/guard/rules` | No | — |
@@ -72,17 +73,20 @@ When **`INTENTRA_TOKEN`** is unset, the server is open. When set, every **POST**
 
 `checkAuth` runs once for all POST/PATCH/DELETE before route matching: [`server.ts`](../mobile-app/server/server.ts) (search `checkAuth`).
 
-**Health introspection:** `GET /health` includes `guard_engine_version`, `rule_count`, buffer and uptime fields.
+**Health introspection:** `GET /health` includes `guard_engine_version`, `rule_count`, buffer and uptime fields, plus **`metrics`**: `post_progress_total`, `jsonl_lines_ingested_total`, `sse_subscriber_opens_total`, `sse_subscriber_closes_total` (MVP counters for evaluator verification).
+
+**Cross-session linkage:** Include optional **`intent_id`** on `POST /progress` (and in `bin/gstack-progress` via `--intent-id` or `INTENTRA_INTENT_ID`) so mobile can filter the live feed by intent; artifacts live under `.intentra/{intent_id}.json`.
 
 ## Evaluator playbook (~10 minutes)
 
 1. From repo root: `bun run test:progress-server` (smoke + guard + fixtures).
 2. Terminal A: `cd mobile-app/server && bun run server.ts` (or Docker per [`DEPLOY.md`](../DEPLOY.md)).
-3. `curl -s http://127.0.0.1:7891/health | jq` — expect `ok`, `guard_engine_version`, `rule_count`.
+3. `curl -s http://127.0.0.1:7891/health | jq` — expect `ok`, `guard_engine_version`, `rule_count`, `metrics`.
 4. `curl -s http://127.0.0.1:7891/intentra/guard/rules | jq '.engine, (.rules|length)'`.
 5. `curl -s http://127.0.0.1:7891/intentra/guard/schema | jq '.rule_ids, .rule_count'`.
 6. `curl -s -X POST http://127.0.0.1:7891/intentra/guard -H 'Content-Type: application/json' -d '{"command":"git push --force"}' | jq`.
 7. Open `GET /events/stream` in a browser or `curl -N` while posting `POST /progress` to see SSE.
+8. `curl -s -X PATCH http://127.0.0.1:7891/intentra/intent -H 'Content-Type: application/json' -d '{"intent_id":"<from POST /intentra/intent>","outcome":"success"}' | jq` (use Bearer if `INTENTRA_TOKEN` is set).
 
 ## Roadmap (out of scope today)
 

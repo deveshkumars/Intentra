@@ -3,7 +3,7 @@ Reinventing Agentic Software Development Collaboration: We provide an agentic co
 
 This is not a fork, rather it's a new agentic platform.
 
-**Master plan (canonical):** [`masterdoc3.md`](masterdoc3.md). **Intentra shipped surface (mobile + APIs):** [`INTENTRA.md`](INTENTRA.md). **Architecture, route/auth matrix, evaluator playbook:** [`docs/intentra-architecture.md`](docs/intentra-architecture.md). **Deploy (Docker, Fly, GHCR):** [`DEPLOY.md`](DEPLOY.md).
+**Master plan (canonical):** [`masterdoc3.md`](masterdoc3.md). **Intentra shipped surface (mobile + APIs):** [`INTENTRA.md`](INTENTRA.md). **Architecture, route/auth matrix, evaluator playbook:** [`docs/intentra-architecture.md`](docs/intentra-architecture.md). **Deploy (Docker, Fly, GHCR):** [`DEPLOY.md`](DEPLOY.md). **Contributors (including AI co-authorship):** [`CONTRIBUTORS.md`](CONTRIBUTORS.md).
 
 # Installation
 

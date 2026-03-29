@@ -20,11 +20,11 @@ Intentra-related code is spread across `mobile-app/`, `.intentra/`, and root doc
 | Area | What | Where |
 |------|------|--------|
 | Progress + SSE | Ring buffer, `GET /events/stream`, `GET /events/history`, `POST /progress` | [`mobile-app/server/server.ts`](mobile-app/server/server.ts) |
-| Health | `GET /health` (no auth; includes `guard_engine_version`, `rule_count`) | same |
+| Health | `GET /health` (no auth; includes `guard_engine_version`, `rule_count`, `metrics` counters) | same |
 | Tracked agents | `GET` / `POST` / `PATCH` / `DELETE` `/agents` | same |
 | Bearer auth | When `INTENTRA_TOKEN` is set, all `POST`, `PATCH`, and `DELETE` require `Authorization: Bearer <token>` | same (`checkAuth`) |
 | Cross-session link | Optional `intent_id` on progress payloads (client + server types) | [`mobile-app/app/src/types.ts`](mobile-app/app/src/types.ts), `server.ts` |
-| Intent-as-Code files | `POST /intentra/intent`, `GET /intentra/intents` → JSON under `.intentra/` | [`mobile-app/server/intent.ts`](mobile-app/server/intent.ts) |
+| Intent-as-Code files | `POST /intentra/intent`, `PATCH /intentra/intent` (set `outcome`), `GET /intentra/intents` → JSON under `.intentra/` | [`mobile-app/server/intent.ts`](mobile-app/server/intent.ts) |
 | Intentra file API | `GET /intentra/files`, `GET /intentra/latest` | [`mobile-app/server/server.ts`](mobile-app/server/server.ts) |
 | Culture audit API | `GET /intentra/culture` — reads `culture.json` from `GSTACK_STATE_DIR` (same file gstack skills load) | [`mobile-app/server/culture.ts`](mobile-app/server/culture.ts) |
 | Telemetry provenance | `ingest_lane` + `upstream_kind` on `ProgressEvent`; `hook_fire` kind from JSONL `event: hook_fire` | [`mobile-app/server/server.ts`](mobile-app/server/server.ts), app [`types.ts`](mobile-app/app/src/types.ts) |
@@ -40,6 +40,7 @@ Intentra-related code is spread across `mobile-app/`, `.intentra/`, and root doc
 | CI image | GHCR build/push `intentra-progress` on `main` (server paths) | [`.github/workflows/intentra-docker.yml`](.github/workflows/intentra-docker.yml) |
 | Deploy config | `fly.toml`, root `docker-compose.yml`, `DEPLOY.md` | repo root |
 | Claude hook + CLI | Example env/curl: [`mobile-app/docs/claude-guard-hook.example.json`](mobile-app/docs/claude-guard-hook.example.json); helper `bin/intentra-guard-http` | — |
+| Contributors | Humans + AI co-authorship policy | [`CONTRIBUTORS.md`](CONTRIBUTORS.md) |
 
 ## gstack vs Intentra (boundary)
 

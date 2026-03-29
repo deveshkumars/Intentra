@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView, StyleSheet,
   TouchableOpacity, RefreshControl,
@@ -12,9 +12,16 @@ interface Props {
   events: ProgressEvent[];
   trackedAgents: TrackedAgent[];
   status: ConnectionStatus;
+  serverUrl: string | null;
+  intentEventFilter: string | null;
+  onIntentEventFilterChange: (intentId: string | null) => void;
   onReconnect: () => void;
   onAgentPress: (agent: TrackedAgent) => void;
   onSetupPress: () => void;
+}
+
+function shortIntentLabel(id: string): string {
+  return id.length > 30 ? `${id.slice(0, 28)}…` : id;
 }
 
 const STATUS_DOT_COLOR: Record<ConnectionStatus, string> = {
@@ -25,9 +32,45 @@ const STATUS_DOT_COLOR: Record<ConnectionStatus, string> = {
 };
 
 export function DashboardScreen({
-  events, trackedAgents, status, onReconnect, onAgentPress, onSetupPress,
+  events,
+  trackedAgents,
+  status,
+  serverUrl,
+  intentEventFilter,
+  onIntentEventFilterChange,
+  onReconnect,
+  onAgentPress,
+  onSetupPress,
 }: Props) {
   const dotColor = STATUS_DOT_COLOR[status];
+  const [intentIds, setIntentIds] = useState<string[]>([]);
+
+  const fetchIntentIds = useCallback(async () => {
+    if (!serverUrl) {
+      setIntentIds([]);
+      return;
+    }
+    try {
+      const r = await fetch(`${serverUrl}/intentra/intents`, {
+        headers: { 'ngrok-skip-browser-warning': 'true' },
+      });
+      if (!r.ok) return;
+      const data = (await r.json()) as { intents?: { intent_id: string }[] };
+      const ids = (data.intents ?? []).map(i => i.intent_id);
+      setIntentIds(ids.slice(-12).reverse());
+    } catch {
+      setIntentIds([]);
+    }
+  }, [serverUrl]);
+
+  useEffect(() => {
+    fetchIntentIds();
+  }, [fetchIntentIds]);
+
+  const handleRefresh = useCallback(() => {
+    onReconnect();
+    fetchIntentIds();
+  }, [onReconnect, fetchIntentIds]);
 
   const renderEvent = useCallback(({ item }: { item: ProgressEvent }) => (
     <EventRow event={item} />
@@ -64,6 +107,43 @@ export function DashboardScreen({
         </View>
       )}
 
+      {/* Intent filter — cross-session linkage (POST /progress + intent_id) */}
+      {(intentIds.length > 0 || intentEventFilter) && serverUrl && (
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Filter by intent</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+            <TouchableOpacity
+              onPress={() => onIntentEventFilterChange(null)}
+              style={[styles.filterChip, !intentEventFilter && styles.filterChipActive]}
+            >
+              <Text style={[styles.filterChipText, !intentEventFilter && styles.filterChipTextActive]}>
+                All
+              </Text>
+            </TouchableOpacity>
+            {intentIds.map(id => (
+              <TouchableOpacity
+                key={id}
+                onPress={() => onIntentEventFilterChange(intentEventFilter === id ? null : id)}
+                style={[
+                  styles.filterChip,
+                  intentEventFilter === id && styles.filterChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    intentEventFilter === id && styles.filterChipTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {shortIntentLabel(id)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Event feed */}
       <Text style={styles.feedLabel}>Live events</Text>
       {events.length === 0 ? (
@@ -91,7 +171,7 @@ export function DashboardScreen({
           refreshControl={
             <RefreshControl
               refreshing={status === 'connecting'}
-              onRefresh={onReconnect}
+              onRefresh={handleRefresh}
               tintColor="#475569"
             />
           }
@@ -150,6 +230,47 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     paddingHorizontal: 16,
     marginBottom: 8,
+  },
+  filterSection: {
+    paddingTop: 8,
+    paddingBottom: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#1e293b',
+  },
+  filterLabel: {
+    color: '#475569',
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    paddingHorizontal: 16,
+    marginBottom: 6,
+  },
+  filterScroll: {
+    paddingLeft: 16,
+    paddingRight: 8,
+    marginBottom: 8,
+  },
+  filterChip: {
+    backgroundColor: '#1e293b',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    maxWidth: 200,
+  },
+  filterChipActive: {
+    backgroundColor: '#312e81',
+    borderWidth: 1,
+    borderColor: '#818cf8',
+  },
+  filterChipText: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontFamily: 'monospace',
+  },
+  filterChipTextActive: {
+    color: '#e0e7ff',
   },
   feedLabel: {
     color: '#475569',
