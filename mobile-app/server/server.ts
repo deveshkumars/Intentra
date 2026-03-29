@@ -75,6 +75,7 @@ export interface ProgressEvent {
   kind: EventKind;
   source: 'jsonl_watcher' | 'post' | 'hook';
   session_id?: string;
+  intent_id?: string;
   skill?: string;
   message?: string;
   step?: string;
@@ -268,6 +269,20 @@ function makeSSEStream(): ReadableStream<Uint8Array> {
   });
 }
 
+// ─── Auth ─────────────────────────────────────────────────────────────────
+
+const AUTH_TOKEN = process.env.INTENTRA_TOKEN ?? null;
+
+/** Returns a 401 Response if auth fails, or null if auth passes. */
+function checkAuth(req: Request, corsHeaders: Record<string, string>): Response | null {
+  if (!AUTH_TOKEN) return null; // no token configured — open mode
+  const header = req.headers.get('authorization') ?? '';
+  if (header === `Bearer ${AUTH_TOKEN}`) return null;
+  return new Response(JSON.stringify({ error: 'unauthorized' }), {
+    status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
+}
+
 // ─── HTTP server ───────────────────────────────────────────────────────────
 
 const server = Bun.serve({
@@ -280,11 +295,17 @@ const server = Bun.serve({
     const corsHeaders = {
       'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, ngrok-skip-browser-warning',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning',
     };
 
     if (req.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders });
+    }
+
+    // Auth gate — protect write endpoints (POST, PATCH, DELETE)
+    if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'DELETE') {
+      const denied = checkAuth(req, corsHeaders);
+      if (denied) return denied;
     }
 
     // POST /agents — register a new tracked agent
@@ -379,6 +400,7 @@ const server = Bun.serve({
         kind: body.kind ?? 'progress',
         source: body.source ?? 'post',
         session_id: body.session_id,
+        intent_id: body.intent_id,
         skill: body.skill,
         message: body.message,
         step: body.step,
