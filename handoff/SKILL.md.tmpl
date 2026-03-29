@@ -1,0 +1,336 @@
+---
+name: handoff
+preamble-tier: 2
+version: 0.1.0
+description: |
+  Stateful Markdown handoffs — English as code. Writes a single Markdown file
+  that captures prompt, plan, and handoff state so that handoffs between humans
+  and agents are lossless. Along with code, you share the prompts + plans + handoff docs.
+  Use when asked to "write a handoff", "save my progress", "hand off to the next
+  agent", "create a resume point", or "snapshot this session".
+  Proactively suggest when a session is ending, work is blocked, or a decision
+  point requires a different person or agent.
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - Edit
+  - Grep
+  - Glob
+  - AskUserQuestion
+---
+
+{{PREAMBLE}}
+
+# Stateful Markdown Handoff — English as Code
+
+You are running the `/handoff` skill. Your job: capture the current session into
+a single Markdown file — **prompt, plan, and state** — so the handoff is lossless.
+
+The handoff file is a program written in English. Along with code, you share the
+prompts + plans + handoff docs. That's the whole idea.
+
+---
+
+## Mode detection
+
+- `/handoff` or `/handoff write` → **Write mode** (default)
+- `/handoff resume` → **Resume mode**
+- `/handoff list` → **List mode**
+- `/handoff check` → **Check mode**
+
+---
+
+## Write mode (default)
+
+### Step 0: Gather git context
+
+Run these and record the output. This is ground truth.
+
+```bash
+git branch --show-current
+```
+
+```bash
+git rev-parse --short HEAD
+```
+
+```bash
+git log --oneline -10
+```
+
+```bash
+git status --short
+```
+
+Detect the base branch:
+
+```bash
+git remote show origin 2>/dev/null | grep "HEAD branch" | sed 's/.*: //'
+```
+
+If that fails, fall back:
+
+```bash
+git branch -a | grep -E '(main|master)' | head -1 | sed 's/.*\///'
+```
+
+Commits ahead/behind:
+
+```bash
+git rev-list --left-right --count <base>...HEAD 2>/dev/null || echo "0	0"
+```
+
+### Step 1: Gather context from the human
+
+Use AskUserQuestion with these questions.
+
+**Question 1:** "What was the prompt — what were you (or the agent) asked to do?"
+- Header: "Prompt"
+- Options:
+  - A) "Infer from recent commits" — read `git log --oneline -10` and propose a summary
+  - B) "Let me type it"
+
+**Question 2:** "What is the current status?"
+- Header: "Status"
+- Options:
+  - A) Done — task completed
+  - B) Blocked — cannot continue without input
+  - C) Needs decision — multiple valid paths
+  - D) In progress — saving a checkpoint
+
+**Question 3:** "Anything else to capture? (decisions, risks, blockers)"
+- Header: "Notes"
+- Options:
+  - A) "I'll describe them"
+  - B) "Infer from the diff"
+  - C) "Nothing extra"
+
+### Step 2: Read the diff and additional context
+
+1. If there are uncommitted changes:
+
+```bash
+git diff --stat
+```
+
+2. Read the full branch diff for the "Plan / What Was Done" section:
+
+```bash
+git diff <base>...HEAD --stat
+```
+
+```bash
+git log <base>..HEAD --oneline
+```
+
+3. Check for culture context:
+
+```bash
+cat ~/.gstack/culture.json 2>/dev/null | head -20
+```
+
+### Step 3: Write the handoff file
+
+Generate a filename:
+
+```bash
+date -u +%Y-%m-%d
+```
+
+Write to `.intentra/handoffs/<date>-<slug>.md` where `<slug>` is a 2-4 word
+kebab-case description of the task (e.g., `2026-03-28-bearer-token-auth.md`).
+
+Create the directory if it doesn't exist:
+
+```bash
+mkdir -p .intentra/handoffs
+```
+
+The file format is below. Write every section using real data gathered in
+Steps 0-2. **No section should contain guesses — verify everything with git.**
+
+---
+
+### Handoff file format
+
+```markdown
+# <Brief title of the work>
+
+**Author:** <name>
+**Date:** <YYYY-MM-DD>
+**Branch:** `<branch>` (<N> ahead of `<base>`)
+**Status:** <done | blocked | needs-decision | in-progress>
+
+---
+
+## Prompt
+
+<The original ask — what was the human intent, verbatim or near-verbatim.
+This is the "why." Paste the actual prompt if available. If not, reconstruct
+it faithfully from context.>
+
+## Plan
+
+<How the work was (or will be) done. Write this as a numbered list of steps
+with enough detail that a reader understands the approach.
+
+If the work is done, this is what WAS done.
+If the work is in progress, this is what IS being done.
+If the work is blocked, this is what was PLANNED.>
+
+1. ...
+2. ...
+3. ...
+
+## State
+
+<The current verifiable state of the repository.>
+
+**Last commit:** `<hash>` <message>
+**Uncommitted changes:** <list or "none">
+**Tests:** <passing / failing / not run>
+
+Verify:
+​```bash
+git log --oneline -3
+git status --short
+​```
+
+## Decisions
+
+<Key choices made and why. Skip if none.>
+
+- **<Decision>:** <Choice>. <One-line reason.>
+- ...
+
+## Risks
+
+<Anything that could go wrong or was deferred. Skip if none.>
+
+- ...
+
+## Blocked on
+
+<Required if status is blocked or needs-decision. Skip otherwise.
+Be specific — what exactly is needed to unblock.>
+
+## Next actions
+
+<Required if status is NOT done. Ordered, specific, executable.
+Each item should be concrete enough for a cold-start agent to run.>
+
+1. ...
+2. ...
+3. ...
+
+## Resume instructions
+
+To pick up this work:
+
+1. Read this file.
+2. Run the verify commands in "State" to confirm nothing has diverged.
+3. Start from "Next actions" step 1.
+4. If the state has diverged, describe what changed before proceeding.
+```
+
+---
+
+### Step 4: Output
+
+After writing the file, output:
+
+```
+Handoff written: .intentra/handoffs/<filename>.md
+Status: <status>
+Branch: <branch> (<N> ahead of <base>)
+
+To resume:  /handoff resume
+To commit:  git add .intentra/ && git commit -m "handoff: <brief description>"
+```
+
+### Ground-truth rule
+
+Every factual claim in the handoff (commit hashes, file paths, branch names,
+test results) MUST be verified via git/bash before writing. Run the command,
+read the output, then write the claim. Never guess.
+
+---
+
+## Resume mode
+
+### Step R1: Find the latest handoff
+
+```bash
+ls -1t .intentra/handoffs/*.md 2>/dev/null | head -1
+```
+
+If none exist: "No handoff files found. Run `/handoff` to create one."
+
+### Step R2: Read and parse
+
+Read the full handoff file.
+
+### Step R3: Verify state
+
+Run the verify commands from the "State" section. Compare:
+- Is the branch the same?
+- Is HEAD the same or ahead?
+- Any unexpected changes?
+
+**If it matches:** "State verified. Resuming from handoff."
+
+**If it diverges:** Describe the divergence and AskUserQuestion:
+- A) Continue anyway
+- B) Show me the differences
+- C) Abort
+
+### Step R4: Execute
+
+Present the "Next actions" list. AskUserQuestion:
+- Header: "Resume"
+- Question: "Ready to execute these actions?"
+- Options:
+  - A) Execute all
+  - B) Step by step — confirm each one
+  - C) Just show me the context
+
+---
+
+## List mode
+
+```bash
+ls -1t .intentra/handoffs/*.md 2>/dev/null
+```
+
+For each file, read the first 6 lines and extract title, date, branch, status.
+Output a table.
+
+If none: "No handoff files found."
+
+---
+
+## Check mode
+
+Find the latest handoff. Run its verify commands. Output pass/fail:
+
+```
+Handoff check: <filename>
+  Branch:  ✓ matches
+  HEAD:    ✓ matches
+  Changes: ✗ 2 new unstaged files
+Verdict: DIVERGED — run /handoff to write a fresh one.
+```
+
+---
+
+## Rules
+
+- **Ground truth.** Verify every claim with a real command. Never guess.
+- **No empty sections.** Omit sections that have no content.
+- **Executable Next Actions.** Each step must be specific enough for a cold-start
+  agent. Bad: "Fix the tests." Good: "Run `bun test`. The failure is in
+  `test/auth.test.ts:42` — the middleware isn't applied to POST /agents."
+- **One file per snapshot.** Never edit an existing handoff. Write a new one.
+- **All Markdown, all the time.** No JSON, no YAML files, no schemas. The
+  handoff document IS the format. Human-readable is machine-readable.
