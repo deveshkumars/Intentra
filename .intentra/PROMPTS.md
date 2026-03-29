@@ -31,3 +31,15 @@ Every prompt that drove this project, verbatim. Newest at the bottom.
 **2026-03-28 — Gordon Beckler**
 
 > ok now. use /handoff first to make a new entry to the bottom of the files. and then: the folder should actually be: one file for prompts, one for plans, and one for general handoff stuff.
+
+---
+
+**2026-03-29 — Gordon Beckler**
+
+> create a new branhc off of main called further-cp. improve the project based on the following feedback for documentation and completeness: Documentation 68% ... Completeness 64% ...
+
+---
+
+**2026-03-29 — Gordon Beckler**
+
+> to improve the documentation score further, use the /handoff skill that this project creates to document our changes this session. After that, further improve documentation so that the score goes up drastically from 70% to 78%. cursor will check your work
