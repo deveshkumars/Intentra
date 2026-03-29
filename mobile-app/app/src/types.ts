@@ -1,5 +1,38 @@
 export type EventKind = 'skill_start' | 'skill_end' | 'progress' | 'tool_use' | 'hook_fire';
 
+export type GuardVerdict = 'allow' | 'warn' | 'deny';
+
+/** Structured entry from .intentra/telemetry/intentra-guard.jsonl */
+export interface GuardTelemetryEntry {
+  event: 'intentra_guard';
+  verdict: GuardVerdict;
+  pattern?: string;
+  ts: string;
+  risk_score?: number;
+  guard_engine_version?: number;
+  repo?: string;
+}
+
+/** Public metadata for a single guard rule (from GET /intentra/guard/rules). */
+export interface GuardRule {
+  id: string;
+  category: string;
+  base_risk: number;
+  description: string;
+}
+
+/** Response shape for GET /intentra/guard/telemetry */
+export interface GuardTelemetryResponse {
+  entries: GuardTelemetryEntry[];
+  stats: {
+    total: number;
+    deny: number;
+    warn: number;
+    allow: number;
+    by_pattern: Record<string, number>;
+  };
+}
+
 /** Where the event entered the Intentra pipeline (provenance for evaluators). */
 export type IngestLane = 'intentra_jsonl_bridge' | 'intentra_http';
 
