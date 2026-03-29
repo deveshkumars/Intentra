@@ -5,7 +5,7 @@ The Expo app’s **Handoffs** tab reads the same append-only Markdown that [`mas
 ## Data path
 
 1. Progress server: **`GET /intentra/files`** returns each file’s `name` and `content`.
-2. **HandoffScreen** keeps `HANDOFFS.md` / `PROMPTS.md` / `PLANS.md` and splits entries on `\n---\n` (same convention as `GET /intentra/latest`).
+2. **HandoffScreen** keeps `HANDOFFS.md` / `PROMPTS.md` / `PLANS.md` and splits entries on `\n---\n` (same convention as `GET /intentra/latest`). All three files are optional — the server returns an empty `files` array if `.intentra/` doesn't exist yet.
 3. Parsing logic lives in **[`mobile-app/shared/handoff-parse.ts`](../mobile-app/shared/handoff-parse.ts)** (pure TypeScript, covered by [`handoff-parse.test.ts`](../mobile-app/shared/handoff-parse.test.ts)). The server exposes **`GET /intentra/handoffs/summary`** using the same module.
 
 ## UX

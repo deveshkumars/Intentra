@@ -373,6 +373,8 @@ Returns `{ "latest": null }` if `HANDOFFS.md` doesn't exist.
 
 Evaluate a command against the guard policy engine. Checks for destructive patterns and applies culture overrides.
 
+**Auth:** Requires Bearer when `INTENTRA_TOKEN` is set (same as all POST routes). This is intentional — the endpoint appends to telemetry on deny/warn verdicts.
+
 **Request body:**
 
 ```json
@@ -383,7 +385,7 @@ Evaluate a command against the guard policy engine. Checks for destructive patte
 }
 ```
 
-Debug mode can also be triggered via `X-Intentra-Guard-Debug: 1` header.
+Debug mode can also be triggered via `X-Intentra-Guard-Debug: 1` request header.
 
 **Response (200) — deny:**
 
