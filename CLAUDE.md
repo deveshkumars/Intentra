@@ -1,5 +1,27 @@
 # gstack development
 
+## Core development principle: finish before you build
+
+**Make existing features fully functional before adding new scaffolding.**
+
+When in doubt about what to work on next, ask: "Is there something already built that
+doesn't fully work yet?" If yes, fix that first. Don't layer new structure on top of
+half-working foundations.
+
+Intentra's shipped surface (SSE pipeline, JSONL watcher, mobile dashboard, agent CRUD,
+safety hook telemetry, `.intentra/` artifact model, `/handoff` skill) must work end-to-end
+before adding new capabilities. A feature is not "done" when the scaffolding exists — it's
+done when a real user can use it reliably without workarounds.
+
+Signs you may be going in the wrong direction:
+- Adding a new file/module when existing ones have TODOs or known gaps
+- Writing new skill templates when existing ones fail their own evals
+- Extending the API surface when existing endpoints aren't tested
+- Building new mobile screens when existing screens have broken states
+
+**Default to depth over breadth.** One feature that works completely is worth more than
+five features that sort-of work.
+
 ## Mobile app progress server (port 7891)
 
 Architecture, HTTP route + auth matrix, and a short evaluator playbook: [`docs/intentra-architecture.md`](docs/intentra-architecture.md). Deploy artifacts: [`DEPLOY.md`](DEPLOY.md).
@@ -230,6 +252,11 @@ always use specific filenames (`git add file1 file2`) — never `git add .` or
 `git add -A`, which will accidentally include the binaries.
 
 ## Commit style
+
+**Commit early and often.** Don't batch up work into one large commit at the end.
+After each logical unit of work is complete and working, commit it immediately.
+Small, frequent commits make it easy to bisect bugs, revert mistakes, and review
+changes incrementally.
 
 **Always bisect commits.** Every commit should be a single logical change. When
 you've made multiple changes (e.g., a rename + a rewrite + new tests), split them
