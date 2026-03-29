@@ -112,7 +112,7 @@ export function DashboardScreen({
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>gstack monitor</Text>
+        <Text style={styles.title}>intentramonitor</Text>
         <View style={styles.headerRight}>
           <View style={[styles.dot, { backgroundColor: dotColor }]} />
           <TouchableOpacity onPress={onSetupPress} style={styles.gearBtn}>
