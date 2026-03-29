@@ -516,10 +516,12 @@ const server = Bun.serve({
       if (!fs.existsSync(dir)) return jsonOk({ files: [] }, corsHeaders);
       try {
         const entries = fs.readdirSync(dir).filter(f => !f.startsWith('.')).sort();
-        const files = entries.map(name => ({
-          name,
-          content: fs.readFileSync(path.join(dir, name), 'utf-8'),
-        }));
+        const files = entries
+          .filter(name => fs.statSync(path.join(dir, name)).isFile())
+          .map(name => ({
+            name,
+            content: fs.readFileSync(path.join(dir, name), 'utf-8'),
+          }));
         return jsonOk({ files }, corsHeaders);
       } catch (err) {
         return jsonInternalError('failed to read .intentra directory', corsHeaders);
