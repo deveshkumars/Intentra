@@ -1,126 +1,175 @@
 /**
- * Intentra-native command guard — executable policy in TypeScript (not SKILL.md prose).
- * Mirrors the destructive-pattern checks in careful/bin/check-careful.sh; gates are
- * overridden by culture.json → intentra.risk_gates[pattern] = deny | warn | allow.
+ * Intentra command guard — policy engine facade (registry + tokenizer + culture gates).
  */
 
 import fs from 'fs';
 import path from 'path';
+import { buildCommandContext } from './guard-command';
+import {
+  findFirstMatchingRule,
+  GUARD_RULE_IDS,
+  GUARD_RULES,
+  listGuardRulePublicMeta,
+} from './guard-policy';
+import type {
+  CommandContext,
+  GuardEvaluation,
+  GuardEvaluationOptions,
+  GuardVerdict,
+} from './guard-types';
 
-export type GuardVerdict = 'allow' | 'warn' | 'deny';
+export type { GuardEvaluation, GuardVerdict, GuardEvaluationOptions } from './guard-types';
+export { listGuardRulePublicMeta } from './guard-policy';
+export { buildCommandContext, normalizeCommand, tokenizeShell } from './guard-command';
 
-export interface GuardEvaluation {
-  verdict: GuardVerdict;
-  pattern?: string;
-  message?: string;
-  /** Always intentra_guard for this module */
-  source: 'intentra_guard';
-}
+const SOURCE = 'intentra_guard' as const;
 
-const SOURCE: GuardEvaluation['source'] = 'intentra_guard';
-
-const PATTERN_MESSAGES: Record<string, string> = {
-  rm_recursive: 'Recursive delete (rm -r) outside safe build-artifact paths.',
-  drop_table: 'SQL DROP detected.',
-  truncate: 'SQL TRUNCATE detected.',
-  git_force_push: 'Git force-push rewrites remote history.',
-  git_reset_hard: 'git reset --hard discards uncommitted work.',
-  git_discard: 'Discards uncommitted changes in the working tree.',
-  kubectl_delete: 'kubectl delete removes cluster resources.',
-  docker_destructive: 'Docker force-remove or system prune.',
-};
-
-/** Same allowlist spirit as careful/bin/check-careful.sh */
-function isSafeRmTarget(token: string): boolean {
-  const t = token.replace(/\/+$/, '');
-  return /(^|\/)(node_modules|\.next|dist|__pycache__|\.cache|build|\.turbo|coverage)$/.test(t);
-}
-
-function isRecursiveRmCommand(cmd: string): boolean {
-  const i = cmd.search(/\brm\b/i);
-  if (i < 0) return false;
-  const rest = cmd.slice(i + 2).trim();
-  const tokens = rest.split(/\s+/);
-  for (const t of tokens) {
-    if (!t.startsWith('-')) break;
-    if (t === '--recursive' || /^-[a-zA-Z]*r[a-zA-Z]*/i.test(t)) return true;
-  }
-  return false;
-}
-
-function rmTargetsAfterFlags(cmd: string): string[] {
-  const i = cmd.search(/\brm\b/i);
-  let rest = cmd.slice(i + 2).trim();
-  while (rest.length > 0) {
-    const tok = rest.split(/\s+/)[0];
-    if (!tok?.startsWith('-')) break;
-    rest = rest.slice(tok.length).trim();
-  }
-  return rest ? rest.split(/\s+/).filter((t) => t && !t.startsWith('-')) : [];
-}
-
-function matchRmRecursive(cmd: string): boolean {
-  if (!isRecursiveRmCommand(cmd)) return false;
-  const targets = rmTargetsAfterFlags(cmd);
-  for (const t of targets) {
-    if (!isSafeRmTarget(t)) return true;
-  }
-  return false;
-}
-
-function matchDestructivePattern(cmd: string, cmdLower: string): string | null {
-  if (matchRmRecursive(cmd)) return 'rm_recursive';
-  if (/\bdrop\s+(table|database)\b/.test(cmdLower)) return 'drop_table';
-  if (/\btruncate\b/.test(cmdLower)) return 'truncate';
-  // Match `git push ... -f` and `git push ... --force` (see careful/bin/check-careful.sh)
-  if (/\bgit\s+push\s+.*(-f\b|--force)/.test(cmd)) return 'git_force_push';
-  if (/\bgit\s+reset\s+--hard\b/.test(cmd)) return 'git_reset_hard';
-  if (/\bgit\s+(checkout|restore)\s+\./.test(cmd)) return 'git_discard';
-  if (/\bkubectl\s+delete\b/.test(cmd)) return 'kubectl_delete';
-  if (/\bdocker\s+(rm\s+-f|system\s+prune)\b/.test(cmd)) return 'docker_destructive';
-  return null;
-}
-
-function getRiskGate(culture: unknown, pattern: string): GuardVerdict {
-  if (!culture || typeof culture !== 'object') return 'deny';
+function extractRiskGates(culture: unknown): Record<string, string> | null {
+  if (!culture || typeof culture !== 'object') return null;
   const intentra = (culture as { intentra?: { risk_gates?: Record<string, string> } }).intentra;
   const gates = intentra?.risk_gates;
-  if (!gates || typeof gates !== 'object') return 'deny';
-  const v = gates[pattern];
-  if (v === 'allow') return 'allow';
-  if (v === 'warn') return 'warn';
-  if (v === 'deny') return 'deny';
-  return 'deny';
+  if (!gates || typeof gates !== 'object') return null;
+  return gates;
 }
 
-export function evaluateCommandGuard(command: string, culture: unknown | null): GuardEvaluation {
-  const cmd = command.trim();
-  if (!cmd) {
-    return { verdict: 'allow', source: SOURCE };
+/** Validate culture keys; unknown pattern ids are reported (typos, drift). */
+export function validateRiskGateKeys(culture: unknown): string[] {
+  const gates = extractRiskGates(culture);
+  if (!gates) return [];
+  const warnings: string[] = [];
+  for (const k of Object.keys(gates)) {
+    if (!GUARD_RULE_IDS.has(k)) {
+      warnings.push(`unknown intentra.risk_gates key "${k}" (not in policy registry)`);
+    }
   }
-  const cmdLower = cmd.toLowerCase();
-  const pattern = matchDestructivePattern(cmd, cmdLower);
-  if (!pattern) {
-    return { verdict: 'allow', source: SOURCE };
+  return warnings;
+}
+
+function resolveVerdictFromCulture(
+  culture: unknown,
+  patternId: string,
+  ruleDefault: GuardVerdict,
+): GuardVerdict {
+  const gates = extractRiskGates(culture);
+  if (!gates) return ruleDefault;
+  const v = gates[patternId];
+  if (v === 'allow' || v === 'warn' || v === 'deny') return v;
+  return ruleDefault;
+}
+
+function computeRiskScore(
+  baseRisk: number,
+  verdict: GuardVerdict,
+): number {
+  if (verdict === 'deny') return Math.min(100, baseRisk);
+  if (verdict === 'warn') return Math.min(100, Math.round(baseRisk * 0.72));
+  return Math.min(100, Math.round(baseRisk * 0.12));
+}
+
+function buildTrace(
+  ctx: CommandContext,
+  ruleId: string | null,
+  phases: Array<{ phase: string; detail: string }>,
+): Array<{ phase: string; detail: string }> {
+  const head = [
+    { phase: 'normalize', detail: `nfkc+ws; len=${ctx.normalized.length}` },
+    { phase: 'tokenize', detail: `tokens=${ctx.tokens.length}` },
+  ];
+  const tail = ruleId
+    ? [{ phase: 'match', detail: `first_hit=${ruleId}` }]
+    : [{ phase: 'match', detail: 'no_rule_matched' }];
+  return [...head, ...phases, ...tail];
+}
+
+export function evaluateCommandGuard(
+  command: string,
+  culture: unknown | null,
+  options?: GuardEvaluationOptions,
+): GuardEvaluation {
+  const debug = options?.debug === true;
+  const culture_warnings = validateRiskGateKeys(culture ?? undefined);
+
+  const raw = command.trim();
+  if (!raw) {
+    return {
+      verdict: 'allow',
+      source: SOURCE,
+      risk_score: 0,
+      culture_warnings: culture_warnings.length ? culture_warnings : undefined,
+      trace: debug ? [{ phase: 'empty', detail: 'allow' }] : undefined,
+    };
   }
-  const gate = getRiskGate(culture, pattern);
-  const baseMsg = PATTERN_MESSAGES[pattern] ?? 'Policy match.';
+
+  const ctx = buildCommandContext(raw);
+  const phases: Array<{ phase: string; detail: string }> = [];
+
+  if (debug) {
+    for (const r of GUARD_RULES) {
+      let hit = false;
+      try {
+        hit = r.match(ctx);
+      } catch {
+        hit = false;
+      }
+      phases.push({ phase: `rule:${r.id}`, detail: hit ? 'matched' : 'skip' });
+    }
+  }
+
+  const rule = findFirstMatchingRule(ctx);
+  if (!rule) {
+    return {
+      verdict: 'allow',
+      source: SOURCE,
+      risk_score: 0,
+      culture_warnings: culture_warnings.length ? culture_warnings : undefined,
+      trace: debug ? buildTrace(ctx, null, phases) : undefined,
+    };
+  }
+
+  const gate = resolveVerdictFromCulture(culture, rule.id, rule.defaultVerdict);
+  const risk_score = computeRiskScore(rule.baseRisk, gate);
+
+  const baseMsg = rule.description;
+  const ruleMeta = {
+    id: rule.id,
+    category: rule.category,
+    baseRisk: rule.baseRisk,
+    cwe_hints: rule.cweHints,
+  };
+
   if (gate === 'allow') {
-    return { verdict: 'allow', pattern, message: `${baseMsg} (culture allows this pattern.)`, source: SOURCE };
+    return {
+      verdict: 'allow',
+      pattern: rule.id,
+      message: `${baseMsg} (culture allows this pattern.)`,
+      source: SOURCE,
+      rule: ruleMeta,
+      risk_score,
+      culture_warnings: culture_warnings.length ? culture_warnings : undefined,
+      trace: debug ? buildTrace(ctx, rule.id, phases) : undefined,
+    };
   }
   if (gate === 'warn') {
     return {
       verdict: 'warn',
-      pattern,
+      pattern: rule.id,
       message: `[intentra guard] WARN: ${baseMsg}`,
       source: SOURCE,
+      rule: ruleMeta,
+      risk_score,
+      culture_warnings: culture_warnings.length ? culture_warnings : undefined,
+      trace: debug ? buildTrace(ctx, rule.id, phases) : undefined,
     };
   }
   return {
     verdict: 'deny',
-    pattern,
+    pattern: rule.id,
     message: `[intentra guard] DENY: ${baseMsg}`,
     source: SOURCE,
+    rule: ruleMeta,
+    risk_score,
+    culture_warnings: culture_warnings.length ? culture_warnings : undefined,
+    trace: debug ? buildTrace(ctx, rule.id, phases) : undefined,
   };
 }
 
@@ -134,6 +183,7 @@ export function appendIntentraGuardTelemetry(entry: {
   pattern?: string;
   ts: string;
   repo?: string;
+  risk_score?: number;
 }): void {
   const root = intentraRepoRoot();
   const dir = path.join(root, '.intentra', 'telemetry');

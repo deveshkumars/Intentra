@@ -18,7 +18,11 @@ import fs from 'fs';
 import path from 'path';
 import { createIntent, listIntents } from './intent';
 import { readCultureSnapshot } from './culture';
-import { appendIntentraGuardTelemetry, evaluateCommandGuard } from './guard';
+import {
+  appendIntentraGuardTelemetry,
+  evaluateCommandGuard,
+  listGuardRulePublicMeta,
+} from './guard';
 
 // ─── CircularBuffer (copied verbatim from browse/src/buffers.ts) ───────────
 
@@ -541,9 +545,24 @@ const server = Bun.serve({
       });
     }
 
-    // POST /intentra/guard — Intentra-native command policy (TypeScript runtime + culture gates)
+    // GET /intentra/guard/rules — policy registry (metadata only)
+    if (req.method === 'GET' && url.pathname === '/intentra/guard/rules') {
+      return new Response(
+        JSON.stringify({
+          engine: {
+            version: 1,
+            tokenizer: 'shell_quote_aware_v1',
+            normalization: 'NFKC_whitespace_collapse',
+          },
+          rules: listGuardRulePublicMeta(),
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
+      );
+    }
+
+    // POST /intentra/guard — policy engine (optional debug trace + culture warnings)
     if (req.method === 'POST' && url.pathname === '/intentra/guard') {
-      let body: { command?: string; session_id?: string } = {};
+      let body: { command?: string; session_id?: string; debug?: boolean } = {};
       try {
         body = await req.json();
       } catch {
@@ -554,8 +573,10 @@ const server = Bun.serve({
           status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
         });
       }
+      const debug =
+        body.debug === true || req.headers.get('x-intentra-guard-debug') === '1';
       const snap = readCultureSnapshot();
-      const result = evaluateCommandGuard(body.command, snap.culture);
+      const result = evaluateCommandGuard(body.command, snap.culture, { debug });
       const ts = now();
       if (result.verdict === 'deny' || result.verdict === 'warn') {
         appendIntentraGuardTelemetry({
@@ -563,6 +584,7 @@ const server = Bun.serve({
           verdict: result.verdict,
           pattern: result.pattern,
           ts,
+          risk_score: result.risk_score,
         });
         addEvent({
           kind: 'hook_fire',
