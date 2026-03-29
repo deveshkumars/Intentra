@@ -25,53 +25,16 @@ import {
 } from './guard';
 import { countHandoffBlocks, parseEntries } from '../shared/handoff-parse.ts';
 import { GUARD_ENGINE, GUARD_RULE_COUNT, GUARD_RULE_IDS } from './guard-policy';
-
-// ─── CircularBuffer (copied verbatim from browse/src/buffers.ts) ───────────
-
-class CircularBuffer<T> {
-  private buffer: (T | undefined)[];
-  private head: number = 0;
-  private _size: number = 0;
-  private _totalAdded: number = 0;
-  readonly capacity: number;
-
-  constructor(capacity: number) {
-    this.capacity = capacity;
-    this.buffer = new Array(capacity);
-  }
-
-  push(entry: T): void {
-    const index = (this.head + this._size) % this.capacity;
-    this.buffer[index] = entry;
-    if (this._size < this.capacity) {
-      this._size++;
-    } else {
-      this.head = (this.head + 1) % this.capacity;
-    }
-    this._totalAdded++;
-  }
-
-  toArray(): T[] {
-    const result: T[] = [];
-    for (let i = 0; i < this._size; i++) {
-      result.push(this.buffer[(this.head + i) % this.capacity] as T);
-    }
-    return result;
-  }
-
-  last(n: number): T[] {
-    const count = Math.min(n, this._size);
-    const result: T[] = [];
-    const start = (this.head + this._size - count) % this.capacity;
-    for (let i = 0; i < count; i++) {
-      result.push(this.buffer[(start + i) % this.capacity] as T);
-    }
-    return result;
-  }
-
-  get length(): number { return this._size; }
-  get totalAdded(): number { return this._totalAdded; }
-}
+import { CircularBuffer } from '../../browse/src/buffers.ts';
+import {
+  jsonOk,
+  jsonCreated,
+  jsonBadRequest,
+  jsonUnauthorized,
+  jsonNotFound,
+  jsonInternalError,
+  type CorsHeaders,
+} from './response';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -357,13 +320,11 @@ function makeSSEStream(): ReadableStream<Uint8Array> {
 const AUTH_TOKEN = process.env.INTENTRA_TOKEN ?? null;
 
 /** Returns a 401 Response if auth fails, or null if auth passes. */
-function checkAuth(req: Request, corsHeaders: Record<string, string>): Response | null {
+function checkAuth(req: Request, corsHeaders: CorsHeaders): Response | null {
   if (!AUTH_TOKEN) return null; // no token configured — open mode
   const header = req.headers.get('authorization') ?? '';
   if (header === `Bearer ${AUTH_TOKEN}`) return null;
-  return new Response(JSON.stringify({ error: 'unauthorized' }), {
-    status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-  });
+  return jsonUnauthorized(corsHeaders);
 }
 
 // ─── HTTP server ───────────────────────────────────────────────────────────
@@ -375,7 +336,7 @@ const server = Bun.serve({
 
     // CORS — allow ngrok + localhost origins
     const origin = req.headers.get('origin') ?? '*';
-    const corsHeaders = {
+    const corsHeaders: CorsHeaders = {
       'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, ngrok-skip-browser-warning',
@@ -400,11 +361,7 @@ const server = Bun.serve({
     if (req.method === 'POST' && url.pathname === '/agents') {
       let body: { name?: string; description?: string; session_id?: string } = {};
       try { body = await req.json(); } catch { /* ignore */ }
-      if (!body.name) {
-        return new Response(JSON.stringify({ error: 'name is required' }), {
-          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
-      }
+      if (!body.name) return jsonBadRequest('name is required', corsHeaders);
       const agent: TrackedAgent = {
         id: makeAgentId(),
         name: body.name,
@@ -416,9 +373,7 @@ const server = Bun.serve({
       };
       trackedAgents.set(agent.id, agent);
       broadcastAgentUpdate(agent);
-      return new Response(JSON.stringify(agent), {
-        status: 201, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      return jsonCreated(agent, corsHeaders);
     }
 
     /**
@@ -429,11 +384,7 @@ const server = Bun.serve({
     if (req.method === 'PATCH' && url.pathname.startsWith('/agents/')) {
       const agentId = url.pathname.slice('/agents/'.length);
       const agent = trackedAgents.get(agentId);
-      if (!agent) {
-        return new Response(JSON.stringify({ error: 'not found' }), {
-          status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
-      }
+      if (!agent) return jsonNotFound('not found', corsHeaders);
       let body: Partial<TrackedAgent> = {};
       try { body = await req.json(); } catch { /* ignore */ }
       const updated: TrackedAgent = {
@@ -447,9 +398,7 @@ const server = Bun.serve({
       };
       trackedAgents.set(agentId, updated);
       broadcastAgentUpdate(updated);
-      return new Response(JSON.stringify(updated), {
-        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      return jsonOk(updated, corsHeaders);
     }
 
     /**
@@ -459,11 +408,7 @@ const server = Bun.serve({
      */
     if (req.method === 'DELETE' && url.pathname.startsWith('/agents/')) {
       const agentId = url.pathname.slice('/agents/'.length);
-      if (!trackedAgents.has(agentId)) {
-        return new Response(JSON.stringify({ error: 'not found' }), {
-          status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
-      }
+      if (!trackedAgents.has(agentId)) return jsonNotFound('not found', corsHeaders);
       trackedAgents.delete(agentId);
       const enc = new TextEncoder();
       const line = `event: agent_delete\ndata: ${JSON.stringify({ id: agentId })}\n\n`;
@@ -471,9 +416,7 @@ const server = Bun.serve({
       for (const ctrl of subscribers) {
         try { ctrl.enqueue(bytes); } catch { subscribers.delete(ctrl); }
       }
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      return jsonOk({ ok: true }, corsHeaders);
     }
 
     /** GET /agents — list all tracked agents sorted by creation time (newest first). */
@@ -481,9 +424,7 @@ const server = Bun.serve({
       const agents = Array.from(trackedAgents.values()).sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
-      return new Response(JSON.stringify({ agents }), {
-        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      return jsonOk({ agents }, corsHeaders);
     }
 
     /**
@@ -515,10 +456,7 @@ const server = Bun.serve({
         duration_s: body.duration_s,
         ts: body.ts,
       });
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 201,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      return jsonCreated({ ok: true }, corsHeaders);
     }
 
     /**
@@ -545,9 +483,7 @@ const server = Bun.serve({
     if (req.method === 'GET' && url.pathname === '/events/history') {
       const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '50', 10), 200);
       const events = eventBuffer.last(limit);
-      return new Response(JSON.stringify({ events, total: eventBuffer.totalAdded }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      return jsonOk({ events, total: eventBuffer.totalAdded }, corsHeaders);
     }
 
     /**
@@ -556,7 +492,7 @@ const server = Bun.serve({
      * and MVP metrics counters for evaluator verification.
      */
     if (req.method === 'GET' && url.pathname === '/health') {
-      return new Response(JSON.stringify({
+      return jsonOk({
         ok: true,
         events: eventBuffer.totalAdded,
         buffered: eventBuffer.length,
@@ -566,27 +502,23 @@ const server = Bun.serve({
         guard_engine_version: GUARD_ENGINE.version,
         rule_count: GUARD_RULE_COUNT,
         metrics: { ...serverMetrics },
-      }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      }, corsHeaders);
     }
 
     /** GET /intentra/files — list all non-hidden files in .intentra/ with full text content. */
     if (req.method === 'GET' && url.pathname === '/intentra/files') {
       const dir = path.join(process.env.INTENTRA_REPO_ROOT ?? process.cwd(), '.intentra');
-      if (!fs.existsSync(dir)) {
-        return new Response(JSON.stringify({ files: [] }), {
-          status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
+      if (!fs.existsSync(dir)) return jsonOk({ files: [] }, corsHeaders);
+      try {
+        const entries = fs.readdirSync(dir).filter(f => !f.startsWith('.')).sort();
+        const files = entries.map(name => ({
+          name,
+          content: fs.readFileSync(path.join(dir, name), 'utf-8'),
+        }));
+        return jsonOk({ files }, corsHeaders);
+      } catch (err) {
+        return jsonInternalError('failed to read .intentra directory', corsHeaders);
       }
-      const entries = fs.readdirSync(dir).filter(f => !f.startsWith('.')).sort();
-      const files = entries.map(name => ({
-        name,
-        content: fs.readFileSync(path.join(dir, name), 'utf-8'),
-      }));
-      return new Response(JSON.stringify({ files }), {
-        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
     }
 
     /**
@@ -598,24 +530,24 @@ const server = Bun.serve({
         process.env.INTENTRA_REPO_ROOT ?? process.cwd(), '.intentra', 'HANDOFFS.md'
       );
       if (!fs.existsSync(handoffsPath)) {
-        return new Response(JSON.stringify({ entries: [], count: 0, block_count: 0 }), {
-          status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
+        return jsonOk({ entries: [], count: 0, block_count: 0 }, corsHeaders);
       }
-      const raw = fs.readFileSync(handoffsPath, 'utf-8');
-      const entries = parseEntries(raw);
-      const slim = entries.map(e => ({
-        date: e.date,
-        author: e.author,
-        summary: e.summary,
-      }));
-      return new Response(JSON.stringify({
-        count: entries.length,
-        block_count: countHandoffBlocks(raw),
-        entries: slim,
-      }), {
-        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      try {
+        const raw = fs.readFileSync(handoffsPath, 'utf-8');
+        const entries = parseEntries(raw);
+        const slim = entries.map(e => ({
+          date: e.date,
+          author: e.author,
+          summary: e.summary,
+        }));
+        return jsonOk({
+          count: entries.length,
+          block_count: countHandoffBlocks(raw),
+          entries: slim,
+        }, corsHeaders);
+      } catch {
+        return jsonInternalError('failed to read HANDOFFS.md', corsHeaders);
+      }
     }
 
     /** GET /intentra/latest — extract the last '---'-separated entry from HANDOFFS.md. */
@@ -623,32 +555,25 @@ const server = Bun.serve({
       const handoffsPath = path.join(
         process.env.INTENTRA_REPO_ROOT ?? process.cwd(), '.intentra', 'HANDOFFS.md'
       );
-      if (!fs.existsSync(handoffsPath)) {
-        return new Response(JSON.stringify({ latest: null }), {
-          status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
+      if (!fs.existsSync(handoffsPath)) return jsonOk({ latest: null }, corsHeaders);
+      try {
+        const raw = fs.readFileSync(handoffsPath, 'utf-8');
+        // Entries are separated by "\n---\n". Last non-empty block is the latest.
+        const blocks = raw.split(/\n---\n/).map(b => b.trim()).filter(Boolean);
+        const latest = blocks.length > 0 ? blocks[blocks.length - 1] : null;
+        return jsonOk({ latest }, corsHeaders);
+      } catch {
+        return jsonInternalError('failed to read HANDOFFS.md', corsHeaders);
       }
-      const raw = fs.readFileSync(handoffsPath, 'utf-8');
-      // Entries are separated by "\n---\n". Last non-empty block is the latest.
-      const blocks = raw.split(/\n---\n/).map(b => b.trim()).filter(Boolean);
-      const latest = blocks.length > 0 ? blocks[blocks.length - 1] : null;
-      return new Response(JSON.stringify({ latest }), {
-        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
     }
 
     /** GET /intentra/intent/:id — fetch a single intent artifact by its exact ID. Returns 404 if not found. */
     if (req.method === 'GET' && url.pathname.startsWith('/intentra/intent/')) {
-      const intentId = decodeURIComponent(url.pathname.slice('/intentra/intent/'.length));
+      const intentId = decodeURIComponent(url.pathname.slice('/intentra/intent/'.length)).trim();
+      if (!intentId) return jsonBadRequest('intent_id is required', corsHeaders);
       const intent = getIntent(intentId);
-      if (!intent) {
-        return new Response(JSON.stringify({ error: 'intent not found' }), {
-          status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
-      }
-      return new Response(JSON.stringify(intent), {
-        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      if (!intent) return jsonNotFound('intent not found', corsHeaders);
+      return jsonOk(intent, corsHeaders);
     }
 
     /**
@@ -665,22 +590,13 @@ const server = Bun.serve({
         /* ignore */
       }
       if (!body.intent_id || typeof body.intent_id !== 'string') {
-        return new Response(JSON.stringify({ error: 'intent_id is required' }), {
-          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
+        return jsonBadRequest('intent_id is required', corsHeaders);
       }
       if (!body.outcome || !isIntentOutcome(body.outcome)) {
-        return new Response(
-          JSON.stringify({ error: 'outcome must be success, error, or cancelled' }),
-          { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
-        );
+        return jsonBadRequest('outcome must be success, error, or cancelled', corsHeaders);
       }
       const updated = updateIntentOutcome(body.intent_id, body.outcome);
-      if (!updated) {
-        return new Response(JSON.stringify({ error: 'intent not found' }), {
-          status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
-      }
+      if (!updated) return jsonNotFound('intent not found', corsHeaders);
       // Emit SSE so mobile gets notified of resolution
       addEvent({
         kind: 'progress',
@@ -691,9 +607,7 @@ const server = Bun.serve({
         outcome: body.outcome as ProgressEvent['outcome'],
         message: `Intent resolved: ${body.outcome} — ${updated.prompt.slice(0, 60)}`,
       });
-      return new Response(JSON.stringify(updated), {
-        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      return jsonOk(updated, corsHeaders);
     }
 
     /**
@@ -706,9 +620,7 @@ const server = Bun.serve({
       let body: Record<string, unknown> = {};
       try { body = await req.json(); } catch { /* ignore */ }
       if (!body.prompt || typeof body.prompt !== 'string') {
-        return new Response(JSON.stringify({ error: 'prompt is required' }), {
-          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
+        return jsonBadRequest('prompt is required', corsHeaders);
       }
       const artifact = createIntent({
         prompt: body.prompt as string,
@@ -726,28 +638,21 @@ const server = Bun.serve({
         intent_id: artifact.intent_id,
         message: `Intent created: ${artifact.prompt.slice(0, 80)}`,
       });
-      return new Response(JSON.stringify(artifact), {
-        status: 201, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      return jsonCreated(artifact, corsHeaders);
     }
 
     /** GET /intentra/intents — list all intent JSON artifacts from .intentra/, sorted chronologically. */
     if (req.method === 'GET' && url.pathname === '/intentra/intents') {
       const intents = listIntents();
-      return new Response(JSON.stringify({ intents, count: intents.length }), {
-        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      return jsonOk({ intents, count: intents.length }, corsHeaders);
     }
 
     /** GET /intentra/guard/rules — public guard rule metadata (ids, categories, risk scores). No matcher functions exposed. */
     if (req.method === 'GET' && url.pathname === '/intentra/guard/rules') {
-      return new Response(
-        JSON.stringify({
-          engine: { ...GUARD_ENGINE },
-          rules: listGuardRulePublicMeta(),
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
-      );
+      return jsonOk({
+        engine: { ...GUARD_ENGINE },
+        rules: listGuardRulePublicMeta(),
+      }, corsHeaders);
     }
 
     /** GET /intentra/guard/schema — JSON Schema for culture.json intentra fragment + valid rule IDs. */
@@ -756,20 +661,15 @@ const server = Bun.serve({
         const schemaPath = path.join(import.meta.dir, 'schemas', 'culture-intentra.fragment.json');
         const raw = fs.readFileSync(schemaPath, 'utf-8');
         const culture_fragment_schema = JSON.parse(raw) as unknown;
-        return new Response(
-          JSON.stringify({
-            culture_fragment_schema,
-            culture_fragment_schema_path: 'mobile-app/server/schemas/culture-intentra.fragment.json',
-            rule_ids: [...GUARD_RULE_IDS].sort(),
-            engine: { ...GUARD_ENGINE },
-            rule_count: GUARD_RULE_COUNT,
-          }),
-          { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
-        );
+        return jsonOk({
+          culture_fragment_schema,
+          culture_fragment_schema_path: 'mobile-app/server/schemas/culture-intentra.fragment.json',
+          rule_ids: [...GUARD_RULE_IDS].sort(),
+          engine: { ...GUARD_ENGINE },
+          rule_count: GUARD_RULE_COUNT,
+        }, corsHeaders);
       } catch {
-        return new Response(JSON.stringify({ error: 'schema_unavailable' }), {
-          status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
+        return jsonInternalError('schema_unavailable', corsHeaders);
       }
     }
 
@@ -788,9 +688,7 @@ const server = Bun.serve({
         /* ignore */
       }
       if (!body.command || typeof body.command !== 'string') {
-        return new Response(JSON.stringify({ error: 'command is required' }), {
-          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
+        return jsonBadRequest('command is required', corsHeaders);
       }
       const debug =
         body.debug === true || req.headers.get('x-intentra-guard-debug') === '1';
@@ -818,22 +716,16 @@ const server = Bun.serve({
           ts,
         });
       }
-      return new Response(JSON.stringify(result), {
-        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      return jsonOk(result, corsHeaders);
     }
 
     /** GET /intentra/culture — re-serve gstack's culture.json for mobile audit and intent linkage (read-only). */
     if (req.method === 'GET' && url.pathname === '/intentra/culture') {
       const snap = readCultureSnapshot();
-      return new Response(
-        JSON.stringify({
-          ...snap,
-          note:
-            'File is written and consumed by gstack skills; Intentra re-serves it for mobile audit and intent linkage.',
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
-      );
+      return jsonOk({
+        ...snap,
+        note: 'File is written and consumed by gstack skills; Intentra re-serves it for mobile audit and intent linkage.',
+      }, corsHeaders);
     }
 
     return new Response('Not found', { status: 404, headers: corsHeaders });

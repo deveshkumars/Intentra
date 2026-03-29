@@ -8,9 +8,9 @@
 import type { BrowserManager } from './browser-manager';
 import { findInstalledBrowsers, importCookies, listSupportedBrowserNames } from './cookie-import-browser';
 import { validateNavigationUrl } from './url-validation';
+import { validateReadPath } from './read-commands';
 import * as fs from 'fs';
 import * as path from 'path';
-import { TEMP_DIR, isPathWithin } from './platform';
 
 export async function handleWriteCommand(
   command: string,
@@ -286,17 +286,8 @@ export async function handleWriteCommand(
     case 'cookie-import': {
       const filePath = args[0];
       if (!filePath) throw new Error('Usage: browse cookie-import <json-file>');
-      // Path validation — prevent reading arbitrary files
-      if (path.isAbsolute(filePath)) {
-        const safeDirs = [TEMP_DIR, process.cwd()];
-        const resolved = path.resolve(filePath);
-        if (!safeDirs.some(dir => isPathWithin(resolved, dir))) {
-          throw new Error(`Path must be within: ${safeDirs.join(', ')}`);
-        }
-      }
-      if (path.normalize(filePath).includes('..')) {
-        throw new Error('Path traversal sequences (..) are not allowed');
-      }
+      // Delegate path safety to the shared validator (same rules as read-commands)
+      validateReadPath(filePath);
       if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
       const raw = fs.readFileSync(filePath, 'utf-8');
       let cookies: any[];
