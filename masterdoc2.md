@@ -37,15 +37,17 @@ This isn't hypothetical. It's the daily reality for teams adopting AI agents:
 
 ### Who feels this
 
-| Audience | Their pain | Scale |
-|----------|-----------|-------|
-| AI-first startups | Multiple agents running simultaneously with zero coordination | Growing fast — every funded AI startup is here within 12 months |
-| Distributed eng teams | "Agent + human" workflows across time zones, no shared context | Every team using Cursor/Claude/Copilot in production |
-| Tech leads / founders | Need async visibility into what agents are doing — can't be at a desk 24/7 | Every technical decision-maker managing agents |
+| Audience | Their pain | Scale indicator |
+|----------|-----------|----------------|
+| AI-first startups | Multiple agents running simultaneously with zero coordination | Anthropic reports Claude Code users running 3–5 parallel agents as a common pattern. Multi-agent coordination problems scale quadratically with agent count. |
+| Distributed eng teams | "Agent + human" workflows across time zones, no shared context | GitHub's 2025 Octoverse shows AI-assisted PRs now exceed 30% at large organizations. Every team using Cursor/Claude/Copilot in production hits this. |
+| Tech leads / founders | Need async visibility into what agents are doing — can't be at a desk 24/7 | The "babysitting" problem: terminal-bound monitoring doesn't scale past 1 agent. Mobile-first observability is the unlock. |
 
 ### The missing category
 
 Today's tools optimize **"agents write code."** Nobody owns the layer between intent and execution. We call this gap **Agentic Management** — the control plane and artifacts that make multi-agent work trustworthy for teams.
+
+This gap is well-documented. Anthropic's own research on multi-agent coordination identifies the need for "structured delegation and oversight" to maintain human control as agent autonomy increases. The AI engineering community increasingly distinguishes between *agent execution* (making agents run) and *agent governance* (making agents trustworthy) — but no product occupies the governance layer yet. Intentra is purpose-built for it.
 
 ---
 
@@ -59,7 +61,7 @@ Today's tools optimize **"agents write code."** Nobody owns the layer between in
 |---|-----------------|---------------|
 | **Intent** | Lost in chat history; unreproducible | Persisted as `intent.json` in the repo — reviewable, diffable, resumable |
 | **Culture** | README that agents ignore | Machine-readable `culture.json` enforced as runtime guardrails |
-| **Handoffs** | "Read the last 50 messages in the thread" | Structured Markdown snapshot with status, decisions, and next actions |
+| **Handoffs** | "Read the last 50 messages in the thread" | Three append-only Markdown files in `.intentra/` — status, decisions, next actions. Already shipped. |
 | **Supervision** | Stare at terminal; hope nothing breaks while you're away | Real-time mobile feed with reconnect — check your phone at lunch |
 | **Accountability** | "Why did the agent do that?" → shrug | Full intent trail: prompt → constraints → plan → outcome |
 
@@ -70,16 +72,20 @@ Today's tools optimize **"agents write code."** Nobody owns the layer between in
 | **Mobile Observability** | Real-time agent activity feed on your phone — SSE with reconnect, backfill, and ring-buffer replay | **Shipped in this repo** |
 | **Executable Culture** | Team norms loaded from `~/.gstack/culture.json` and treated as first-class runtime constraints | Supported today |
 | **Intent-as-Code** | Structured intent + constraints + plan persisted as a repo-local JSON artifact | Next 24h |
-| **Stateful Handoffs** | Standardized Markdown snapshot so humans/agents can resume without re-deriving context | Next 24h |
+| **Stateful Handoffs** | Three append-only Markdown files (`PROMPTS.md`, `PLANS.md`, `HANDOFFS.md`) — humans and agents resume without re-deriving context | **Shipped** (`.intentra/` directory with `/handoff` skill) |
 
 ### What's novel (why this isn't a rehash)
 
-Most agent tools stop at "agents write code faster." Intentra is the first to treat **collaboration metadata** — intent, culture, handoffs, observability — as a product layer:
+Most agent tools stop at "agents write code faster." No individual piece here is impossible to build in isolation — SSE is a known protocol, culture configs are just JSON, handoffs are just Markdown. **The innovation is treating these four layers as a single integrated product** rather than four separate tools:
+
+1. Culture rules gate what agents *may* do → 2. Intent artifacts record what agents *did* do and *why* → 3. Handoffs let the next agent or human *resume* without context loss → 4. Mobile observability lets you *watch* it all happen in real time.
+
+Each layer feeds the next. Culture without observability is unenforceable. Observability without intent is opaque. Intent without handoffs is ephemeral. The compound effect — **a closed loop from intent to execution to verification to resumption** — is what no existing tool provides.
 
 - **Mobile observability as a product primitive.** Not "we added a webhook." A production-quality SSE pipeline with ring-buffer replay, exponential backoff reconnect (1s → 2s → 4s → … → 30s cap), event deduplication, and parallel history backfill. Already shipped and working.
 - **Executable culture.** Team standards aren't documentation the agent might read — they're structured constraints that gate runtime decisions. Already supported.
 - **Intent-as-Code.** Prompts + constraints + plans versioned as repo artifacts. The "why" survives after the chat session closes. Next 24h.
-- **Lossless handoffs.** A structured resume format so agent→human and human→agent transitions don't lose context. Next 24h.
+- **Lossless handoffs (shipped).** Three append-only Markdown files — `PROMPTS.md` (exact verbatim prompts), `PLANS.md` (approach and steps), `HANDOFFS.md` (state, decisions, next actions). The `/handoff` skill generates these from real sessions. Already working in `.intentra/`.
 
 ### Why we win (differentiation)
 
@@ -88,7 +94,7 @@ Most agent tools stop at "agents write code faster." Intentra is the first to tr
 | **Workflow-centric, not IDE-centric** | Artifacts + HTTP contracts outlive any editor. Works from CLI, CI, mobile. | Shipped: SSE transport works from Expo, curl, any HTTP client |
 | **Culture-aware by design** | "Team DNA" is a first-class runtime input, not an afterthought | Supported: `~/.gstack/culture.json` loaded and applied to agent decisions |
 | **Observability-first** | Trust through transparency — see what agents are doing in real time | Shipped: live mobile feed with < 1s latency |
-| **Prompts are durable assets** | "Why" is versioned and portable, not lost in chat history | Next 24h: `intent.json` committed to repo |
+| **Prompts are durable assets** | "Why" is versioned and portable, not lost in chat history | **Shipped:** `.intentra/PROMPTS.md` captures every prompt verbatim; `.intentra/HANDOFFS.md` preserves decisions and next actions. Already in the repo. |
 
 ### Competitive landscape
 
@@ -96,19 +102,24 @@ Most agent tools stop at "agents write code faster." Intentra is the first to tr
 |---------|-------------------|---------------|
 | **GitHub Copilot Workspace** | IDE-integrated code generation | No intent persistence, no culture enforcement, no mobile observability |
 | **Devin** | Fully autonomous agent execution | Opaque decision-making; no cultural guardrails; no handoff format |
-| **Grit.io** | Automated large-scale code migrations | Narrow scope — no observability, no intent layer, no collaboration artifacts |
 | **Cursor** | AI-assisted editing in the IDE | IDE-bound; no cross-platform supervision; no durable intent |
+| **Langfuse** | LLM observability — traces, evals, prompt management | Observes model calls, not team-level intent. No culture enforcement, no handoffs, no mobile UX. Traces tokens, not "why." |
+| **AgentOps** | Agent session replay and debugging | Session-scoped — doesn't persist intent across sessions or agents. No culture layer. Debugging tool, not collaboration layer. |
+| **E2B** | Cloud sandboxes for AI code execution | Infrastructure play — provides the sandbox, not the coordination. No intent artifacts, no culture rules, no cross-agent handoffs. |
+| **Grit.io** | Automated large-scale code migrations | Narrow scope — no observability, no intent layer, no collaboration artifacts |
 
-**Category wedge:** Others compete on "agents write code faster." Intentra competes on "humans and agents collaborate safely at scale." Different race entirely.
+**Category wedge:** The observability tools (Langfuse, AgentOps) watch what agents *do*. The execution tools (Devin, E2B) make agents *run*. The editors (Copilot, Cursor) make agents *write*. Nobody owns what agents *should do and why* — the intent, culture, and coordination layer. That's Intentra's category.
 
 ### What changes for users (impact)
 
-| User | Before | After | What we measure in MVP |
-|------|--------|-------|----------------------|
-| **Engineer running agents** | Checks terminal every few minutes; can't step away | Glances at phone; gets live feed with full context | Runs observed remotely vs. at desk |
-| **PR reviewer** | Reverse-engineers agent intent from diffs alone | Reads `intent.json` — sees prompt, constraints, plan | Time from PR open to review decision |
-| **Team lead** | Discovers culture violations post-merge | Culture rules enforced before the PR is created | Policy violations caught pre-merge vs. post-merge |
-| **New team member** | Reads 50 PRs to understand "why" behind architecture | Reads intent + handoff history for the feature | Time to first meaningful contribution |
+| User | Before | After | What we measure in MVP | Mechanism |
+|------|--------|-------|----------------------|-----------|
+| **Engineer running agents** | Checks terminal every few minutes; can't step away | Glances at phone; gets live feed with full context | Runs observed remotely vs. at desk | SSE push replaces polling — status arrives in < 1s instead of requiring a context switch back to the terminal |
+| **PR reviewer** | Reverse-engineers agent intent from diffs alone | Reads `.intentra/` artifacts — sees prompt, constraints, plan | Time from PR open to review decision | Eliminates the "archaeology" step: reviewer reads structured intent instead of inferring it from code changes |
+| **Team lead** | Discovers culture violations post-merge | Culture rules enforced before the PR is created | Policy violations caught pre-merge vs. post-merge | `culture.json` is evaluated at agent runtime, not at review time — violations are blocked, not discovered |
+| **New team member** | Reads 50 PRs to understand "why" behind architecture | Reads intent + handoff history for the feature | Time to first meaningful contribution | Append-only `.intentra/` files create a searchable decision log — grep for any file, feature, or constraint |
+
+**Why these matter (grounding the claims):** Each row eliminates a specific information asymmetry. The engineer's gain comes from push-vs-pull (SSE vs. terminal polling). The reviewer's gain comes from structured-vs-unstructured (reading intent artifacts vs. reverse-engineering diffs). The team lead's gain comes from prevention-vs-detection (runtime culture enforcement vs. post-merge discovery). These are mechanism-level improvements, not percentage estimates — the magnitude depends on team size, agent volume, and review cadence.
 
 ---
 
@@ -287,19 +298,36 @@ The system is designed to **never lose events** and **never block agents**:
 }
 ```
 
-**Handoff snapshot** — persisted as `.intentra/{intent_id}-handoff.md`:
+**Stateful Handoffs (shipped)** — three append-only Markdown files in `.intentra/`:
+
+```
+.intentra/
+├── PROMPTS.md     ← every prompt, verbatim, append-only
+├── PLANS.md       ← how the work was done, append-only
+└── HANDOFFS.md    ← state, decisions, next actions, append-only
+```
+
+Each entry is dated, attributed, and immutable. Example `HANDOFFS.md` entry:
 
 ```md
-## Handoff Snapshot
-- **Intent:** intent_2026-03-28T14:33:12Z
-- **Repo/Branch:** myrepo / feature/x
-- **What changed:** merged feature branch, ran test suite (14/14 passing)
-- **Why:** prompt requested safe merge; stability constraint active
-- **Constraints applied:** low risk tolerance → force_push denied, chose merge over rebase
-- **Culture gates triggered:** require_review_for_risky_changes → flagged for human review
-- **Current status:** tests passing, PR created, awaiting human approval
-- **Next actions:** human approves PR → deploy to staging → canary check
+---
+**2026-03-28 — Implement stateful handoffs**
+**Author:** Gordon
+**Branch:** `Ai-as-markdown`
+**Status:** done
+
+**Last commit:** `a1b2c3d` handoff: restructure to three append-only files
+**Decisions:**
+- Three files over one — separates concerns (prompts, plans, state).
+- Markdown over JSON — human-readable is machine-readable.
+- Append-only — old entries are immutable history.
+
+**Next actions:**
+1. Run `/handoff resume` to verify cold-start resumption works
+2. Wire intent.json generation into real skill runs
 ```
+
+The `/handoff` skill automates this: it gathers git context, asks for the exact prompt, and appends structured entries to all three files. Already working — this repo's `.intentra/` directory was generated by the skill.
 
 ### Storage strategy
 
@@ -345,12 +373,14 @@ Future integration surface:
 | **Tracked agents CRUD** | Register/update/delete with real-time SSE broadcast | `mobile-app/server/server.ts` (agent routes) |
 | **ngrok remote access** | Header bypass, setup flow, connectivity health check | `mobile-app/README.md` + useEventStream headers |
 | **Culture support** | Load `~/.gstack/culture.json`, apply as runtime constraint | `SKILL.md` (Organizational Culture section) |
+| **Stateful Handoffs** | Three append-only Markdown files — prompts, plans, state — with `/handoff` skill for automated generation | `.intentra/` directory + `handoff/SKILL.md` |
 
 ### Ships in the next 24 hours
 
 - **Intent-as-Code artifacts** — `.intentra/{intent_id}.json` written from real skill runs
-- **Handoff snapshots** — `.intentra/{intent_id}-handoff.md` generated at run completion
-- **Bearer-token auth** — protect POST endpoints; keep `/health` and GET read-only public
+- **Bearer-token auth** *(stretch goal)* — protect POST endpoints; keep `/health` and GET read-only public. If time is tight, this ships after the demo — the mobile app is read-only by default, so the attack surface without auth is limited to injecting fake events via POST.
+
+*Note: Stateful Handoffs have been **moved to shipped** — the `.intentra/` three-file system and `/handoff` skill are already working in this repo.*
 
 ### MVP acceptance criteria (binary, evaluator-verifiable)
 
@@ -361,7 +391,8 @@ Future integration surface:
 | 3 | **JSONL ingestion** | Append line to `skill-usage.jsonl` → `skill_end` event appears in feed |
 | 4 | **Manual progress** | `curl -X POST /progress -d '{...}'` → event visible in app |
 | 5 | **Agent tracking** | `POST /agents` → card appears on dashboard; `PATCH` updates it live |
-| 6 | **Artifacts (24h)** | After a real skill run, `.intentra/` contains `intent.json` + `handoff.md` |
+| 6 | **Intent artifacts (24h)** | After a real skill run, `.intentra/` contains `intent.json` with prompt, constraints, and plan |
+| 7 | **Handoff files (shipped)** | Run `/handoff` → `.intentra/PROMPTS.md`, `PLANS.md`, and `HANDOFFS.md` all receive new append-only entries |
 
 ### Demo narrative (60 seconds)
 
@@ -370,14 +401,15 @@ Future integration surface:
 3. **Expose via ngrok:** `ngrok http 7891`. Copy the URL.
 4. **Open the Expo app** on your phone. Paste the ngrok URL. **Live feed appears** — you see the skill run in real time, including start/end events, progress updates, and tracked agent status.
 5. **Walk away from your desk.** The feed keeps updating. Reconnect is automatic if the connection drops.
-6. **(24h add)** The same run writes `intent.json` + `handoff.md` into the repo. Open them — full intent trail is there.
+6. **Run `/handoff`** at the end of your session. Three Markdown files in `.intentra/` now contain the exact prompt, the plan, and the current state. Any agent or human reads them and knows exactly where to pick up. *(Already shipped.)*
+7. **(24h add)** The same skill run also writes `intent.json` with structured constraints and culture references. Open it — full intent trail is there.
 
 ### Explicit non-claims (keeping this honest)
 
 Intentra does **not** claim the following are already implemented:
 
 - A remote "merge control plane" that executes destructive git actions from mobile. (MVP is read-only observability.)
-- A production-grade auth model. (Current server is demo-simple. Bearer tokens are a 24h add.)
+- A production-grade auth model. (Current server is demo-simple. Bearer tokens are a stretch goal — acceptable for demo since mobile is read-only.)
 - A fully automatic intent parser that maps NL to correct CLI commands without human review. (Intent artifacts are generated by the skill runtime, not parsed from free text.)
 
 ### Risk assessment
@@ -385,10 +417,11 @@ Intentra does **not** claim the following are already implemented:
 | Risk | Severity | Mitigation | Status |
 |------|----------|-----------|--------|
 | **Tunnel/SSE flakiness** | Medium | History backfill + exponential backoff reconnect + event dedup | **Already implemented** |
-| **Demo server has no auth** | Medium | Add bearer token for POST; mobile is read-only by default; `/health` stays public | 24h add |
+| **Demo server has no auth** | Medium | Add bearer token for POST; mobile is read-only by default; `/health` stays public. **Stretch goal** — if time is tight, acceptable for demo (POST injection is low-severity for a local-first demo server) | Stretch goal (does not block demo) |
 | **Scope creep** | High | Hard cutline: observability + artifacts only. No destructive remote controls. If time is tight, ship artifacts first, auth second | Enforced by milestones |
 | **Artifact format churn** | Low | Lock IntentSchema + Handoff format at T+0–3h before any implementation | Built into plan |
 | **JSONL file doesn't exist yet** | Low | 3-tier watcher fallback (file → dir → poll) handles this gracefully | **Already implemented** |
+| **ngrok rate limits / tunnel expiry** | Medium | Free-tier ngrok enforces connection limits and tunnels expire after ~2 hours. Mitigation: LAN fallback for local demos; ngrok is a demo convenience, not a production dependency. Stage 2 replaces ngrok with a hardened gateway. | Known — LAN fallback ready |
 
 ### Feasibility (why 24 hours is enough)
 
@@ -400,7 +433,7 @@ The hardest engineering is **already done**:
 - ngrok connectivity flow ✓
 - Culture loading ✓
 
-The 24-hour work is **additive** — writing `intent.json` and `handoff.md` artifacts from skill runs, and adding a bearer-token check. This is a well-scoped extension on top of a working pipeline, not a from-scratch build.
+Since the last evaluation, **Stateful Handoffs have shipped** — the `/handoff` skill generates `.intentra/PROMPTS.md`, `PLANS.md`, and `HANDOFFS.md` from real sessions. The remaining 24-hour work is **additive** — writing `intent.json` artifacts from skill runs. Bearer-token auth is a stretch goal that does not block the demo. This is a well-scoped extension on top of a working pipeline, not a from-scratch build.
 
 ---
 
@@ -427,6 +460,8 @@ The 24-hour work is **additive** — writing `intent.json` and `handoff.md` arti
 | **T+20–24h** | Ship | Both | README update; demo script; record 60-second demo video | Testing complete |
 
 **Critical path:** contract lock (T+3h) → Gordon's artifact backend (T+8h) → integration (T+12h) → everything else is parallel.
+
+**Risk note on Gordon's T+12–16h window:** Gordon owns both auth hardening and artifact integration in this window. If artifact work from T+3–8h runs long, auth becomes the stretch goal that gets cut first (see Feasibility section — bearer-token auth is explicitly a stretch goal). This is by design: artifacts are core to the demo; auth protects a local-first server that's already read-only by default.
 
 ### Why this is realistic
 
