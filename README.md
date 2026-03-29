@@ -6,21 +6,51 @@ On top of the skills layer sits **Intentra** — an observability and collaborat
 
 **Canonical master plan:** [`masterdoc3.md`](masterdoc3.md) · **Intentra shipped surface:** [`INTENTRA.md`](INTENTRA.md) · **Architecture & API:** [`docs/intentra-architecture.md`](docs/intentra-architecture.md) · **Deploy (Docker, Fly, GHCR):** [`DEPLOY.md`](DEPLOY.md) · **Contributors:** [`CONTRIBUTORS.md`](CONTRIBUTORS.md)
 
+## Documentation
+
+- **Intentra (mobile + server):** [`INTENTRA.md`](INTENTRA.md), [`docs/quickstart.md`](docs/quickstart.md), [`docs/api-reference.md`](docs/api-reference.md), [`mobile-app/README.md`](mobile-app/README.md), [`mobile-app/TESTING.md`](mobile-app/TESTING.md)
+- **gstack skills:** [`docs/skills.md`](docs/skills.md), [`AGENTS.md`](AGENTS.md) (full slash-command inventory)
+- **Contracts:** [`docs/openapi/intentra-progress.json`](docs/openapi/intentra-progress.json), `bun run scripts/check-intentra-contracts.ts`
+- **Architecture & ops:** [`docs/intentra-architecture.md`](docs/intentra-architecture.md), [`DEPLOY.md`](DEPLOY.md)
+- **ADRs:** [`docs/adr/`](docs/adr/)
+- **Full docs index:** [`docs/README.md`](docs/README.md)
+
+**Product vision** in `masterdoc3.md` is not a shipped API spec; for routes and behavior, use `INTENTRA.md` and `docs/intentra-architecture.md`.
+
+### Repository layout (high level)
+
+```
+browse/            # headless browser CLI + daemon
+mobile-app/        # progress server (Bun) + Expo monitor app
+docs/              # Intentra + guard + ops docs, OpenAPI, ADRs, design drafts
+<skill>/           # one directory per gstack skill (SKILL.md)
+.github/workflows  # CI
+```
+
 ---
+
+## Getting started
+
+1. Install gstack (30 seconds — see below)
+2. Run `/office-hours` — describe what you're building
+3. Run `/plan-ceo-review` on any feature idea
+4. Run `/review` on any branch with changes
+5. Run `/qa` on your staging URL
+6. Stop there. You'll know if this is for you.
 
 ## Install — 30 seconds
 
-**Requirements:** [Claude Code](https://docs.anthropic.com/en/docs/claude-code) · [Git](https://git-scm.com/) · [Bun](https://bun.sh/) v1.0+
+**Requirements:** [Claude Code](https://docs.anthropic.com/en/docs/claude-code) · [Git](https://git-scm.com/) · [Bun](https://bun.sh/) v1.0+ · [Node.js](https://nodejs.org/) (Windows only, if your setup needs it)
 
 ### Global install (your machine)
 
 Open Claude Code and paste this prompt. Claude does the rest.
 
-> Install gstack: run **`git clone --single-branch --depth 1 https://github.com/deveshkumars/Intentra.git ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup`** then add a "gstack" section to CLAUDE.md that says to use the /browse skill from gstack for all web browsing, never use mcp\_\_claude-in-chrome\_\_\* tools, and lists the available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse, /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /setup-culture, /retro, /investigate, /document-release, /codex, /cso, /autoplan, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade. Then ask the user if they also want to add gstack to the current project so teammates get it.
+> Install gstack: run **`git clone --single-branch --depth 1 https://github.com/deveshkumars/Intentra.git ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup`** then add a "gstack" section to CLAUDE.md that says to use the /browse skill from gstack for all web browsing, never use mcp\_\_claude-in-chrome\_\_\* tools, and lists the available skills (full table in [`AGENTS.md`](AGENTS.md)): /autoplan, /benchmark, /browse, /canary, /careful, /codex, /collab-agent, /connect-chrome, /cso, /design-consultation, /design-review, /document-release, /freeze, /gstack-upgrade, /guard, /handoff, /investigate, /land-and-deploy, /office-hours, /plan-ceo-review, /plan-design-review, /plan-eng-review, /qa, /qa-only, /retro, /review, /setup-browser-cookies, /setup-culture, /setup-deploy, /ship, /unfreeze. Then ask the user if they also want to add gstack to the current project so teammates get it.
 
 ### Per-repo install (teammates get it automatically)
 
-> Add gstack to this project: run **`cp -Rf ~/.claude/skills/gstack .claude/skills/gstack && rm -rf .claude/skills/gstack/.git && cd .claude/skills/gstack && ./setup`** then add a "gstack" section to this project's CLAUDE.md that says to use the /browse skill from gstack for all web browsing, never use mcp\_\_claude-in-chrome\_\_\* tools, lists the available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse, /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /setup-culture, /retro, /investigate, /document-release, /codex, /cso, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade, and tells Claude that if gstack skills aren't working, run `cd .claude/skills/gstack && ./setup` to build the binary and register skills.
+> Add gstack to this project: run **`cp -Rf ~/.claude/skills/gstack .claude/skills/gstack && rm -rf .claude/skills/gstack/.git && cd .claude/skills/gstack && ./setup`** then add a "gstack" section to this project's CLAUDE.md that says to use the /browse skill from gstack for all web browsing, never use mcp\_\_claude-in-chrome\_\_\* tools, lists the same skills as in [`AGENTS.md`](AGENTS.md): /autoplan, /benchmark, /browse, /canary, /careful, /codex, /collab-agent, /connect-chrome, /cso, /design-consultation, /design-review, /document-release, /freeze, /gstack-upgrade, /guard, /handoff, /investigate, /land-and-deploy, /office-hours, /plan-ceo-review, /plan-design-review, /plan-eng-review, /qa, /qa-only, /retro, /review, /setup-browser-cookies, /setup-culture, /setup-deploy, /ship, /unfreeze, and tells Claude that if gstack skills aren't working, run `cd .claude/skills/gstack && ./setup` to build the binary and register skills.
 
 Real files get committed to your repo (not a submodule), so `git clone` just works. Everything lives inside `.claude/`. Nothing touches your PATH or runs in the background.
 
@@ -35,6 +65,8 @@ git clone --single-branch --depth 1 https://github.com/deveshkumars/Intentra.git
 cd .agents/skills/gstack && ./setup --host codex
 ```
 
+When setup runs from `.agents/skills/gstack`, it installs the generated Codex skills next to it in the same repo and does not write to `~/.codex/skills`.
+
 Install globally for your user account:
 
 ```bash
@@ -42,13 +74,15 @@ git clone --single-branch --depth 1 https://github.com/deveshkumars/Intentra.git
 cd ~/gstack && ./setup --host codex
 ```
 
+`setup --host codex` creates the runtime root at `~/.codex/skills/gstack` and links the generated Codex skills at the top level. This avoids duplicate skill discovery from the source repo checkout.
+
 Or let setup auto-detect which agents you have installed:
 
 ```bash
 cd ~/gstack && ./setup --host auto
 ```
 
-All 28 skills work across all supported agents. Hook-based safety skills (`/careful`, `/freeze`, `/guard`) use inline safety advisory prose on non-Claude hosts.
+For Codex-compatible hosts, setup supports both repo-local installs from `.agents/skills/gstack` and user-global installs from `~/.codex/skills/gstack`. The full skill set in [`AGENTS.md`](AGENTS.md) is generated for supported agents. Hook-based safety skills (`/careful`, `/freeze`, `/guard`) use inline safety advisory prose on non-Claude hosts.
 
 ---
 
@@ -118,7 +152,7 @@ Each skill feeds into the next. `/office-hours` writes a design doc that `/plan-
 | `/qa` | **QA Lead** | Test your app, find bugs, fix them with atomic commits, re-verify. Auto-generates regression tests for every fix. |
 | `/qa-only` | **QA Reporter** | Same methodology as `/qa` but report only. Pure bug report without code changes. |
 | `/cso` | **Chief Security Officer** | OWASP Top 10 + STRIDE threat model. Zero-noise: 17 false positive exclusions, 8/10+ confidence gate, independent finding verification. Each finding includes a concrete exploit scenario. |
-| `/ship` | **Release Engineer** | Sync main, run tests, audit coverage, push, open PR. Bootstraps test frameworks if you don't have one. Invokes `/document-release` automatically. |
+| `/ship` | **Release Engineer** | Sync main, run tests, audit coverage, push, open PR. Bootstraps test frameworks if you don't have one. Invokes `/document-release` automatically (per the ship skill workflow). |
 | `/land-and-deploy` | **Release Engineer** | Merge the PR, wait for CI and deploy, verify production health. One command from "approved" to "verified in production." |
 | `/canary` | **SRE** | Post-deploy monitoring loop. Watches for console errors, performance regressions, and page failures. |
 | `/benchmark` | **Performance Engineer** | Baseline page load times, Core Web Vitals, and resource sizes. Compare before/after on every PR. |
@@ -141,6 +175,8 @@ Each skill feeds into the next. `/office-hours` writes a design doc that `/plan-
 | `/unfreeze` | **Unlock** — remove the `/freeze` boundary. |
 | `/setup-deploy` | **Deploy Configurator** — one-time setup for `/land-and-deploy`. Detects your platform, production URL, and deploy commands. |
 | `/gstack-upgrade` | **Self-Updater** — upgrade gstack to latest. Detects global vs vendored install, syncs both, shows what changed. |
+| `/handoff` | **Session continuity** — append prompts, plans, and handoff state to Markdown files for the next agent or human. |
+| `/collab-agent` | **Git collaboration** — merges, branch coordination, handoff docs for multi-person or multi-agent teams. |
 
 **[Deep dives with examples and philosophy for every skill →](docs/skills.md)**
 
@@ -148,29 +184,37 @@ Each skill feeds into the next. `/office-hours` writes a design doc that `/plan-
 
 ## Parallel sprints
 
-gstack works well with one sprint. It gets interesting with ten running at once.
+gstack works well with one sprint. It gets interesting with ten running at once. The bullets below describe behaviors that ship in this repository (skills, browse tooling, mobile progress server). Where a workflow depends on a **third-party product** or your own machine setup, that is called out explicitly — those are not guarantees from this repo alone.
 
 **Design is at the heart.** `/design-consultation` doesn't just pick fonts. It researches what's out there in your space, proposes safe choices AND creative risks, generates realistic mockups of your actual product, and writes `DESIGN.md` — and then `/design-review` and `/plan-eng-review` read what you chose. Design decisions flow through the whole system.
 
 **`/qa` was a massive unlock.** It let me go from 6 to 12 parallel workers. Claude Code saying *"I SEE THE ISSUE"* and then actually fixing it, generating a regression test, and verifying the fix — that changed how I work. The agent has eyes now.
 
-**Smart review routing.** Just like at a well-run startup: CEO doesn't have to look at infra bug fixes, design review isn't needed for backend changes. gstack tracks what reviews are run, figures out what's appropriate, and just does the smart thing. The Review Readiness Dashboard tells you where you stand before you ship.
+**Review readiness.** The `/ship` skill includes a Review Readiness Dashboard so you can see what checks apply before you open a PR. Which reviews you run still depends on the skills you invoke and your team’s process — gstack does not auto-route work across sessions without you choosing the skills.
 
 **Test everything.** `/ship` bootstraps test frameworks from scratch if your project doesn't have one. Every `/ship` run produces a coverage audit. Every `/qa` bug fix generates a regression test. 100% test coverage is the goal — tests make vibe coding safe instead of yolo coding.
 
-**`/document-release` is the engineer you never had.** It reads every doc file in your project, cross-references the diff, and updates everything that drifted. README, ARCHITECTURE, CONTRIBUTING, CLAUDE.md, TODOS — all kept current automatically. `/ship` auto-invokes it, so docs stay current without an extra command.
+**`/document-release` is the engineer you never had.** It reads project docs, cross-references the diff, and updates what drifted (README, architecture notes, CLAUDE.md, etc., per the skill). **`/ship` auto-invokes `/document-release`** when you follow the ship skill steps — so docs can stay current without a separate command if you use that workflow.
 
 **Real browser mode.** `$B connect` launches your actual Chrome as a headed window controlled by Playwright. You watch Claude click, fill, and navigate in real time — same window, same screen. A subtle green shimmer at the top edge tells you which Chrome window gstack controls. All existing browse commands work unchanged. `$B disconnect` returns to headless. A Chrome extension Side Panel shows a live activity feed of every command and a chat sidebar where you can direct Claude. This is co-presence — Claude isn't remote-controlling a hidden browser, it's sitting next to you in the same cockpit.
 
 **Sidebar agent — your AI browser assistant.** Type natural language instructions in the Chrome side panel and a child Claude instance executes them. Each task gets up to 5 minutes. The sidebar agent runs in an isolated session, so it won't interfere with your main Claude Code window.
 
-**Browser handoff when the AI gets stuck.** Hit a CAPTCHA, auth wall, or MFA prompt? `$B handoff` opens a visible Chrome at the exact same page with all your cookies and tabs intact. Solve the problem, tell Claude you're done, `$B resume` picks up right where it left off. The agent even suggests it automatically after 3 consecutive failures.
+**Personal automation (illustrative).** The same headed-browser tooling can support ad hoc automation outside classic dev QA (e.g. repeating navigation on a site you control). Treat this as **your** responsibility for terms of service, consent, and safety — not a product guarantee from this repo.
+
+**Browser handoff when the AI gets stuck.** Hit a CAPTCHA, auth wall, or MFA prompt? `$B handoff` opens a visible Chrome at the exact same page with all your cookies and tabs intact. Solve the problem, tell Claude you're done, `$B resume` picks up right where it left off. Browse tooling and skills may suggest this flow after repeated failures when that logic is present in the active skill or CLI.
 
 **Multi-AI second opinion.** `/codex` gets an independent review from OpenAI's Codex CLI — a completely different AI looking at the same diff. When both `/review` (Claude) and `/codex` (OpenAI) have reviewed the same branch, you get a cross-model analysis showing which findings overlap and which are unique to each.
 
 **Safety guardrails on demand.** Say "be careful" and `/careful` warns before any destructive command. `/freeze` locks edits to one directory while debugging so Claude can't accidentally "fix" unrelated code. `/guard` activates both. `/investigate` auto-freezes to the module being investigated.
 
-**[Conductor](https://conductor.build) for 10–15 parallel sprints.** Conductor runs multiple Claude Code sessions in parallel — each in its own isolated workspace. One session running `/office-hours` on a new idea, another doing `/review` on a PR, a third implementing a feature, a fourth running `/qa` on staging, and more on other branches. All at the same time.
+**Proactive skill suggestions.** Some skills and install docs describe suggesting the next skill (e.g. based on session context). Exact behavior depends on your **Claude Code / agent host** configuration and whether hooks or preambles are enabled — it is not a single global switch in this repository.
+
+### Optional ecosystem (external tools)
+
+**Parallel sessions beyond one repo.** Products such as [Conductor](https://conductor.build) run multiple Claude Code (or other agent) sessions in parallel, each in its own workspace. That pattern is **external orchestration**: useful with gstack skills, but not shipped or required by this repository.
+
+**High parallelism.** Running many concurrent sprints is a **personal or team operating model**, not a capability this repo enforces. Your practical limit depends on machines, API limits, and the orchestration product you use.
 
 ---
 
@@ -263,6 +307,8 @@ A pre-built image is published to GHCR on every push to `main` that touches serv
 
 | Doc | What it covers |
 |-----|---------------|
+| [Documentation hub](docs/README.md) | Grouped index + maintenance rule for route/OpenAPI changes |
+| [AGENTS.md](AGENTS.md) | Full gstack slash-command inventory |
 | [Quickstart](docs/quickstart.md) | 5-minute local setup: install → server → ngrok → mobile app |
 | [API Reference](docs/api-reference.md) | Every endpoint with request/response schemas and JSON examples |
 | [Architecture](docs/intentra-architecture.md) | Route/auth matrix, event pipeline diagram, evaluator playbook |
@@ -279,6 +325,8 @@ A pre-built image is published to GHCR on every push to `main` that touches serv
 | [Handoffs (mobile)](docs/handoffs-mobile.md) | Handoffs tab, shared `handoff-parse`, `GET /intentra/handoffs/summary` |
 | [OpenAPI subset](docs/openapi/intentra-progress.json) | Machine-readable contract for core routes |
 | [ADRs](docs/adr/) | Shared handoff module, guard segmentation limits, first-match registry |
+| [Mobile App Architecture](docs/mobile-app.md) | Screen layout, data model, SSE hook, event-to-agent linking |
+| [Claude Code Hooks](docs/claude-code-hooks.md) | Wire `gstack-progress` + `intentra-guard-http` into Claude Code hooks |
 | [Deploy](DEPLOY.md) | Docker, docker-compose, Fly.io, GHCR image tags |
 
 ---

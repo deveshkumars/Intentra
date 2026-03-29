@@ -87,6 +87,8 @@ bunx expo start
 
 Scan the QR code with Expo Go. On the Setup screen, paste the ngrok URL from step 2.
 
+**Metro (Expo dev server) vs ngrok:** `ngrok http 7891` only tunnels the **progress server**. The **Expo dev server** (default **8081**) must still be reachable from your phone. Easiest path: phone and computer on the **same Wi‑Fi**, run `bunx expo start` (or `npx expo start`) and use **LAN** mode (`--lan` if you need to force it). If the phone cannot reach port 8081 (guest Wi‑Fi, firewall), start a **second tunnel** for Metro, e.g. `ngrok http 8081`, and open the Expo URL that points at that tunnel. See [Troubleshooting — Expo Go stuck on “Opening project…”](troubleshooting.md#expo-go-stuck-on-opening-project).
+
 For **Handoffs**, **PROMPTS**, and **PLANS** on the **Handoffs** tab, point the server at your repo root so `.intentra/` resolves:
 
 ```bash

@@ -48,8 +48,8 @@ Copy the `https://xxxx.ngrok-free.app` URL — you'll paste it into the app.
 
 ```bash
 cd mobile-app/app
-npm install
-npx expo start
+bun install   # or: npm install
+bunx expo start   # or: npx expo start
 ```
 
 Scan the QR code with **Expo Go** (iOS App Store / Google Play).
@@ -60,6 +60,15 @@ On first launch, the app shows a setup screen. Paste your ngrok URL and tap **Co
 
 > To test on the same machine (iOS Simulator or LAN): use your machine's LAN IP
 > instead of ngrok, e.g. `http://192.168.1.42:7891`.
+
+If the progress server uses **`INTENTRA_TOKEN`**, enter the same token in the optional bearer field on the Setup screen (the app probes `POST /agents` so misconfiguration fails fast).
+
+### Development: LAN vs tunnel
+
+- **`ngrok http 7891` tunnels only the progress server.** Expo’s **Metro** bundler still listens on **8081** (by default) on your dev machine. The phone must reach **8081** for Expo Go to load the app, unless you use tunnel mode.
+- **LAN (typical):** Phone and computer on the same Wi‑Fi. Run `npx expo start --lan` (or `bunx expo start --lan`) if the default QR connection fails. Ensure the host firewall allows **8081** (and **7891** if you use raw LAN URLs for the server).
+- **Tunnel:** If LAN is blocked (guest Wi‑Fi, strict firewall), use `npx expo start --tunnel`, or run a **second** tunnel (e.g. `ngrok http 8081`) and open the Expo dev URL that points at Metro through that tunnel.
+- Stuck on **“Opening project…”** in Expo Go? See [Troubleshooting — Expo Go stuck on “Opening project…”](../docs/troubleshooting.md#expo-go-stuck-on-opening-project).
 
 ---
 

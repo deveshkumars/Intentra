@@ -107,6 +107,16 @@ bun run build
 bin/dev-teardown
 ```
 
+### Documentation PR checklist
+
+When your change affects **shipped HTTP surface** or **how operators run the stack**, update docs in the same PR:
+
+- [`docs/intentra-architecture.md`](docs/intentra-architecture.md) — route and auth matrix
+- [`INTENTRA.md`](INTENTRA.md) — “Shipped in this repo” table
+- [`docs/openapi/intentra-progress.json`](docs/openapi/intentra-progress.json) — OpenAPI contract (then run `bun run scripts/check-intentra-contracts.ts`)
+
+When you add or rename a **top-level skill** (`*/SKILL.md`), update [`AGENTS.md`](AGENTS.md) and any **install blurbs** in [`README.md`](README.md) that enumerate skills. Regenerate generated `SKILL.md` from templates per [`CLAUDE.md`](CLAUDE.md) when you edit `.tmpl` files.
+
 ## Testing & evals
 
 ### Setup
