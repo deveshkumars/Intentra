@@ -105,6 +105,21 @@ export function createIntent(input: {
   return artifact;
 }
 
+/** Read a single intent artifact by id. */
+export function getIntent(intent_id: string): IntentArtifact | null {
+  if (!intent_id || intent_id.includes('..') || intent_id.includes('/')) {
+    return null;
+  }
+  const filepath = path.join(intentraDir(), `${intent_id}.json`);
+  if (!fs.existsSync(filepath)) return null;
+  try {
+    const art = JSON.parse(fs.readFileSync(filepath, 'utf-8')) as IntentArtifact;
+    return art.intent_id === intent_id ? art : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Read all intent artifacts from .intentra/ */
 export function listIntents(): IntentArtifact[] {
   const dir = intentraDir();

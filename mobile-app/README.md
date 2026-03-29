@@ -204,9 +204,10 @@ Resolve `.intentra/` from `INTENTRA_REPO_ROOT` if set, otherwise the server’s 
 | `GET` | `/intentra/files` | No | List non-hidden files under `.intentra/` with full text |
 | `GET` | `/intentra/latest` | No | Last `---`-separated block from `HANDOFFS.md` |
 | `GET` | `/intentra/intents` | No | List parsed intent JSON artifacts |
+| `GET` | `/intentra/intent/:id` | No | Fetch a single intent artifact by id |
 | `GET` | `/intentra/culture` | No | Snapshot of `culture.json` from `GSTACK_STATE_DIR` (same file gstack loads; Intentra re-serves for mobile audit) |
-| `POST` | `/intentra/intent` | Yes (`Bearer`) | Create intent JSON (`prompt` required; optional `repo`, `constraints`, `culture_ref`, `plan`). If `culture_ref` is omitted and `culture.json` exists, server sets `culture_ref` to that path. |
-| `PATCH` | `/intentra/intent` | Yes (`Bearer`) | Set `outcome`: JSON `{ "intent_id": "…", "outcome": "success" \| "error" \| "cancelled" }` |
+| `POST` | `/intentra/intent` | Yes (`Bearer`) | Create intent JSON (`prompt` required; optional `repo`, `constraints`, `culture_ref`, `plan`). Emits SSE `intent_created` event. If `culture_ref` is omitted and `culture.json` exists, server sets `culture_ref` to that path. |
+| `PATCH` | `/intentra/intent` | Yes (`Bearer`) | Set `outcome`: JSON `{ "intent_id": "…", "outcome": "success" \| "error" \| "cancelled" }`. Emits SSE `intent_resolved` event. |
 
 ```bash
 # List intent JSON files (empty array if none)

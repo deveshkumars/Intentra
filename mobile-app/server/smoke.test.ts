@@ -169,6 +169,74 @@ describe('progress server smoke', () => {
     expect(j.rule?.category).toBe('vcs');
   });
 
+  test('GET /intentra/intent/:id fetches single intent', async () => {
+    const cr = await fetch(`${BASE}/intentra/intent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: 'single lookup test' }),
+    });
+    expect(cr.ok).toBe(true);
+    const art = (await cr.json()) as { intent_id: string; prompt: string };
+    const gr = await fetch(`${BASE}/intentra/intent/${encodeURIComponent(art.intent_id)}`);
+    expect(gr.ok).toBe(true);
+    const fetched = (await gr.json()) as { intent_id: string; prompt: string };
+    expect(fetched.intent_id).toBe(art.intent_id);
+    expect(fetched.prompt).toBe('single lookup test');
+  });
+
+  test('GET /intentra/intent/:id returns 404 for unknown', async () => {
+    const r = await fetch(`${BASE}/intentra/intent/intent_nonexistent`);
+    expect(r.status).toBe(404);
+  });
+
+  test('POST /progress with intent_id links event', async () => {
+    const intentId = 'intent_smoke_link_test';
+    const pr = await fetch(`${BASE}/progress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: 'progress',
+        message: 'linked event test',
+        intent_id: intentId,
+      }),
+    });
+    expect(pr.ok).toBe(true);
+    const hr = await fetch(`${BASE}/events/history?limit=1`);
+    const hj = (await hr.json()) as { events: Array<{ intent_id?: string; message?: string }> };
+    expect(hj.events.length).toBeGreaterThanOrEqual(1);
+    // The most recent event should have our intent_id
+    const last = hj.events[hj.events.length - 1];
+    expect(last!.intent_id).toBe(intentId);
+  });
+
+  test('POST /intentra/guard debug trace returns trace array', async () => {
+    const r = await fetch(`${BASE}/intentra/guard`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: 'ls -la', debug: true }),
+    });
+    expect(r.ok).toBe(true);
+    const j = (await r.json()) as { verdict: string; trace?: Array<{ phase: string }> };
+    expect(j.verdict).toBe('allow');
+    expect(Array.isArray(j.trace)).toBe(true);
+    expect(j.trace!.length).toBeGreaterThan(0);
+  });
+
+  test('POST /intentra/intent emits SSE intent_created event', async () => {
+    const h0 = await fetch(`${BASE}/health`);
+    const j0 = (await h0.json()) as { events: number };
+    const beforeCount = j0.events;
+    await fetch(`${BASE}/intentra/intent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: 'sse emission test' }),
+    });
+    const h1 = await fetch(`${BASE}/health`);
+    const j1 = (await h1.json()) as { events: number };
+    // Creating an intent should add at least 1 event (the intent_created SSE)
+    expect(j1.events).toBeGreaterThan(beforeCount);
+  });
+
   test('INTENTRA_TOKEN rejects POST without Bearer', async () => {
     proc.kill();
     await wait(200);
