@@ -81,15 +81,19 @@ Commits ahead/behind:
 git rev-list --left-right --count <base>...HEAD 2>/dev/null || echo "0	0"
 ```
 
-### Step 1: Gather context from the human
+### Step 1: Gather the exact prompt
 
-Use AskUserQuestion with these questions.
+**This is the most important step.** The handoff must contain the **exact prompt**
+that started the work — the literal words the human typed or pasted. Not a summary.
+Not an inference. The actual prompt.
 
-**Question 1:** "What was the prompt — what were you (or the agent) asked to do?"
+Use AskUserQuestion:
+
+**Question 1:** "Paste the exact prompt that started this work — the literal words you typed to the agent or teammate."
 - Header: "Prompt"
 - Options:
-  - A) "Infer from recent commits" — read `git log --oneline -10` and propose a summary
-  - B) "Let me type it"
+  - A) "Let me paste it" — the user will type/paste the exact prompt
+  - B) "It's in my clipboard" — the user will paste it in the follow-up
 
 **Question 2:** "What is the current status?"
 - Header: "Status"
@@ -166,9 +170,11 @@ Steps 0-2. **No section should contain guesses — verify everything with git.**
 
 ## Prompt
 
-<The original ask — what was the human intent, verbatim or near-verbatim.
-This is the "why." Paste the actual prompt if available. If not, reconstruct
-it faithfully from context.>
+> Exact words. Copy-paste the literal prompt that started this work.
+> This is not a summary. This is the actual text the human typed.
+
+<The exact prompt, verbatim. If multiple prompts led to this work,
+include all of them in order, separated by blank lines.>
 
 ## Plan
 
@@ -326,6 +332,10 @@ Verdict: DIVERGED — run /handoff to write a fresh one.
 
 ## Rules
 
+- **Exact prompts.** The Prompt section must contain the exact words the human
+  typed. Not a summary. Not a paraphrase. The literal prompt. If there were
+  multiple prompts, include all of them. This is the most important section —
+  it's the raw intent, preserved verbatim.
 - **Ground truth.** Verify every claim with a real command. Never guess.
 - **No empty sections.** Omit sections that have no content.
 - **Executable Next Actions.** Each step must be specific enough for a cold-start
