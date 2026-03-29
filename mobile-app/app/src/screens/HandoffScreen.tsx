@@ -1,14 +1,17 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { parseEntries, formatDate, countHandoffBlocks } from '../../../shared/handoff-parse';
 import { progressFetchHeaders } from '../apiHeaders';
+import type { ProgressEvent } from '../types';
 
 interface Props {
   serverUrl: string | null;
   authToken?: string | null;
+  /** SSE event stream — used to auto-refresh when a skill finishes (files may have changed) */
+  events?: ProgressEvent[];
 }
 
 interface IntentFile {
@@ -44,12 +47,13 @@ const DOC_LABELS: Record<DocType, { title: string; icon: string; description: st
 
 const DOC_ORDER: DocType[] = ['HANDOFFS', 'PROMPTS', 'PLANS'];
 
-export function HandoffScreen({ serverUrl, authToken = null }: Props) {
+export function HandoffScreen({ serverUrl, authToken = null, events }: Props) {
   const [files, setFiles] = useState<Record<string, string>>({});
   const [activeDoc, setActiveDoc] = useState<DocType>('HANDOFFS');
   const [expandedEntries, setExpandedEntries] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const lastEventIdRef = useRef<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!serverUrl) return;
@@ -76,6 +80,16 @@ export function HandoffScreen({ serverUrl, authToken = null }: Props) {
   }, [serverUrl, authToken]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Auto-refresh when a skill finishes — handoff files may have been updated
+  useEffect(() => {
+    if (!events || events.length === 0) return;
+    const latest = events[events.length - 1];
+    if (!latest) return;
+    if (latest.id === lastEventIdRef.current) return;
+    lastEventIdRef.current = latest.id;
+    if (latest.upstream_kind === 'gstack_skill_run') fetchData();
+  }, [events, fetchData]);
 
   const toggleEntry = (key: string) => {
     setExpandedEntries(prev => ({ ...prev, [key]: !prev[key] }));

@@ -100,7 +100,7 @@ export default function App() {
                 onSetupPress={() => setScreen('setup')}
               />
             ) : activeTab === 'handoffs' ? (
-              <HandoffScreen serverUrl={serverUrl} authToken={authToken} />
+              <HandoffScreen serverUrl={serverUrl} authToken={authToken} events={events} />
             ) : (
               <IntentScreen serverUrl={serverUrl} authToken={authToken} events={events} />
             )}
