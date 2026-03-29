@@ -2,7 +2,9 @@
 # gstack-progress — POST a progress event to the mobile monitor server
 #
 # Usage:
-#   gstack-progress --message "Running tests" [--step lint] [--pct 42] [--skill qa]
+#   gstack-progress --message "Running tests" [--step lint] [--pct 42] [--skill qa] [--intent-id intent_2026-01-01T00:00:00Z]
+#
+# Optional: INTENTRA_INTENT_ID env (same as --intent-id) to tie POST /progress to an intent artifact.
 #
 # Env overrides (for testing):
 #   GSTACK_PROGRESS_PORT — port (default 7891)
@@ -22,6 +24,7 @@ STEP=""
 PCT=""
 SKILL_NAME="${GSTACK_SKILL:-}"
 SESSION="${CLAUDE_SESSION_ID:-}"
+INTENT_ID="${INTENTRA_INTENT_ID:-}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -29,6 +32,7 @@ while [ $# -gt 0 ]; do
     --step)    STEP="$2"; shift 2 ;;
     --pct)     PCT="$2"; shift 2 ;;
     --skill)   SKILL_NAME="$2"; shift 2 ;;
+    --intent-id) INTENT_ID="$2"; shift 2 ;;
     *)         shift ;;
   esac
 done
@@ -41,6 +45,7 @@ MESSAGE="$(json_safe "$MESSAGE")"
 STEP="$(json_safe "$STEP")"
 SKILL_NAME="$(json_safe "$SKILL_NAME")"
 SESSION="$(json_safe "$SESSION")"
+INTENT_ID="$(json_safe "$INTENT_ID")"
 
 # Build JSON without jq dependency
 BODY="{\"kind\":\"progress\",\"source\":\"post\",\"ts\":\"$TS\""
@@ -49,6 +54,7 @@ BODY="{\"kind\":\"progress\",\"source\":\"post\",\"ts\":\"$TS\""
 [ -n "$PCT" ]         && BODY="$BODY,\"pct\":$PCT"
 [ -n "$SKILL_NAME" ]  && BODY="$BODY,\"skill\":\"$SKILL_NAME\""
 [ -n "$SESSION" ]     && BODY="$BODY,\"session_id\":\"$SESSION\""
+[ -n "$INTENT_ID" ]   && BODY="$BODY,\"intent_id\":\"$INTENT_ID\""
 BODY="$BODY}"
 
 # curl with tight timeout — never block the agent

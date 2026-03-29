@@ -125,3 +125,32 @@ export function listIntents(): IntentArtifact[] {
   }
   return intents;
 }
+
+const OUTCOMES = ['success', 'error', 'cancelled'] as const;
+export type IntentOutcome = (typeof OUTCOMES)[number];
+
+export function isIntentOutcome(s: string): s is IntentOutcome {
+  return (OUTCOMES as readonly string[]).includes(s);
+}
+
+/** Update `outcome` on an existing `.intentra/{intent_id}.json` artifact. */
+export function updateIntentOutcome(
+  intent_id: string,
+  outcome: IntentOutcome,
+): IntentArtifact | null {
+  if (!intent_id || intent_id.includes('..') || intent_id.includes('/')) {
+    return null;
+  }
+  const filepath = path.join(intentraDir(), `${intent_id}.json`);
+  if (!fs.existsSync(filepath)) return null;
+  let art: IntentArtifact;
+  try {
+    art = JSON.parse(fs.readFileSync(filepath, 'utf-8')) as IntentArtifact;
+  } catch {
+    return null;
+  }
+  if (art.intent_id !== intent_id) return null;
+  art.outcome = outcome;
+  fs.writeFileSync(filepath, JSON.stringify(art, null, 2) + '\n');
+  return art;
+}

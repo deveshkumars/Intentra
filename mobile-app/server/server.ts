@@ -16,7 +16,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { createIntent, listIntents } from './intent';
+import { createIntent, listIntents, updateIntentOutcome, isIntentOutcome } from './intent';
 import { readCultureSnapshot } from './culture';
 import {
   appendIntentraGuardTelemetry,
@@ -116,6 +116,14 @@ const startedAt = Date.now();
 const eventBuffer = new CircularBuffer<ProgressEvent>(BUFFER_CAPACITY);
 let nextId = 1;
 
+/** MVP counters (evaluator-verifiable via GET /health). */
+const serverMetrics = {
+  post_progress_total: 0,
+  jsonl_lines_ingested_total: 0,
+  sse_subscriber_opens_total: 0,
+  sse_subscriber_closes_total: 0,
+};
+
 type SSEController = ReadableStreamDefaultController<Uint8Array>;
 const subscribers = new Set<SSEController>();
 
@@ -191,6 +199,7 @@ function readNewJsonlLines(): void {
     jsonlOffset = stat.size;
 
     const lines = buf.toString('utf-8').split('\n').filter(Boolean);
+    serverMetrics.jsonl_lines_ingested_total += lines.length;
     for (const line of lines) {
       try {
         const entry = JSON.parse(line) as Record<string, unknown>;
@@ -278,6 +287,7 @@ function makeSSEStream(): ReadableStream<Uint8Array> {
         ctrl.enqueue(enc.encode(`event: progress\ndata: ${JSON.stringify(ev)}\n\n`));
       }
       subscribers.add(ctrl);
+      serverMetrics.sse_subscriber_opens_total++;
 
       // Heartbeat
       heartbeat = setInterval(() => {
@@ -285,13 +295,15 @@ function makeSSEStream(): ReadableStream<Uint8Array> {
           ctrl.enqueue(enc.encode(': heartbeat\n\n'));
         } catch {
           clearInterval(heartbeat);
-          subscribers.delete(ctrl);
+          if (subscribers.delete(ctrl)) serverMetrics.sse_subscriber_closes_total++;
         }
       }, HEARTBEAT_MS);
     },
     cancel(ctrl) {
       clearInterval(heartbeat);
-      subscribers.delete(ctrl as unknown as SSEController);
+      if (subscribers.delete(ctrl as unknown as SSEController)) {
+        serverMetrics.sse_subscriber_closes_total++;
+      }
     },
   });
 }
@@ -423,6 +435,7 @@ const server = Bun.serve({
       } catch {
         // accept even if body is malformed — still acknowledge
       }
+      serverMetrics.post_progress_total++;
       addEvent({
         kind: body.kind ?? 'progress',
         source: body.source ?? 'post',
@@ -477,6 +490,7 @@ const server = Bun.serve({
         jsonl: JSONL_PATH,
         guard_engine_version: GUARD_ENGINE.version,
         rule_count: GUARD_RULE_COUNT,
+        metrics: { ...serverMetrics },
       }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
@@ -515,6 +529,36 @@ const server = Bun.serve({
       const blocks = raw.split(/\n---\n/).map(b => b.trim()).filter(Boolean);
       const latest = blocks.length > 0 ? blocks[blocks.length - 1] : null;
       return new Response(JSON.stringify({ latest }), {
+        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // PATCH /intentra/intent — set outcome on an existing intent artifact
+    if (req.method === 'PATCH' && url.pathname === '/intentra/intent') {
+      let body: { intent_id?: string; outcome?: string } = {};
+      try {
+        body = await req.json();
+      } catch {
+        /* ignore */
+      }
+      if (!body.intent_id || typeof body.intent_id !== 'string') {
+        return new Response(JSON.stringify({ error: 'intent_id is required' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+      if (!body.outcome || !isIntentOutcome(body.outcome)) {
+        return new Response(
+          JSON.stringify({ error: 'outcome must be success, error, or cancelled' }),
+          { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
+        );
+      }
+      const updated = updateIntentOutcome(body.intent_id, body.outcome);
+      if (!updated) {
+        return new Response(JSON.stringify({ error: 'intent not found' }), {
+          status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+      return new Response(JSON.stringify(updated), {
         status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }

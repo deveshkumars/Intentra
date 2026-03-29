@@ -45,8 +45,19 @@ describe('progress server smoke', () => {
             ok?: boolean;
             guard_engine_version?: number;
             rule_count?: number;
+            metrics?: {
+              post_progress_total?: number;
+              sse_subscriber_opens_total?: number;
+            };
           };
-          if (j.ok === true && typeof j.guard_engine_version === 'number' && typeof j.rule_count === 'number') {
+          if (
+            j.ok === true
+            && typeof j.guard_engine_version === 'number'
+            && typeof j.rule_count === 'number'
+            && j.metrics
+            && typeof j.metrics.post_progress_total === 'number'
+            && typeof j.metrics.sse_subscriber_opens_total === 'number'
+          ) {
             ok = true;
             break;
           }
@@ -102,6 +113,38 @@ describe('progress server smoke', () => {
     expect(j.rule_ids!.length).toBeGreaterThanOrEqual(8);
     expect(j.rule_count).toBe(j.rule_ids!.length);
     expect(j.culture_fragment_schema?.title).toBeDefined();
+  });
+
+  test('GET /health metrics increment on POST /progress', async () => {
+    const h0 = await fetch(`${BASE}/health`);
+    const j0 = (await h0.json()) as { metrics?: { post_progress_total: number } };
+    const before = j0.metrics?.post_progress_total ?? 0;
+    await fetch(`${BASE}/progress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'progress', message: 'metric probe' }),
+    });
+    const h1 = await fetch(`${BASE}/health`);
+    const j1 = (await h1.json()) as { metrics?: { post_progress_total: number } };
+    expect(j1.metrics!.post_progress_total).toBeGreaterThanOrEqual(before + 1);
+  });
+
+  test('PATCH /intentra/intent sets outcome', async () => {
+    const cr = await fetch(`${BASE}/intentra/intent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: 'smoke intent outcome' }),
+    });
+    expect(cr.ok).toBe(true);
+    const art = (await cr.json()) as { intent_id: string };
+    const pr = await fetch(`${BASE}/intentra/intent`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ intent_id: art.intent_id, outcome: 'success' }),
+    });
+    expect(pr.ok).toBe(true);
+    const updated = (await pr.json()) as { outcome: string };
+    expect(updated.outcome).toBe('success');
   });
 
   test('POST /intentra/guard denies destructive command', async () => {
@@ -174,5 +217,22 @@ describe('progress server smoke', () => {
       body: JSON.stringify({ kind: 'progress', message: 'ok' }),
     });
     expect(allowed.ok).toBe(true);
+
+    const patchDenied = await fetch(`${BASE}/intentra/intent`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ intent_id: 'intent_x', outcome: 'success' }),
+    });
+    expect(patchDenied.status).toBe(401);
+
+    const patchOk = await fetch(`${BASE}/intentra/intent`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer smoke-test-secret',
+      },
+      body: JSON.stringify({ intent_id: 'intent_x', outcome: 'success' }),
+    });
+    expect(patchOk.status).toBe(404);
   });
 });
