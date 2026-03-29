@@ -57,6 +57,12 @@ export function DetailScreen({ agent, events, onBack }: Props) {
   const statusColor = STATUS_COLOR[agent.status];
   const agentEvents = filterAgentEvents(agent, events);
 
+  // Safety summary for this agent's session
+  const hookFires = agentEvents.filter(e => e.kind === 'hook_fire');
+  const toolCalls = agentEvents.filter(e => e.kind === 'tool_use').length;
+  const skillEnds = agentEvents.filter(e => e.kind === 'skill_end');
+  const lastSkillEnd = skillEnds[0]; // agentEvents is sorted newest-first
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -89,6 +95,52 @@ export function DetailScreen({ agent, events, onBack }: Props) {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Message</Text>
             <Text style={styles.sectionValue}>{agent.message}</Text>
+          </View>
+        )}
+
+        {/* Session safety summary */}
+        {agentEvents.length > 0 && (
+          <View style={styles.safetyRow}>
+            <View style={styles.safetyStat}>
+              <Text style={styles.safetyNum}>{agentEvents.length}</Text>
+              <Text style={styles.safetyLabel}>events</Text>
+            </View>
+            {toolCalls > 0 && (
+              <View style={styles.safetyStat}>
+                <Text style={styles.safetyNum}>{toolCalls}</Text>
+                <Text style={styles.safetyLabel}>tool calls</Text>
+              </View>
+            )}
+            {hookFires.length > 0 && (
+              <View style={[styles.safetyStat, styles.safetyStatDanger]}>
+                <Text style={[styles.safetyNum, { color: '#f87171' }]}>{hookFires.length}</Text>
+                <Text style={[styles.safetyLabel, { color: '#f87171' }]}>blocked</Text>
+              </View>
+            )}
+            {lastSkillEnd?.duration_s != null && (
+              <View style={styles.safetyStat}>
+                <Text style={styles.safetyNum}>{lastSkillEnd.duration_s.toFixed(0)}s</Text>
+                <Text style={styles.safetyLabel}>duration</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Hook fire detail (if any) */}
+        {hookFires.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: '#f87171' }]}>
+              Safety blocks ({hookFires.length})
+            </Text>
+            {hookFires.map(e => (
+              <View key={e.id} style={styles.hookRow}>
+                <Text style={styles.hookIcon}>!</Text>
+                <Text style={styles.hookPattern} numberOfLines={1}>
+                  {e.step ?? e.skill ?? 'hook'}
+                </Text>
+                <Text style={styles.hookTime}>{absoluteTime(e.ts)}</Text>
+              </View>
+            ))}
           </View>
         )}
 
@@ -196,6 +248,60 @@ const styles = StyleSheet.create({
   },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   statusText: { fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
+  safetyRow: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  safetyStat: {
+    backgroundColor: '#1e293b',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    alignItems: 'center',
+    minWidth: 64,
+  },
+  safetyStatDanger: {
+    backgroundColor: '#1a0a0a',
+    borderWidth: 1,
+    borderColor: '#7f1d1d',
+  },
+  safetyNum: {
+    color: '#f1f5f9',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  safetyLabel: {
+    color: '#64748b',
+    fontSize: 9,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  hookRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 5,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#1e293b',
+  },
+  hookIcon: {
+    color: '#f87171',
+    fontSize: 14,
+    width: 20,
+    textAlign: 'center',
+  },
+  hookPattern: {
+    color: '#fca5a5',
+    fontSize: 13,
+    fontFamily: 'monospace',
+    flex: 1,
+  },
+  hookTime: {
+    color: '#475569',
+    fontSize: 11,
+  },
   section: { gap: 6 },
   sectionLabel: {
     color: '#475569',
