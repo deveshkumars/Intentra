@@ -8,6 +8,15 @@ All responses are JSON with `Content-Type: application/json` unless noted. CORS 
 
 **Related:** [INTENTRA.md](../INTENTRA.md) (shipped surface) · [Architecture](intentra-architecture.md) · [Documentation hub](README.md) · [Root README](../README.md) (Intentra section)
 
+## Protocol conventions (integrators)
+
+- **JSON over HTTP:** Request bodies are UTF-8 JSON unless noted. Successful mutating routes typically return **201** (resource created) or **200** with a small `{ "ok": true }` envelope — see each section below for exact status codes.
+- **Error shape:** Authentication failures use **401** and body `{"error":"unauthorized"}`. Validation failures (e.g. missing `name` on `POST /agents`) use **400** with `{"error":"<message>"}`.
+- **Open mode:** When the server is started **without** `INTENTRA_TOKEN`, every write is unauthenticated. Treat that as **localhost-only** or an explicitly trusted network; it is not a safe default on the public Internet.
+- **Server-Sent Events:** `GET /events/stream` responds with `Content-Type: text/event-stream`. Payload lines use the standard `event:` / `data:` framing. Keep-alives are **SSE comments** (`: heartbeat`) on a 15s timer — clients should ignore comment lines rather than parsing them as JSON.
+- **Idempotency:** `POST /progress` and `POST /agents` are **not** idempotent; duplicate submissions produce distinct events or agents. Retry logic on the client should dedupe at the application layer if needed.
+- **Contract tests:** The OpenAPI subset in [`openapi/intentra-progress.json`](openapi/intentra-progress.json) is enforced by `bun run scripts/check-intentra-contracts.ts`; extend the spec when you add routes.
+
 ## Authentication
 
 When `INTENTRA_TOKEN` is set, all `POST`, `PATCH`, and `DELETE` requests require:
