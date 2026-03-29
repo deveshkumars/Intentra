@@ -471,12 +471,16 @@ const server = Bun.serve({
     if (req.method === 'GET' && url.pathname === '/intentra/files') {
       const dir = path.join(process.env.INTENTRA_REPO_ROOT ?? process.cwd(), '.intentra');
       if (!fs.existsSync(dir)) return jsonOk({ files: [] }, corsHeaders);
-      const entries = fs.readdirSync(dir).filter(f => !f.startsWith('.')).sort();
-      const files = entries.map(name => ({
-        name,
-        content: fs.readFileSync(path.join(dir, name), 'utf-8'),
-      }));
-      return jsonOk({ files }, corsHeaders);
+      try {
+        const entries = fs.readdirSync(dir).filter(f => !f.startsWith('.')).sort();
+        const files = entries.map(name => ({
+          name,
+          content: fs.readFileSync(path.join(dir, name), 'utf-8'),
+        }));
+        return jsonOk({ files }, corsHeaders);
+      } catch (err) {
+        return jsonInternalError('failed to read .intentra directory', corsHeaders);
+      }
     }
 
     /**
@@ -490,18 +494,22 @@ const server = Bun.serve({
       if (!fs.existsSync(handoffsPath)) {
         return jsonOk({ entries: [], count: 0, block_count: 0 }, corsHeaders);
       }
-      const raw = fs.readFileSync(handoffsPath, 'utf-8');
-      const entries = parseEntries(raw);
-      const slim = entries.map(e => ({
-        date: e.date,
-        author: e.author,
-        summary: e.summary,
-      }));
-      return jsonOk({
-        count: entries.length,
-        block_count: countHandoffBlocks(raw),
-        entries: slim,
-      }, corsHeaders);
+      try {
+        const raw = fs.readFileSync(handoffsPath, 'utf-8');
+        const entries = parseEntries(raw);
+        const slim = entries.map(e => ({
+          date: e.date,
+          author: e.author,
+          summary: e.summary,
+        }));
+        return jsonOk({
+          count: entries.length,
+          block_count: countHandoffBlocks(raw),
+          entries: slim,
+        }, corsHeaders);
+      } catch {
+        return jsonInternalError('failed to read HANDOFFS.md', corsHeaders);
+      }
     }
 
     /** GET /intentra/latest — extract the last '---'-separated entry from HANDOFFS.md. */
@@ -510,16 +518,21 @@ const server = Bun.serve({
         process.env.INTENTRA_REPO_ROOT ?? process.cwd(), '.intentra', 'HANDOFFS.md'
       );
       if (!fs.existsSync(handoffsPath)) return jsonOk({ latest: null }, corsHeaders);
-      const raw = fs.readFileSync(handoffsPath, 'utf-8');
-      // Entries are separated by "\n---\n". Last non-empty block is the latest.
-      const blocks = raw.split(/\n---\n/).map(b => b.trim()).filter(Boolean);
-      const latest = blocks.length > 0 ? blocks[blocks.length - 1] : null;
-      return jsonOk({ latest }, corsHeaders);
+      try {
+        const raw = fs.readFileSync(handoffsPath, 'utf-8');
+        // Entries are separated by "\n---\n". Last non-empty block is the latest.
+        const blocks = raw.split(/\n---\n/).map(b => b.trim()).filter(Boolean);
+        const latest = blocks.length > 0 ? blocks[blocks.length - 1] : null;
+        return jsonOk({ latest }, corsHeaders);
+      } catch {
+        return jsonInternalError('failed to read HANDOFFS.md', corsHeaders);
+      }
     }
 
     /** GET /intentra/intent/:id — fetch a single intent artifact by its exact ID. Returns 404 if not found. */
     if (req.method === 'GET' && url.pathname.startsWith('/intentra/intent/')) {
-      const intentId = decodeURIComponent(url.pathname.slice('/intentra/intent/'.length));
+      const intentId = decodeURIComponent(url.pathname.slice('/intentra/intent/'.length)).trim();
+      if (!intentId) return jsonBadRequest('intent_id is required', corsHeaders);
       const intent = getIntent(intentId);
       if (!intent) return jsonNotFound('intent not found', corsHeaders);
       return jsonOk(intent, corsHeaders);
