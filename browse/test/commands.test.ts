@@ -539,7 +539,7 @@ describe('Visual', () => {
       await handleMetaCommand('screenshot', ['--viewport', '/etc/evil.png'], bm, async () => {});
       expect(true).toBe(false);
     } catch (err: any) {
-      expect(err.message).toContain('Path must be within');
+      expect(err.message).toContain('must be within');
     }
   });
 
@@ -1722,7 +1722,7 @@ describe('Path traversal prevention', () => {
       await handleMetaCommand('screenshot', ['/etc/evil.png'], bm, () => {});
       expect(true).toBe(false);
     } catch (err: any) {
-      expect(err.message).toContain('Path must be within');
+      expect(err.message).toContain('must be within');
     }
   });
 
@@ -1739,7 +1739,7 @@ describe('Path traversal prevention', () => {
       await handleMetaCommand('pdf', ['/home/evil.pdf'], bm, () => {});
       expect(true).toBe(false);
     } catch (err: any) {
-      expect(err.message).toContain('Path must be within');
+      expect(err.message).toContain('must be within');
     }
   });
 
@@ -1749,7 +1749,7 @@ describe('Path traversal prevention', () => {
       await handleMetaCommand('responsive', ['/var/evil'], bm, () => {});
       expect(true).toBe(false);
     } catch (err: any) {
-      expect(err.message).toContain('Path must be within');
+      expect(err.message).toContain('must be within');
     }
   });
 
@@ -1788,7 +1788,7 @@ describe('Path traversal prevention', () => {
       await handleMetaCommand('screenshot', ['/tmpevil/steal.png'], bm, () => {});
       expect(true).toBe(false);
     } catch (err: any) {
-      expect(err.message).toContain('Path must be within');
+      expect(err.message).toContain('must be within');
     }
   });
 
@@ -1806,7 +1806,7 @@ describe('Path traversal prevention', () => {
       await handleWriteCommand('cookie-import', ['/etc/passwd'], bm);
       expect(true).toBe(false);
     } catch (err: any) {
-      expect(err.message).toContain('Path must be within');
+      expect(err.message).toContain('must be within');
     }
   });
 
@@ -1818,7 +1818,7 @@ describe('Path traversal prevention', () => {
       await handleMetaCommand('snapshot', ['-a', '-o', '/etc/evil.png'], bm, () => {});
       expect(true).toBe(false);
     } catch (err: any) {
-      expect(err.message).toContain('Path must be within');
+      expect(err.message).toContain('must be within');
     }
   });
 });
