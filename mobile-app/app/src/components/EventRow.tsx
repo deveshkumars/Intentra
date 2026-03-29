@@ -50,6 +50,11 @@ export function EventRow({ event }: Props) {
         {event.skill && event.kind !== 'skill_start' && event.kind !== 'skill_end' && event.kind !== 'hook_fire' && (
           <Text style={styles.skill}>{event.skill}</Text>
         )}
+        {event.intent_id && (
+          <Text style={styles.intentId} numberOfLines={1}>
+            intent: {event.intent_id}
+          </Text>
+        )}
         {event.ingest_lane && (
           <Text style={styles.lane} numberOfLines={1}>
             {event.ingest_lane}
@@ -88,6 +93,12 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontSize: 11,
     marginTop: 1,
+  },
+  intentId: {
+    color: '#a78bfa',
+    fontSize: 10,
+    marginTop: 2,
+    fontFamily: 'monospace',
   },
   lane: {
     color: '#475569',

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, RefreshControl,
+  ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 
 interface IntentFile {
@@ -82,6 +82,36 @@ export function IntentScreen({ serverUrl }: Props) {
 
   const toggle = (key: string) => {
     setExpanded(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const setOutcome = async (
+    intent: IntentArtifact,
+    outcome: 'success' | 'error' | 'cancelled',
+  ) => {
+    if (!serverUrl) return;
+    try {
+      const r = await fetch(`${serverUrl}/intentra/intent`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: JSON.stringify({ intent_id: intent.intent_id, outcome }),
+      });
+      const body = await r.text();
+      if (!r.ok) {
+        Alert.alert(
+          'Could not update intent',
+          r.status === 401
+            ? 'Server requires INTENTRA_TOKEN — set Bearer auth for PATCH in your client.'
+            : body.slice(0, 200),
+        );
+        return;
+      }
+      await fetchData();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : String(err));
+    }
   };
 
   if (!serverUrl) {
@@ -208,15 +238,17 @@ export function IntentScreen({ serverUrl }: Props) {
                     <Text style={styles.metaLabel}>
                       {intent.repo.branch}
                     </Text>
-                    {intent.outcome && (
-                      <Text style={[
+                    <Text
+                      style={[
                         styles.metaLabel,
                         intent.outcome === 'success' && styles.metaSuccess,
                         intent.outcome === 'error' && styles.metaError,
-                      ]}>
-                        {intent.outcome}
-                      </Text>
-                    )}
+                        intent.outcome === 'cancelled' && styles.metaCancelled,
+                        !intent.outcome && styles.metaOpen,
+                      ]}
+                    >
+                      {intent.outcome ?? 'open'}
+                    </Text>
                     {intent.constraints?.risk_tolerance && (
                       <Text style={styles.metaLabel}>
                         risk: {String(intent.constraints.risk_tolerance)}
@@ -232,6 +264,26 @@ export function IntentScreen({ serverUrl }: Props) {
                       ))}
                     </View>
                   )}
+                  <View style={styles.outcomeRow}>
+                    <TouchableOpacity
+                      style={[styles.outcomeBtn, styles.outcomeSuccess]}
+                      onPress={() => setOutcome(intent, 'success')}
+                    >
+                      <Text style={styles.outcomeBtnText}>Done</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.outcomeBtn, styles.outcomeError]}
+                      onPress={() => setOutcome(intent, 'error')}
+                    >
+                      <Text style={styles.outcomeBtnText}>Failed</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.outcomeBtn, styles.outcomeCancelled]}
+                      onPress={() => setOutcome(intent, 'cancelled')}
+                    >
+                      <Text style={styles.outcomeBtnText}>Cancelled</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))}
             </View>
@@ -356,6 +408,31 @@ const styles = StyleSheet.create({
   },
   metaError: {
     color: '#f87171',
+  },
+  metaCancelled: {
+    color: '#fbbf24',
+  },
+  metaOpen: {
+    color: '#94a3b8',
+  },
+  outcomeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  outcomeBtn: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  outcomeSuccess: { backgroundColor: '#14532d' },
+  outcomeError: { backgroundColor: '#7f1d1d' },
+  outcomeCancelled: { backgroundColor: '#713f12' },
+  outcomeBtnText: {
+    color: '#f1f5f9',
+    fontSize: 12,
+    fontWeight: '600',
   },
   planSteps: {
     marginTop: 10,

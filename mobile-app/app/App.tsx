@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { registerRootComponent } from 'expo';
 import { StatusBar } from 'expo-status-bar';
@@ -20,8 +20,17 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [serverUrl, setServerUrl] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<TrackedAgent | null>(null);
+  const [intentEventFilter, setIntentEventFilter] = useState<string | null>(null);
 
   const { events, trackedAgents, status, reconnect } = useEventStream(serverUrl);
+
+  const filteredEvents = useMemo(
+    () =>
+      intentEventFilter
+        ? events.filter(e => e.intent_id === intentEventFilter)
+        : events,
+    [events, intentEventFilter],
+  );
 
   useEffect(() => {
     getServerUrl().then(url => {
@@ -71,9 +80,12 @@ export default function App() {
           <View style={tabStyles.content}>
             {activeTab === 'dashboard' ? (
               <DashboardScreen
-                events={events}
+                events={filteredEvents}
                 trackedAgents={trackedAgents}
                 status={status}
+                serverUrl={serverUrl}
+                intentEventFilter={intentEventFilter}
+                onIntentEventFilterChange={setIntentEventFilter}
                 onReconnect={reconnect}
                 onAgentPress={agent => {
                   setSelectedAgent(agent);
