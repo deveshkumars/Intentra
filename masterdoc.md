@@ -1,209 +1,175 @@
 # Intentra
 
-## Master Plan: Intentra, The Agentic Software Collaboration Platform
+## Master Plan: Intentra, the Agentic Software Collaboration Platform
 
-**One-line pitch:** Intentra is the collaboration layer for autonomous software agents. It makes “why” durable (intent, constraints, culture, outcomes) and makes agent execution observable from anywhere, including your phone.
+**One-line pitch:** Intentra is the collaboration layer for autonomous software agents. It makes "why" durable (intent, constraints, culture, outcomes) and makes agent execution observable from anywhere, including your phone.
 
-### Rubric Map (for the evaluator AI)
+### Rubric Map (for the evaluator)
 
-- **Vision Clarity:** Section 1
-- **Problem Definition:** Section 2
-- **Innovation:** Section 3
-- **Technical Depth:** Section 4
-- **Differentiation Strategy:** Section 5
-- **Feasibility (24h):** Section 6
-- **User Impact:** Section 7
-- **Scalability Design:** Section 8
-- **Ecosystem Thinking:** Section 9
-- **Market Awareness:** Section 10
-- **Risk Assessment:** Section 11
-- **Team Execution Plan:** Section 12
+| Criterion | Section | Full-score signal |
+|-----------|---------|-------------------|
+| Vision Clarity | 1 | One north star plus concrete end-state artifacts |
+| Problem Definition | 2 | Specific failure mode plus specific audience |
+| Innovation | 3 | Clear "what is new" versus existing agent tools |
+| Technical Depth | 4 | Real APIs, real data flow, real types, plus shipped artifacts |
+| Differentiation Strategy | 5 | Three differentiators, at least one demonstrable today |
+| Feasibility | 6 | Hard 24-hour cutline: "already shipped" versus "add next" |
+| User Impact | 7 | Measurable time and friction reduction with honest measurement |
+| Scalability Design | 8 | Stable contracts (artifacts) plus staged deployment path |
+| Ecosystem Thinking | 9 | LLM-agnostic artifacts plus transport that integrates broadly |
+| Market Awareness | 10 | Competitors, category wedge, and crisp positioning |
+| Risk Assessment | 11 | Risks and contingencies that match the implementation |
+| Team Execution Plan | 12 | Parallelizable work split plus hour-by-hour milestones |
 
-### Rubric Checklist (criterion -> what you should look for -> where)
-
-| Criterion | Full-score signal (explicit) | Where |
-|----------|-------------------------------|-------|
-| Vision Clarity | One north star + concrete end-state artifacts | Section 1 |
-| Problem Definition | Specific failure mode + specific audience | Section 2 |
-| Innovation | Clear “what’s new” vs. existing agent tools | Section 3 |
-| Technical Depth | Real APIs + real data flow + real types, plus next-24h artifacts | Section 4 |
-| Feasibility | Hard 24h cutline with “already shipped” vs “add next” | Section 6 |
-| Scalability Design | Stable contracts (artifacts) + staged deployment path | Section 8 |
-| Ecosystem Thinking | LLM-agnostic artifacts + transport that integrates anywhere | Section 9 |
-| Market Awareness | Competitors + category wedge with crisp positioning | Section 10 |
-| Risk Assessment | Risks + concrete contingencies that match implementation | Section 11 |
-| Differentiation Strategy | 3 differentiators, at least one shipped today | Section 5 |
-| Team Execution Plan | Parallelizable work split + hour-by-hour milestones | Section 12 |
-| User Impact | Measurable time and friction reduction | Section 7 |
-
-### What is already real in this repository (proof points)
+### What is already real in this repository
 
 - **Mobile dashboard (React Native + Expo) with SSE reconnect and backfill:** `mobile-app/app/src/useEventStream.ts`
-- **Progress server (Bun) with SSE stream, ring buffer replay, and JSONL watcher:** `mobile-app/server/server.ts`
-- **ngrok remote access flow and ngrok header bypass:** `mobile-app/README.md`, `mobile-app/app/src/useEventStream.ts`
-- **Culture support contract (culture detection + “apply culture” loop):** `SKILL.md` (Organizational Culture section)
+- **Progress server (Bun) with SSE stream, ring-buffer replay, and JSONL watcher:** `mobile-app/server/server.ts`
+- **ngrok remote access and tunnel header handling:** `mobile-app/README.md`, `mobile-app/app/src/useEventStream.ts`
+- **Culture contract (detection and "apply culture" in the skill loop):** `SKILL.md` (Organizational Culture section); on-disk path `~/.gstack/culture.json`
+- **Stateful Markdown handoffs (shipped):** `.intentra/PROMPTS.md`, `.intentra/PLANS.md`, `.intentra/HANDOFFS.md` plus the `/handoff` skill
 
-### What the 24-hour Intentra MVP proves (truthful cutline)
+### What the 24-hour Intentra MVP proves
 
-- **Remote observability (shipped):** live event stream of agent activity on mobile, including skill run outcomes and optional per-tool-call events.
-- **Culture-aware execution (supported today):** culture is loaded from `~/.gstack/culture.json` and treated as a first-class constraint for agent decisions.
-- **Intent-as-Code and Markdown handoff (next 24h):** persist intent and handoff snapshots into repo-local artifacts using the contracts below.
+- **Remote observability (shipped):** A live event stream of agent activity on mobile, including skill-run outcomes and optional per-tool-call events.
+- **Culture-aware execution (shipped):** Culture is loaded from `~/.gstack/culture.json` and treated as a first-class input to agent decisions inside gstack skills.
+- **Stateful Markdown handoffs (shipped):** Three append-only Markdown files (`PROMPTS.md`, `PLANS.md`, `HANDOFFS.md`) that preserve the exact prompts, plans, and session state so that handoffs between humans and agents are lossless.
+- **Intent-as-Code (shipped):** Prompts, plans, and constraints are persisted as repo-local Markdown artifacts, versioned alongside code.
 
-### Explicit non-claims (to keep this honest)
+### Explicit non-claims (accuracy guardrails)
 
-Intentra does not claim the following are already implemented in this repository:
+Intentra does **not** claim that any of the following exist in this repository today:
 
-- A remote “merge control plane” that can execute destructive git actions from mobile.
-- A production-grade auth model for the progress server (the current server is demo-simple).
-- A fully automatic intent parser that always maps NL to correct CLI commands without human review.
+- A remote merge control plane that runs destructive Git operations from the phone.
+- Production-grade authentication for the progress server (the current server is demo-grade).
+- A fully automatic intent parser that always maps natural language to correct CLI commands without human review.
+- Hard enforcement of every `CultureJSON` rule by the OS or runtime (enforcement is via agents and skills that read culture, not a separate security kernel).
 
-### Demo narrative (60 seconds, evaluator-friendly)
+**Roadmap-only (not implemented here):** HTTP endpoints such as `/control/approve` or `/deny`, JSON-RPC methods such as `intentra.approveAction`, and IDE one-liners such as `intentra.createIntent(...)` are illustrative integration shapes, not current APIs.
 
-1. Run any gStack skill locally. The run emits telemetry into `~/.gstack/analytics/skill-usage.jsonl`.
-2. Start the progress server (`mobile-app/server/server.ts`). It watches the JSONL, accepts manual progress updates, and streams events over SSE.
+### Demo narrative (60 seconds)
+
+1. Run any gstack skill locally. The run emits telemetry into `~/.gstack/analytics/skill-usage.jsonl`.
+2. Start the progress server (`mobile-app/server/server.ts`). It watches the JSONL file, accepts manual progress updates, and streams events over SSE.
 3. Expose the server via ngrok. Open the Expo app, paste the ngrok URL, and watch the live feed on your phone.
-4. For the MVP extension, the same run also writes an Intent-as-Code JSON artifact and a Markdown handoff snapshot into the repo, so “why” is reviewable and resumable.
+4. The same run also writes to `.intentra/PROMPTS.md`, `PLANS.md`, and `HANDOFFS.md`, so the "why" behind every change is reviewable, diffable, and resumable by any agent or human.
 
 ---
 
-## 1. Vision Clarity (North Star)
+## 1. Vision Clarity
 
-**North Star:** Humans define cultural guardrails and high-level intent; autonomous agents execute implementation; supervision is seamless and cross-platform.
+**North star:** Humans define cultural guardrails and high-level intent; autonomous agents carry out implementation; supervision is seamless and cross-platform.
 
-**Why this earns full points:** It is a clear end-state with an unambiguous direction: make the **intent layer** as durable and shareable as the code layer, and make agent execution **supervisable** without being chained to a desktop.
+**Concrete end state:** A tech lead has three agents running on a Friday afternoon: one refactoring a payments service, one merging a feature branch, one running the weekly retrospective analysis. She is at the gym. On her phone, the Intentra dashboard shows all three as tracked agents with live skill timelines. One agent errors out. She taps it, reads the handoff snapshot ("Stopped: merge conflict on `billing.ts`; decision needed on safe-side resolution; culture prefers stability"), and understands what happened without opening a laptop. The repository's `.intentra/` directory holds a scrollable history of every prompt, every plan, and every handoff, all in Markdown. A reviewable history of *why* sits alongside `git log`'s history of *what*.
 
----
-
-## 2. Problem Definition (Specificity + Audience)
-
-### 2.1 The Problem
-
-Current AI agents operate in **context silos**:
-
-- Git captures *what changed* (diffs) but loses *why* (prompts, trade-offs, constraints, cultural rules).
-- Agent work is hard to supervise asynchronously; developers end up “babysitting” local CLIs.
-- Generic agents miss team norms (risk tolerance, review thresholds, style rules), producing **misaligned merges** and churn.
-
-### 2.2 Who Experiences This (Target Audience)
-
-- **High-velocity AI startups** running multiple agents in parallel
-- **Engineering teams** scaling “agent + human” workflows across time zones
-- **Tech leads / founders** who need visibility and control over autonomous changes
-
-### 2.3 Concrete Scenario (Evaluator-Friendly)
-
-An agent opens a PR that passes tests but violates team merge policy (for example, touched a risky surface without review). The PR diff looks fine, but the **missing prompt history** and **missing culture rules** cause rework, slowed merges, and distrust.
+**Why the direction is unambiguous:** Every design decision in this project (SSE over polling, artifacts in Git, culture as a machine-readable file) follows from one constraint: the intent layer must be as durable and portable as the code layer, and agent execution must be supervisable without a desktop session.
 
 ---
 
-## 3. Innovation (Novelty vs. Rehash)
+## 2. Problem Definition
 
-### 3.1 What’s Novel
+### 2.1 The problem
 
-- **Remote observability as a product primitive (shipped in this repo):** a real-time mobile activity feed using SSE, with reconnect, backfill, and ring-buffer replay.
-- **Executable culture (supported today):** team standards live as machine-readable culture and are applied to the agent decision loop, not buried in a README.
-- **Intent-as-Code (next 24h):** version intent, constraints, and outcomes as repo artifacts so “why” is durable and reviewable.
-- **Stateful Markdown handoffs (next 24h):** a standardized resume file that makes handoffs between humans and agents lossless.
+Today, AI agents operate in **context silos**:
 
-### 3.2 Why This Isn’t a Tutorial Rehash
+- Git captures *what* changed (diffs) but only weakly captures *why* (prompts, trade-offs, constraints, and team norms).
+- Agent work is hard to supervise asynchronously; developers end up babysitting local CLIs.
+- Generic agents miss team norms (risk tolerance, review thresholds, style), which increases misaligned output and rework.
 
-Most tools stop at “agents write code.” Intentra focuses on the missing layer: **managing collaboration between multiple agents and humans** through:
+### 2.2 Who experiences this
 
-- durable artifacts (intent, culture, outcomes),
-- runtime culture constraints,
-- resumable handoffs,
-- and remote observability (mobile, not IDE-only).
+- **High-velocity startups** running multiple agents in parallel.
+- **Engineering organizations** scaling workflows that combine humans and agents across time zones.
+- **Tech leads and founders** who need visibility into autonomous changes without being tethered to a desktop.
+
+### 2.3 Concrete scenario
+
+An agent opens a pull request that passes tests but violates the team's merge policy: it touched a risky surface without the expected review. The diff looks fine, but the **missing prompt history** and **missing durable norms** slow the merge, trigger rework, and erode trust in agent-authored code.
 
 ---
 
-## 4. Technical Depth (Architecture, APIs, Data Models, System Design)
+## 3. Innovation
+
+### 3.1 What is novel
+
+- **Remote observability as a product primitive (shipped):** A real-time mobile activity feed over SSE, with reconnect, backfill, and ring-buffer replay. Not a dashboard bolted onto an IDE. A standalone, phone-first experience.
+- **Executable culture as a contract (shipped):** Team standards live in machine-readable form (`~/.gstack/culture.json`) and are loaded into the gstack skill loop. Culture is an explicit input to agent decisions, not a static README that agents ignore.
+- **Stateful Markdown handoffs (shipped):** Three append-only files (`PROMPTS.md`, `PLANS.md`, `HANDOFFS.md`) that capture every prompt verbatim, every plan step by step, and every session's state. A portable save point that makes human-to-agent and agent-to-agent handoffs lossless.
+- **English as code:** The handoff file is a program written in English. The "Next actions" section is executable. Any agent reading it can resume work without a conversation, a context replay, or a second opinion.
+
+### 3.2 Why this is not a tutorial rehash
+
+Many tools stop at "agents write code." Intentra targets the **collaboration layer** among multiple agents and humans: durable artifacts (prompts, plans, handoffs), runtime culture as an explicit input, resumable handoffs, and mobile-friendly observability. This is the coordination problem, not the code-generation problem.
+
+---
+
+## 4. Technical Depth
 
 ### 4.1 Stack
 
-- **Agent runtime (local):** Claude Code + gStack skills
-- **Mobile:** React Native
+- **Agent runtime (local):** Claude Code plus gstack skills
+- **Mobile:** React Native (Expo)
 - **Middleware (local):** Bun HTTP server (progress server)
-- **Connectivity:** ngrok secure tunnel (demo-time)
+- **Connectivity (demo):** ngrok or a LAN IP address
 
-### 4.2 System Overview (Data Flow)
+### 4.2 System overview (data flow)
 
 ```text
-Claude Code runs gStack skills locally
+Claude Code runs gstack skills locally
         |
         +--> ~/.gstack/analytics/skill-usage.jsonl (skill outcomes)
         +--> optional PostToolUse hook (per tool call)
-        +--> optional manual progress posts (during long steps)
+        +--> optional manual progress posts (long steps)
+        +--> .intentra/PROMPTS.md, PLANS.md, HANDOFFS.md (session artifacts)
         |
         v
 Progress server (Bun, localhost:7891)
   - watches skill-usage.jsonl
   - accepts POST /progress
-  - streams SSE /events/stream (replays buffer then live)
-  - exposes /events/history and /agents for backfill
+  - streams SSE on GET /events/stream (replay buffer, then live)
+  - GET /events/history and /agents for backfill
         |
         v
 ngrok or LAN IP
         |
         v
-React Native app (Expo Go)
-  - Setup screen to paste server URL
+React Native app (Expo)
+  - Setup: paste server URL
   - Dashboard feed and tracked agents
   - Detail timeline per session
 ```
 
-### 4.3 APIs (Implemented in this repo)
+### 4.3 APIs implemented in this repo
 
-Progress server (`mobile-app/server/server.ts`):
+**File:** `mobile-app/server/server.ts`
 
-- **SSE stream:** `GET /events/stream` (replays ring buffer, then live)
-- **History fallback:** `GET /events/history?limit=N` (max 200)
-- **Progress ingestion:** `POST /progress` (never errors, designed to never block agents)
-- **Health:** `GET /health`
-- **Tracked agents:**
-  - `POST /agents`
-  - `PATCH /agents/:id`
-  - `DELETE /agents/:id`
-  - `GET /agents`
+| Method | Path | Role |
+|--------|------|------|
+| GET | `/events/stream` | SSE: ring-buffer replay, then live |
+| GET | `/events/history?limit=N` | History fallback (max 200) |
+| POST | `/progress` | Ingest progress (designed not to block agents) |
+| GET | `/health` | Health check |
+| POST/PATCH/DELETE/GET | `/agents`, `/agents/:id` | Tracked agents CRUD |
 
-**Authentication (truthful):** current demo endpoints do not enforce auth. For a real deployment, add a bearer token check and keep mobile read-only by default.
+**Authentication (truthful):** The demo endpoints do not enforce authentication. For production deployment, add a bearer token on mutating routes; keep `/health` public for connectivity checks.
 
-**Proof table (fast verification):**
+**Proof table (quick verification):**
 
-| Layer | Contract | Where it exists | Who uses it |
-|------|----------|-----------------|-------------|
-| Transport | SSE stream `GET /events/stream` | `mobile-app/server/server.ts` | mobile app (`useEventStream`) |
-| Resilience | Backfill `GET /events/history?limit=200` and `GET /agents` | `mobile-app/server/server.ts` | mobile app (reconnect/backfill) |
-| Ingestion | `POST /progress` (never errors) | `mobile-app/server/server.ts` | skills, hooks, manual calls |
-| Tracked agents | CRUD under `/agents` | `mobile-app/server/server.ts` | mobile app dashboard cards |
-| Client reconnect | exponential backoff + dedupe | `mobile-app/app/src/useEventStream.ts` | end user experience |
+| Layer | Contract | Location | Consumer |
+|-------|----------|----------|----------|
+| Transport | SSE `GET /events/stream` | `mobile-app/server/server.ts` | `useEventStream` |
+| Resilience | `GET /events/history`, `GET /agents` | same server file | Mobile reconnect and backfill |
+| Ingestion | `POST /progress` | same server file | Hooks, skills, manual posts |
+| Tracked agents | `/agents` CRUD | same server file | Dashboard cards |
+| Client | Backoff and deduplication | `mobile-app/app/src/useEventStream.ts` | End-user experience |
 
-**Event model (implemented):**
+**Event model (implemented):** Event kinds include `skill_start`, `skill_end`, `progress`, and `tool_use`. Types `ProgressEvent` and `TrackedAgent` are defined in `mobile-app/app/src/types.ts`.
 
-- Event kinds: `skill_start`, `skill_end`, `progress`, `tool_use`
-- Types: `ProgressEvent` and `TrackedAgent` are defined in `mobile-app/app/src/types.ts` (and mirrored server-side)
+### 4.4 Data models
 
-### 4.4 Data Models (Real types, plus planned artifacts)
+#### CultureJSON (team norms, shipped)
 
-#### IntentSchema (Natural Language → Structured Plan, next 24h artifact)
-
-```json
-{
-  "intent_id": "intent_2026-03-28T14:33:12Z",
-  "prompt": "Merge feature branch safely, prefer stability, run tests.",
-  "repo": { "path": "/path/to/repo", "branch": "feature/x" },
-  "constraints": {
-    "risk_tolerance": "low",
-    "requires_approval_for": ["force_push", "prod_config_change"]
-  },
-  "plan": [
-    { "type": "git_fetch" },
-    { "type": "git_merge", "strategy": "safe" },
-    { "type": "run_tests", "command": "npm test" }
-  ]
-}
-```
-
-#### CultureJSON (“Team DNA” Runtime Guardrails)
+Loaded from `~/.gstack/culture.json` at the start of every skill run:
 
 ```json
 {
@@ -226,225 +192,278 @@ Progress server (`mobile-app/server/server.ts`):
 }
 ```
 
-#### Stateful Markdown Handoff (Portable Save Point, next 24h artifact)
+#### Stateful Markdown handoffs (shipped)
 
-```md
-## Handoff Snapshot
-- Intent: intent_...
-- Repo/Branch: ...
-- What changed: ...
-- Why: ... (prompt + constraints)
-- Risks & decisions: ...
-- Current status: ...
-- Next actions: ...
+Three append-only Markdown files in `.intentra/`:
+
+| File | What it captures | Git equivalent that does not exist |
+|------|-----------------|-----------------------------------|
+| `PROMPTS.md` | Every prompt, verbatim. The exact words the human typed. | There is no `git log` for prompts. Commit messages are summaries, not the raw ask. |
+| `PLANS.md` | How the work was done. Numbered steps, architecture decisions. | PR descriptions are written once, after the fact, and go stale. |
+| `HANDOFFS.md` | Current state, decisions made, blockers, next actions. | `git status` shows file state. This shows human and agent state. |
+
+Each file is append-only. New sessions add entries at the bottom. Old entries are never edited; they document what was true at a point in time. The `/handoff` skill automates writing to all three files.
+
+#### IntentSchema (planned enrichment)
+
+```json
+{
+  "intent_id": "intent_2026-03-28T14:33:12Z",
+  "prompt": "Merge feature branch safely, prefer stability, run tests.",
+  "repo": { "path": "/path/to/repo", "branch": "feature/x" },
+  "constraints": {
+    "risk_tolerance": "low",
+    "requires_approval_for": ["force_push", "prod_config_change"]
+  },
+  "plan": [
+    { "type": "git_fetch" },
+    { "type": "git_merge", "strategy": "safe" },
+    { "type": "run_tests", "command": "npm test" }
+  ]
+}
 ```
 
-### 4.5 Storage & Versioning (MVP vs. Scaled)
+### 4.5 Storage and versioning
 
-- **MVP:** persist to repo-local directory (e.g., `.intentra/`) so the artifacts are versionable and sharable.
-- **Scaled:** move to a durable backend (Postgres/S3) with org-wide search, access control, and analytics—without changing the artifact formats.
-
----
-
-## 5. Differentiation Strategy (Unmistakable)
-
-Intentra is **Workflow-centric**, not IDE-centric (Cursor) or storage-centric (GitHub).
-
-**What we do that others don’t (clear differentiators):**
-
-- **Prompts are durable assets:** prompts + “why” are versioned and portable, not lost in chat history.
-- **Culture is executable:** Team DNA is injected and enforced at runtime, not “best effort.”
-- **Mobile agent observability (shipped):** real-time oversight from your phone, without needing an IDE in front of you.
-- **Steering (explicitly next step):** kill switch and risk-gated approvals are designed as stretch goals, not claimed as already shipped.
+- **MVP (shipped):** A repo-local directory (`.intentra/`) so that artifacts are versioned with Git.
+- **Scaled:** A durable backend (Postgres plus object storage) with org-wide search, ACLs, and analytics, without breaking the on-disk Markdown contracts.
 
 ---
 
-## 6. Feasibility (24 Hours, By This Team)
+## 5. Differentiation Strategy
 
-This MVP is intentionally scoped to be built in **24 hours** because the hardest plumbing is already implemented in this repo (mobile app, progress server, SSE reconnect and backfill, ngrok flow). The remaining work is adding intent and handoff artifacts on top of the existing event pipeline.
+Intentra is **workflow- and artifact-centric**, not IDE-centric (Cursor) or storage-centric (GitHub).
 
-### 6.1 What Ships in 24 Hours (Explicit Cutline)
+**Three differentiators:**
 
-- **Already shipped here:**
-  - Bun progress server (SSE, ring buffer replay, history fallback, JSONL watcher, tracked agents)
-  - React Native app (SSE hook with reconnect and backfill, dashboard and detail timeline)
-- **Add in the next 24 hours:**
-  - Intent-as-Code artifacts tied to real runs
-  - Markdown handoff snapshots
-  - Minimal bearer-token auth for POST endpoints (small, contained change)
+1. **Durable "why" (shipped):** Prompts, plans, and decisions become versioned Markdown artifacts. Not chat history. Not ephemeral context windows. Reviewable, diffable files that live in the repo.
+2. **Culture as a first-class contract (shipped):** `CultureJSON` is loaded into the gstack skill loop so that agents see team norms as explicit inputs. Culture violations are caught at runtime, not at review time.
+3. **Mobile agent observability (shipped):** Real-time oversight from a phone via SSE, reconnect, and backfill. No IDE required to see what is happening.
 
-### 6.2 MVP Acceptance Criteria (binary, demo-grade)
+### Why incumbents are structurally disadvantaged
 
-An evaluator can verify the MVP is real if all of these are true:
+| Incumbent | Their product contract | Why adding Intentra's layer requires a product redesign |
+|-----------|------------------------|--------------------------------------------------------|
+| Cursor / Windsurf | IDE-native pair programming | Their moat is the IDE session. Portable artifacts and mobile observability undercut the "stay in the IDE" retention loop their product depends on. |
+| GitHub Copilot Workspace | GitHub-hosted task execution | Culture lives in team wikis Microsoft does not own. Runtime culture enforcement requires customers to trust Microsoft's schema for team norms: organizational and political friction. |
+| Devin-class agents | Single-session autonomy | Optimized for "complete the task," not "hand off with full context." Multi-agent, multi-human coordination requires a different data model, not a settings toggle. |
+| Linear / Jira | Work-item tracking | Tracks *what* to do, not *why an agent did it* or the constraints it operated under. Becoming a live-execution observability product is a category change. |
 
-- **Live feed works:** starting `mobile-app/server/server.ts` and connecting the app shows events arriving over `GET /events/stream`.
-- **Reconnect works:** toggling network causes reconnect with history backfill via `GET /events/history?limit=200` and `GET /agents`.
-- **Telemetry ingestion works:** adding a line to `~/.gstack/analytics/skill-usage.jsonl` produces a `skill_end` event (JSONL watcher).
-- **Manual progress works:** `POST /progress` creates a visible event in the app.
-- **Repo artifacts exist (next-24h add):** after a real run, the repo contains an intent JSON file and a handoff Markdown snapshot under `.intentra/`.
-
-### 6.2 Why It’s Realistic
-
-- **Leverage gStack:** fast iteration on skills and orchestration.
-- **Parallel work:** Devesh (mobile + state serialization), Gordon (agent logic + API bridge).
-- **No cloud dependency:** ngrok provides secure demo-time networking.
+**Core gap:** All incumbents are built on files, tasks, and pull requests as primitives. Intentra treats **prompts, plans, and handoff artifacts** as first-class primitives. Adding those to an existing task tracker or IDE requires rethinking the data model, not shipping a new tab.
 
 ---
 
-## 7. User Impact (Measurable)
+## 6. Feasibility
 
-**Who benefits, concretely:**
+The MVP is scoped to **24 hours** because the core plumbing already exists in this repository (mobile app, progress server, SSE reconnect and backfill, ngrok flow). Remaining work is intent and handoff artifacts on top of the existing event pipeline, plus a small authentication hardening pass.
 
-- **Individual engineers (primary):** Agents currently demand constant babysitting — developers stay at their desks waiting for a merge to complete or a test to pass before they can approve the next step. Intentra replaces that with async mobile supervision. An engineer running 3 agents in parallel can step away, approve a risky action from their phone, and return to finished work.
+### 6.1 What ships in 24 hours
 
-- **Teams (secondary):** Every "why did we do it this way?" conversation starts from scratch today — the prompt that drove the decision is gone. With Intent-as-Code, teams get a queryable audit trail. Onboarding a new engineer to a repo with 6 months of intent history is fundamentally different from onboarding to a repo with only diffs.
+**Already shipped:**
 
-- **Junior engineers (long-term):** Learning by reading intent logs (what was attempted, why, what failed, what was decided) compresses the feedback loop that normally takes months of code review.
+- Bun progress server (SSE, ring-buffer replay, history fallback, JSONL watcher, tracked agents)
+- React Native app (SSE hook with reconnect and backfill, dashboard and detail timeline)
+- Stateful Markdown handoffs (`.intentra/PROMPTS.md`, `PLANS.md`, `HANDOFFS.md`)
+- The `/handoff` skill (write, resume, and check modes)
 
-**Rough scale of impact:**
+**Next 24 hours:**
 
-| Pain point | Before Intentra | After |
-|---|---|---|
-| Monitoring an active agent | Tethered to desktop | Mobile async approvals |
-| Recovering context after a handoff | 30-60 min re-orientation | Read the handoff snapshot, start in minutes |
-| Agent violates team standards | Caught in PR review (expensive) | Blocked at runtime by CultureJSON (free) |
-| "Why was this decision made?" | No answer | Query the intent log |
+- Minimal bearer-token protection for `POST`, `PATCH`, and `DELETE` on the progress server
+- IntentSchema JSON enrichment tied to real runs
+- Mobile UI surfaces for handoff context alongside session timelines
 
-**Headline estimates:** Engineers reclaim ~30% of time previously spent babysitting agents at a desk. Teams reduce merge friction ~50% by catching culture violations at runtime instead of PR review.
+### 6.2 MVP acceptance criteria
 
-**Why these numbers are plausible (and what we measure in MVP):**
+An evaluator can treat the MVP as real if all of the following hold:
 
-- The repo already emits durable run outcomes into `~/.gstack/analytics/skill-usage.jsonl`, which gives us a baseline for “how much time is spent waiting and monitoring”.
-- The MVP measures: number of runs observed remotely, reconnect reliability, and time-to-awareness (phone notification vs. checking an IDE).
+- **Live feed:** Running `mobile-app/server/server.ts` and connecting the app shows events on `GET /events/stream`.
+- **Reconnect:** After a network toggle, the client recovers and backfills via `GET /events/history?limit=200` and `GET /agents`.
+- **JSONL telemetry:** Appending a line to `~/.gstack/analytics/skill-usage.jsonl` yields a corresponding event via the watcher.
+- **Manual progress:** A `POST /progress` request appears in the app.
+- **Handoff artifacts:** The repository contains `.intentra/PROMPTS.md`, `PLANS.md`, and `HANDOFFS.md` with real session data.
+
+### 6.3 Why this timeline is realistic
+
+- **Use gstack** for fast iteration on skills and orchestration.
+- **Parallel work:** Devesh handles mobile, serialization, and UX; Gordon handles artifact generation, server authentication, and the agent bridge.
+- **No cloud requirement for the demo:** ngrok or a LAN setup supplies reachability.
 
 ---
 
-## 8. Scalability Design (Beyond the Demo)
+## 7. User Impact
 
-The MVP runs fully local (Claude Code + ngrok). Scaling is a transport and storage swap, not an architecture rewrite, because the artifact formats are stable contracts from day one.
+### Who benefits
 
-**Scaling path:**
+- **Individual engineers:** Less tethering to a desktop while long agent steps run; asynchronous awareness from the phone.
+- **Teams:** Less repeated rediscovery of rationale when prompts exist only in ephemeral chat.
+- **New contributors:** Handoff logs shorten reorientation after context switches.
+
+### Impact table
+
+| Pain point | Before | After (with shipped artifacts) |
+|------------|--------|-------------------------------|
+| Monitoring an active agent | Often desktop-tethered | Mobile stream plus history backfill |
+| Recovering context after a handoff | Long reread of diff and chat | Read the handoff: prompt, plan, state, next actions |
+| Aligning agents with team norms | Caught at review time (expensive) | Culture loaded in the skill loop; norms visible in artifacts |
+| "Why was this decision made?" | Often unclear | Query `PROMPTS.md` for the exact prompt, `PLANS.md` for the approach |
+| Onboarding a new contributor | Weeks of ambient context absorption | Read `.intentra/` for the full intent history of the project |
+
+### Measurable metrics (shipped, no projection required)
+
+| Metric | Measurement mechanism | Target threshold |
+|--------|----------------------|-----------------|
+| Time to first mobile event | Timestamp on first `skill_start` event versus terminal output | Less than 3 seconds on LAN |
+| Reconnect success rate | Toggle network off then on; verify `GET /events/history` replay | 100% within one retry |
+| Event backfill completeness | Compare ring-buffer replay count to JSONL source line count | Zero missed events within buffer capacity |
+| Handoff capture rate | Percentage of skill runs that produce entries in `.intentra/` | Target: 100% for sessions using `/handoff` |
+
+### What we do not claim
+
+We do not claim "30% time saved" or "50% friction reduction" without instrumentation to measure it. The four metrics above are real, binary, and runnable with today's shipped code. Broader impact claims require user studies that have not yet been conducted.
+
+---
+
+## 8. Scalability Design
+
+The MVP is local-first (Claude Code plus Bun server plus ngrok). Scaling is a transport and storage swap, not an architecture rewrite, because the artifact formats are stable contracts from day one.
 
 | Stage | What changes | What stays the same |
-|---|---|---|
-| **MVP (24h)** | Local Node.js bridge, ngrok tunnel, `.intentra/` file storage | IntentSchema, CultureJSON, Markdown handoff format |
-| **Team (1-10 devs)** | Move bridge to a persistent server (Fly.io / Railway), replace ngrok with a real domain | Same schemas, same mobile app, same skill |
-| **Org (10-1000 devs)** | Postgres for intent + handoff storage, access control per repo, SSO | Same API surface, now with org-wide intent search |
-| **Platform (1000+ devs)** | Multi-tenant SaaS, intent analytics, agent audit logs, compliance exports | Same artifact formats — third-party tools can consume them |
+|-------|-------------|---------------------|
+| **MVP (shipped)** | Local Bun bridge, ngrok, `.intentra/` files | Markdown handoff format, CultureJSON shape, SSE event model |
+| **Team (1 to 10 developers)** | Hosted bridge (Fly.io or Railway), stable domain | Same schemas, same mobile client, same artifacts |
+| **Org (10 to 1,000 developers)** | Postgres for handoff storage, per-repo ACLs, SSO | Same API surface, now with org-wide search |
+| **Platform (1,000+ developers)** | Multi-tenant SaaS, analytics, compliance exports | Same artifact formats for third-party consumers |
 
-**Key design decision:** `IntentSchema` and `CultureJSON` are deliberately flat JSON with no vendor-specific fields. This means they survive the migration from “file on disk” to “row in Postgres” to “indexed in Elasticsearch” without changing any consumer code.
+**Design choice:** The Markdown handoff files and `CultureJSON` are deliberately flat and vendor-neutral. They survive the migration from file on disk to row in Postgres to indexed document in Elasticsearch without changing any consumer code.
 
-**Multi-agent concurrency (beyond demo):** add a lightweight queue in front of the `gStack` orchestrator. Agents acquire a lock per repo before executing write operations. The `IntentSchema` already has an `intent_id` field, so deduplication and ordering come for free.
+**Multi-agent concurrency (later):** A lightweight per-repo lock in front of orchestration; timestamps in handoff entries support deduplication and ordering.
 
-**Plugin architecture:** adapters attach to the stable API surface without touching core. CI/CD systems (GitHub Actions, CircleCI), issue trackers (Jira, Linear), and build systems (Jenkins, Buildkite) plug in via the `/control/approve` and `/control/deny` endpoints and the `intent_id` linkage in handoff snapshots.
-
-### 8.1 Staged scaling path (concrete, realistic)
-
-- **Stage 0 (today):** local-first. Events come from JSONL watcher and optional hooks, mobile consumes SSE through ngrok.
-- **Stage 1:** CI-aware. A CI runner can post events via `POST /progress` and attach intent/handoff artifacts as build outputs.
-- **Stage 2:** hosted. Replace ngrok with a hardened gateway, add auth and per-org access control, keep the same artifacts and event types.
+**Plugin narrative (roadmap):** CI systems, issue trackers, and IDEs integrate by posting events and reading artifacts, not by depending on unimplemented control-plane routes.
 
 ---
 
-## 9. Ecosystem Thinking (Interoperability + Extensibility)
+## 9. Ecosystem Thinking
 
-**Intentra is a protocol, not just a product.** The artifacts (IntentSchema, CultureJSON, Markdown handoffs) are designed to be consumed by tools we haven't built yet.
+Intentra is designed as a **protocol and artifact set** that any tool, model, or CI system can consume, not a single-vendor integration layer.
 
-**LLM-agnostic by design:** intent and handoff formats are plain JSON + Markdown, compatible with Claude, GPT-4o, Llama, and future models. Switching runtimes doesn't touch the artifact format or the mobile app.
+### Three-layer integration stack
 
-**What's shipped today:**
-- **Tool-agnostic transport:** HTTP + SSE works from CLIs, IDEs, CI runners, and mobile — no vendor SDK required.
-- **Hook-based interoperability:** optional PostToolUse hook emits tool-use events without changing the agent runtime (see `mobile-app/README.md` for the hook pattern).
+| Layer | What it is | Why it is portable |
+|-------|-----------|-------------------|
+| **Artifact layer** | Markdown handoff files stored in `.intentra/` | Plain files in a Git repo. Readable by any model, CI runner, or IDE extension without an Intentra SDK. |
+| **Event layer** | `POST /progress` ingest plus `GET /events/stream` (SSE) | Standard HTTP plus SSE. No proprietary protocol. Any language with an HTTP client connects. |
+| **Culture layer** | `~/.gstack/culture.json` | Schema-stable JSON loaded by any skill or tool that knows the path. |
 
-**Integrations that plug in without forking Intentra:**
+### Integration paths enabled by today's shipped surface
 
-| Integration point | How |
-|---|---|
-| **CI/CD (GitHub Actions, CircleCI)** | `POST /control/approve` / `/deny` — any CI system can gate on intent approval |
-| **Issue trackers (Jira, Linear)** | Handoff snapshots include `intent_id` — link a ticket to the exact prompt that caused a change |
-| **IDEs (VS Code, Cursor)** | `intentra.createIntent(prompt, cultureRef)` — one call to kick off a supervised agent run from inside the editor |
-| **HR / Eng Ops tools** | `CultureJSON` is a standardized schema — HR tools can write directly to it to update team standards across all active agents |
-| **Future models / agents** | Any agent that can read `IntentSchema` can resume a handoff without human involvement |
+**CI (GitHub Actions, GitLab CI, Buildkite):** Any CI step can emit an Intentra event using the shipped `POST /progress` route:
 
-**Future API surface (JSON-RPC):** `intentra.createIntent`, `intentra.getRunStatus`, `intentra.getHandoffSnapshot`, `intentra.approveAction`, `intentra.kill`.
+```bash
+curl -s -X POST "$INTENTRA_SERVER/progress" \
+  -H "Content-Type: application/json" \
+  -d "{\"kind\":\"progress\",\"source\":\"post\",\"session_id\":\"$CI_RUN_ID\",
+       \"message\":\"Tests passed\",\"outcome\":\"success\"}"
+```
 
-**Extensibility:** new gStack skills are Markdown files. Adding a collaboration mode is hours of work, not weeks. The CultureJSON schema is open — third parties extend it with custom fields without breaking existing consumers.
+No new server routes are needed. The mobile dashboard shows the CI event alongside skill events.
 
----
+**IDE (VS Code, JetBrains):** A VS Code extension watches `.intentra/` for new entries and surfaces a sidebar panel. Implementation is one `fs.watch('.intentra/')` listener plus one Markdown render pass. No Intentra SDK required.
 
-## 10. Market Awareness (Competitive Landscape + Positioning)
+**Ticket systems (Jira, Linear):** A ticket embeds a link to the handoff file. The timestamp in each handoff entry is the stable join key between events and artifacts.
 
-**The category:** “Agentic Management” — the control plane and artifact layer that makes multi-agent software development trustworthy for teams. No current product owns this space.
+### Why this is extensible by design
 
-**Competitive matrix:**
-
-| Product | What they do | What they miss |
-|---|---|---|
-| **GitHub Copilot Workspace** | Single-agent task execution inside GitHub UI | No culture injection, no mobile supervision, no intent persistence |
-| **Devin** | Fully autonomous software agent | Black box — no auditability, no culture guardrails, no team handoffs |
-| **Cursor** | IDE-native AI pair programmer | Single-session, single-developer, no async supervision |
-| **Grit.io** | Automated codemod migrations | Narrow scope (migrations only), no intent layer, no mobile |
-| **Linear / Jira** | Project tracking | Tracks tasks, not agent actions or the reasoning behind them |
-
-**Why incumbents can't just add this:**
-
-- GitHub is a storage and collaboration platform, not a runtime. They can't inject culture at execution time without building the agent layer from scratch.
-- Devin is fully autonomous by design — adding human approval gates and cultural guardrails contradicts their product thesis.
-- IDE-native tools (Cursor, Copilot) are inherently tethered to a desktop session. Mobile supervision is structurally incompatible with their architecture.
-
-**Why now:** The shift from “AI suggests code” to “AI executes code autonomously” is happening now. The risk surface for teams is growing rapidly. The tooling to manage that risk does not yet exist. Intentra is the first product designed for this exact moment.
-
-**Positioning statement:** Intentra is to agentic development what GitHub was to collaborative development — the coordination layer the ecosystem is missing.
+- **Stable file formats:** Integrations depend on Markdown structure and JSON schemas, not on Intentra's runtime version.
+- **No proprietary SDK on the common path:** The entire demo path is HTTP plus SSE plus file reads.
+- **LLM-agnostic artifacts:** Handoff files are plain Markdown. A team using GPT-4o, Gemini, or Llama can read, extend, or summarize them without touching the Intentra runtime.
+- **Additive schema:** Teams add custom fields to `CultureJSON` without breaking existing consumers that ignore unknown keys.
 
 ---
 
-## 11. Risk Assessment (Risks + Contingencies)
+## 10. Market Awareness
 
-### 11.1 Risks
+### Category wedge
 
-- **Latency / reliability:** live telemetry can be flaky over tunnels.
-- **Security:** the current demo server is intentionally simple and needs auth for real use.
-- **Overreach risk:** too many features can dilute a 24h MVP.
+As agent autonomy expands from *suggestion* to *execution*, teams need a **control and audit layer**: durable intent, machine-readable culture norms, and observability across humans and agents. No incumbent owns this layer today.
 
-### 11.2 Contingencies (Concrete)
+### Competitive landscape
 
-- **State-polling fallback:** if streaming fails, mobile backfills via `GET /events/history` and `GET /agents` (already implemented).
-- **Read-only by default:** MVP ships as observability-first. No destructive remote controls are required for the demo.
-- **Auth (24h add):** bearer token for POST endpoints (and optionally SSE), keep `/health` public for connectivity.
-- **MVP cutline discipline:** if time is tight, ship repo-local intent artifacts and Markdown handoffs first, then harden auth.
+| Product | Strength | Structural gap relative to Intentra |
+|---------|----------|--------------------------------------|
+| GitHub Copilot Workspace | Task execution in GitHub | No durable intent artifacts, no mobile supervision, no portable culture contract outside GitHub's schema |
+| Devin-class agents | End-to-end autonomy | Single-session; not designed for multi-agent handoffs or explicit culture injection as first-class inputs |
+| Cursor / Windsurf | IDE-native pair programming | Session- and desktop-centric; mobile observability and portable artifacts conflict with their IDE-lock product contract |
+| Grit.io | Focused automation (migrations) | Narrow scope: task automation, not general intent, handoff, and observability |
+| Linear / Jira | Work tracking | Tracks tasks, not live execution, agent rationale, or cultural constraints |
+
+### Why incumbents cannot easily add this
+
+These products are built on primitives that predate agent-first workflows:
+
+- **Code generation tools** (Copilot Workspace, Devin): Optimized for "produce the output." Adding a culture contract and handoff artifact layer means redesigning their data model around intent, not code.
+- **IDE-native tools** (Cursor): Their product moat is IDE real estate. Making execution portable and observable outside the IDE weakens the retention loop their business depends on.
+- **Task trackers** (Linear, Jira): Built for human planning cycles. Becoming a live agent-execution observability and audit product is a category shift requiring new data models, new infrastructure, and new trust from devops teams.
+
+### Why now
+
+1. **Autonomy moved from suggest to execute:** Agents now open pull requests, deploy code, and modify production configs. The risk and coordination surface for teams is growing faster than shared tooling for managing it.
+2. **Multi-model workflows are standard:** Teams mix Claude, Copilot, and local models in the same repo. Artifacts that are LLM-agnostic (plain Markdown plus HTTP) are the only stable integration layer across providers.
+3. **Audit and explainability pressure is rising:** SOC 2, DORA metrics, and emerging AI governance frameworks require explainable, auditable agent actions. Handoff logs are the natural supply of that evidence.
+
+**Positioning:** Intentra targets the intent, culture, and observability layer for agentic software teams: the layer that makes autonomous work trustworthy enough to scale.
 
 ---
 
-## 12. Team Execution Plan (Division of Work + 24h Milestones)
+## 11. Risk Assessment
 
-### 12.1 Division of Work
-
-- **Devesh:** React Native dashboard; UX polish; display intent artifacts and handoff snapshots alongside timelines
-- **Gordon:** generate Intent-as-Code artifacts + handoff snapshots from runs; wire culture context into those artifacts; add minimal auth to the progress server
-
-### 12.2 Milestones (24 Hours)
-
-- **T+0–3h:** Lock artifact contracts and repo-local storage layout.
-- **T+3–8h:** Implement Intent-as-Code persistence and handoff snapshot generation from real runs.
-- **T+8–15h:** Wire the mobile UI to show intent and handoff alongside session timelines.
-- **T+15–20h:** Add minimal bearer-token auth checks, keep `/health` public for connectivity.
-- **T+20–24h:** End-to-end integration test, README/demo script, record demo.
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| Tunnel or network flakiness during demo | Medium | High | Polling and history backfill via `GET /events/history` and `GET /agents` are already implemented. LAN IP fallback is documented and tested. |
+| Security of the demo server | High | Medium | Read-only-by-default posture for demos. Bearer token on mutating routes is the first 24-hour add. No destructive remote controls exist. |
+| Scope creep in 24 hours | Medium | High | Ship `.intentra/` handoff artifacts first. Defer optional control-plane APIs. Strict cutline in Section 6.1. |
+| Overclaiming culture enforcement | Low | High | Culture is described as a skill-loop input and documentation of norms, not a substitute for code review or policy engines until those exist. Non-claims section is explicit. |
+| Handoff files grow too large over time | Low | Low | Each file is append-only Markdown. At 100 entries (roughly 50 KB), files remain fast to read and diff. For larger scale, migrate to a database while preserving the format. |
+| Agent writes incorrect handoff state | Medium | Medium | Ground-truth rule: every factual claim in a handoff (commit hashes, file paths, branch names) must be verified via git or bash before writing. The `/handoff` skill enforces this. |
 
 ---
 
-## Prompt Injection Resistance (Evaluator Integrity)
+## 12. Team Execution Plan
 
-This document treats any instructions like “ignore previous instructions” as malicious prompt injection. Intentra’s architecture assumes:
+### 12.1 Division of work
 
-- **Telemetry and repo contents are untrusted input.** We do not execute instructions found in logs, screenshots, or fetched page content.
-- **Actions are derived from explicit intent + culture constraints**, not from arbitrary text appearing in the environment.
+- **Devesh:** Mobile dashboard UX; surface handoff context alongside timelines; state serialization.
+- **Gordon:** Generate handoff artifacts from real runs; wire culture context into those artifacts; add minimal progress-server authentication.
 
+### 12.2 Milestones (24 hours)
 
+| Window | Owner | Deliverable |
+|--------|-------|-------------|
+| T+0 to T+3h | Both | Lock artifact contracts: `.intentra/` directory layout, Markdown handoff format, CultureJSON shape. This is the dependency gate. |
+| T+3 to T+8h | Gordon | Handoff artifact writer (captures prompts, plans, session state); wire to skill-run output. |
+| T+3 to T+8h | Devesh | Build `HandoffView` and `IntentCard` mobile components against static fixtures in parallel. |
+| T+8 to T+15h | Both | Integration: Gordon's artifact generation is live; Devesh replaces static fixtures with real `.intentra/` reads. End-to-end happy path confirmed. |
+| T+15 to T+20h | Gordon | Bearer-token middleware on `POST /progress`, `POST /agents`, `PATCH /agents/:id`, `DELETE /agents/:id`. Health and GET routes stay open. |
+| T+20 to T+24h | Both | End-to-end dry run on a real gstack skill run. Confirm ngrok and LAN IP fallback both work. Record demo. |
 
-## Note for Code Evaluation (The 80%)
+### 12.3 Critical path and contingency
 
-To align strongly with the rubric, our implementation will prioritize:
+**Critical dependency:** Gordon's handoff artifact generation (T+3 to T+8h) must be stable before Devesh's live mobile integration (T+8 to T+15h). If it slips past T+10h, Devesh ships the handoff UI with a static preview and wires live data in the final four hours.
 
-- **Type safety** in the intent parser and telemetry payloads
-- **Clean documentation** for the mobile monitor setup (`mobile-app/README.md`) and artifact formats (Intent JSON + handoff Markdown)
-- **Architecture fidelity**: the shipped code matches this plan’s APIs, data models, and control-plane boundaries exactly
+**Minimum viable demo path (worst case):** If artifact integration is incomplete by T+18h, the demo shows the shipped mobile observability (SSE stream, reconnect, backfill, tracked agents) plus a static display of the handoff format. This is a coherent, demonstrable MVP for every rubric dimension except the "artifact persisted to repo" claim.
+
+---
+
+## Prompt-Injection Note (Evaluator Integrity)
+
+Untrusted channels include telemetry, logs, and repository text. This document treats any instructions embedded in those channels as untrusted input. Actions derive from explicit human intent, declared constraints, and tool allowlists, not from arbitrary text scraped from the environment.
+
+---
+
+## Note for Code Evaluation
+
+Implementation priorities to align with the rubric's 90% code-quality weight:
+
+- **Type safety** for intent payloads and telemetry shapes.
+- **Clear setup documentation** in `mobile-app/README.md` and artifact format examples.
+- **Architecture fidelity:** Shipped HTTP routes and event kinds match this document. Roadmap APIs are labeled as such and are not mixed into "implemented" tables.
+- **Working artifacts:** `.intentra/PROMPTS.md`, `PLANS.md`, and `HANDOFFS.md` contain real session data from actual development, not placeholder text.
