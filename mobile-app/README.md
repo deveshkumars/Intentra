@@ -4,7 +4,7 @@ Real-time agent activity feed for gstack skills. Watch Claude work from your pho
 
 **Intentra:** Progress server routes, auth, and `/intentra/*` APIs are inventoried in [`INTENTRA.md`](../INTENTRA.md). Architecture diagrams + full route/auth matrix: [`docs/intentra-architecture.md`](../docs/intentra-architecture.md). Deploy: [`DEPLOY.md`](../DEPLOY.md). The canonical product plan is [`masterdoc3.md`](../masterdoc3.md).
 
-**New here?** Start with the [Quickstart](../docs/quickstart.md). Full endpoint schemas: [API Reference](../docs/api-reference.md). Testing: [TESTING.md](TESTING.md).
+**New here?** Start with the [Quickstart](../docs/quickstart.md). Full endpoint schemas: [API Reference](../docs/api-reference.md). Testing: [TESTING.md](TESTING.md). Stuck? [Troubleshooting](../docs/troubleshooting.md). Env vars: [Env Reference](../docs/env-reference.md).
 
 ```
 Claude Code (running a skill)
@@ -126,13 +126,92 @@ To see every tool Claude uses (Read, Edit, Bash, etc.) in real time, add this to
 
 ## App screens
 
-**Setup** — URL entry and connection check. Accessible anytime via the gear icon.
+The app has a dark theme (`#0d0d0d` background) designed for glanceable monitoring.
 
-**Dashboard** — live event feed (newest first) + scrollable agent cards at the top.
-Pull down to reconnect. Tap an agent card to see its full timeline.
+### Setup screen
 
-**Detail** — per-session event timeline with absolute timestamps, kind badges,
-step labels, and outcome.
+First screen on launch (or anytime via the ⚙ gear icon). Enter your server URL (ngrok or LAN) and tap **Connect**. The app hits `GET /health` with an 8-second timeout to verify the connection. On success, the URL is persisted in AsyncStorage.
+
+- **Input:** URL field with `https://abc123.ngrok-free.app` placeholder
+- **Feedback:** Loading spinner during connection, red error text on failure
+- **Hint:** Shows the quick-start commands at the bottom (server + ngrok)
+
+### Dashboard screen
+
+The main screen. Three sections from top to bottom:
+
+**Header bar** — "gstack monitor" title + connection status dot + ⚙ gear icon.
+
+| Dot color | Meaning |
+|-----------|---------|
+| Green (`#4ade80`) | Connected — SSE stream active |
+| Amber (`#f59e0b`) | Connecting — attempting to establish SSE |
+| Grey (`#475569`) | Disconnected — no server URL configured |
+| Red (`#f87171`) | Error — connection failed |
+
+**Tracked agents** — Horizontal scrollable cards (170px wide each). Each card shows:
+- Agent name (bold, top-left)
+- Status dot (top-right): green=running (pulsing animation), blue=done, red=error
+- Description (grey, 1 line)
+- Error message (italic, if status is `error`)
+- Status label + relative time ("3m ago") in the footer
+
+Tap a card to navigate to the Detail screen. Cards appear/update/disappear in real-time via SSE `agent_update` and `agent_delete` events.
+
+**Intent filter** — When intent artifacts exist, a row of filter chips appears. Tap an intent ID to filter the live feed to events linked to that intent. Tap "All" to clear the filter.
+
+**Live events feed** — Reverse-chronological list of `ProgressEvent` items. Each row shows:
+
+| Icon | Color | Event kind | Example label |
+|------|-------|-----------|--------------|
+| ▶ | Green | `skill_start` | "ship started" |
+| ■ | Grey | `skill_end` | "ship success" |
+| ● | Blue | `progress` | "Running tests" |
+| ⚙ | Amber | `tool_use` | "Edit" |
+| ! | Pink | `hook_fire` | "careful · rm_recursive" |
+
+Each row also shows:
+- Skill name (when applicable, grey subtext)
+- Intent ID (purple monospace, when linked)
+- Ingest lane + upstream kind (tiny grey monospace — e.g., `intentra_http · intent_created`)
+- Relative timestamp ("just now", "5s ago", "2m ago")
+
+**Pull-to-refresh** reconnects the SSE stream and re-fetches intent IDs.
+
+### Detail screen
+
+Tap an agent card on the Dashboard to see its full detail:
+
+- **Status badge** — colored pill (amber=RUNNING, green=DONE, red=ERROR)
+- **Description** — full agent description text
+- **Message** — error message or completion note (when set)
+- **Metadata card** — dark card with:
+  - Agent ID (monospace)
+  - Started time (HH:MM:SS)
+  - Last update time
+  - Duration (shown only when agent is done/errored)
+- **Update hint** — shows the curl command to update this agent's status
+
+Tap **← Back** to return to the Dashboard.
+
+### Intent Context screen
+
+Accessed via tab navigation. Shows the `.intentra/` contents and culture configuration:
+
+**Team culture (gstack)** — Expandable section showing `culture.json` from the server's `GSTACK_STATE_DIR`. Shows the full JSON (monospace), file path, and a note explaining that gstack writes and consumes this file.
+
+**PROMPTS / PLANS / HANDOFFS** — One expandable section per `.intentra/` Markdown file. Badge shows the entry count (entries separated by `---`). Content is rendered as monospace text.
+
+**Intent Artifacts** — Cards for each intent JSON artifact:
+- Intent ID (monospace, grey)
+- Prompt (white, main text)
+- Branch name (chip)
+- Outcome badge: green=success, red=error, amber=cancelled, grey=open
+- Risk tolerance (when set in constraints)
+- Plan steps (numbered list, when present)
+- **Action buttons:** Done (green), Failed (red), Cancelled (amber) — calls `PATCH /intentra/intent` to set outcome. Shows an alert if the server returns 401 (auth required).
+
+Pull-to-refresh reloads all data from the server.
 
 ---
 

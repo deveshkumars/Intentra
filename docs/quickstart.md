@@ -113,3 +113,6 @@ GET endpoints (`/health`, `/events/stream`, `/agents`, etc.) remain public.
 - **[Guard Engine](guard-engine.md)** — command safety policy engine
 - **[Culture Config](culture-config.md)** — customize guard rules via `culture.json`
 - **[Architecture](intentra-architecture.md)** — route matrix, auth model, evaluator playbook
+- **[Troubleshooting](troubleshooting.md)** — common issues and diagnostic commands
+- **[Env Reference](env-reference.md)** — all environment variables with defaults
+- **[Security](security.md)** — auth model and data protection

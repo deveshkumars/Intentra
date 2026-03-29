@@ -15,6 +15,11 @@ This repository is primarily **gstack** (Claude Code skills, browse, analytics).
 | **[Guard Engine](docs/guard-engine.md)** | Pipeline deep-dive: normalization, tokenization, rule matching |
 | **[Guard Rules Reference](docs/guard-rules-reference.md)** | All 8 rules with trigger examples and safe targets |
 | **[Culture Config](docs/culture-config.md)** | Customize guard verdicts via `culture.json` risk_gates |
+| **[Error Handling](docs/error-handling.md)** | HTTP error codes, retry strategies, SSE reconnection patterns |
+| **[Troubleshooting](docs/troubleshooting.md)** | Common issues with step-by-step fixes and diagnostic commands |
+| **[Env Reference](docs/env-reference.md)** | All environment variables with defaults and validation rules |
+| **[Scaling](docs/scaling.md)** | Ring buffer limits, subscriber capacity, resource usage |
+| **[Security](docs/security.md)** | Auth model, CORS policy, data protection, threat model |
 | **[Testing Guide](mobile-app/TESTING.md)** | Running and extending smoke tests |
 | **[Deploy](DEPLOY.md)** | Docker, docker-compose, Fly.io, GHCR image tags |
 

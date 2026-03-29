@@ -157,3 +157,5 @@ Full shell grammar (AST), SQL AST parsing, and signed policy bundles are documen
 - **[Culture Config](culture-config.md)** — customize guard verdicts via `culture.json` risk_gates
 - **[API Reference](api-reference.md)** — HTTP endpoints for guard evaluation
 - **[Architecture](intentra-architecture.md)** — route/auth matrix and event pipeline
+- **[Troubleshooting](troubleshooting.md)** — guard false positives and debug trace walkthrough
+- **[Security](security.md)** — NFKC normalization, input validation, and threat model
