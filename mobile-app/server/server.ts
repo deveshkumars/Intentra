@@ -104,6 +104,8 @@ export interface TrackedAgent {
   created_at: string;
   updated_at: string;
   message?: string;
+  /** Optional session_id linking this agent to ProgressEvent.session_id for event filtering. */
+  session_id?: string;
 }
 
 // ─── State ─────────────────────────────────────────────────────────────────
@@ -357,7 +359,7 @@ const server = Bun.serve({
      * Returns 400 if `name` is missing.
      */
     if (req.method === 'POST' && url.pathname === '/agents') {
-      let body: { name?: string; description?: string } = {};
+      let body: { name?: string; description?: string; session_id?: string } = {};
       try { body = await req.json(); } catch { /* ignore */ }
       if (!body.name) {
         return new Response(JSON.stringify({ error: 'name is required' }), {
@@ -371,6 +373,7 @@ const server = Bun.serve({
         status: 'running',
         created_at: now(),
         updated_at: now(),
+        ...(body.session_id ? { session_id: body.session_id } : {}),
       };
       trackedAgents.set(agent.id, agent);
       broadcastAgentUpdate(agent);
@@ -400,6 +403,7 @@ const server = Bun.serve({
         ...(body.description !== undefined && { description: body.description }),
         ...(body.status !== undefined && { status: body.status }),
         ...(body.message !== undefined && { message: body.message }),
+        ...(body.session_id !== undefined && { session_id: body.session_id }),
         updated_at: now(),
       };
       trackedAgents.set(agentId, updated);

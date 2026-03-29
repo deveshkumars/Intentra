@@ -31,4 +31,6 @@ export interface TrackedAgent {
   created_at: string;
   updated_at: string;
   message?: string;
+  /** Links this agent to ProgressEvent.session_id for event timeline filtering. */
+  session_id?: string;
 }
