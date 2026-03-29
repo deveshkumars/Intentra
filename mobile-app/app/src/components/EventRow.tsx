@@ -30,6 +30,11 @@ function relativeTime(ts: string): string {
   return `${Math.floor(diff / 3600)}h ago`;
 }
 
+function formatDuration(s: number): string {
+  if (s < 60) return `${s.toFixed(1)}s`;
+  return `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`;
+}
+
 export function EventRow({ event }: Props) {
   const icon = KIND_ICON[event.kind] ?? '·';
   const color = KIND_COLOR[event.kind] ?? '#94a3b8';
@@ -42,11 +47,30 @@ export function EventRow({ event }: Props) {
     (event.kind === 'hook_fire' ? `${event.skill ?? 'hook'} · ${event.step ?? 'block'}` : null) ??
     event.kind;
 
+  const hasPct = typeof event.pct === 'number';
+  const hasDuration = event.kind === 'skill_end' && typeof event.duration_s === 'number';
+
   return (
     <View style={styles.row}>
       <Text style={[styles.icon, { color }]}>{icon}</Text>
       <View style={styles.body}>
-        <Text style={styles.label} numberOfLines={1}>{label}</Text>
+        <View style={styles.labelRow}>
+          <Text style={styles.label} numberOfLines={1}>{label}</Text>
+          {hasDuration && (
+            <Text style={styles.duration}>{formatDuration(event.duration_s!)}</Text>
+          )}
+          {hasPct && !hasDuration && (
+            <Text style={styles.pctText}>{event.pct}%</Text>
+          )}
+        </View>
+
+        {/* Progress bar for events with pct */}
+        {hasPct && (
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${Math.min(100, event.pct!)}%` as any, backgroundColor: color }]} />
+          </View>
+        )}
+
         {event.skill && event.kind !== 'skill_start' && event.kind !== 'skill_end' && event.kind !== 'hook_fire' && (
           <Text style={styles.skill}>{event.skill}</Text>
         )}
@@ -70,7 +94,7 @@ export function EventRow({ event }: Props) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -80,14 +104,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     width: 22,
     textAlign: 'center',
+    paddingTop: 1,
   },
   body: {
     flex: 1,
     marginHorizontal: 10,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
   label: {
     color: '#e2e8f0',
     fontSize: 14,
+    flex: 1,
+  },
+  duration: {
+    color: '#64748b',
+    fontSize: 11,
+    fontFamily: 'monospace',
+  },
+  pctText: {
+    color: '#60a5fa',
+    fontSize: 11,
+    fontFamily: 'monospace',
+    minWidth: 32,
+    textAlign: 'right',
+  },
+  progressTrack: {
+    height: 2,
+    backgroundColor: '#1e293b',
+    borderRadius: 1,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: 2,
+    borderRadius: 1,
   },
   skill: {
     color: '#64748b',
@@ -111,5 +166,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     minWidth: 52,
     textAlign: 'right',
+    paddingTop: 1,
   },
 });
