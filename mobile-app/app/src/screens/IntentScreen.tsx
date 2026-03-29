@@ -4,11 +4,6 @@ import {
   ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 
-interface IntentFile {
-  name: string;
-  content: string;
-}
-
 interface IntentArtifact {
   intent_id: string;
   prompt: string;
@@ -31,10 +26,7 @@ interface CulturePayload {
   note?: string;
 }
 
-const MARKDOWN_FILES = ['PROMPTS.md', 'PLANS.md', 'HANDOFFS.md'];
-
 export function IntentScreen({ serverUrl }: Props) {
-  const [files, setFiles] = useState<IntentFile[]>([]);
   const [intents, setIntents] = useState<IntentArtifact[]>([]);
   const [culture, setCulture] = useState<CulturePayload | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -46,10 +38,7 @@ export function IntentScreen({ serverUrl }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const [filesRes, intentsRes, cultureRes] = await Promise.all([
-        fetch(`${serverUrl}/intentra/files`, {
-          headers: { 'ngrok-skip-browser-warning': 'true' },
-        }),
+      const [intentsRes, cultureRes] = await Promise.all([
         fetch(`${serverUrl}/intentra/intents`, {
           headers: { 'ngrok-skip-browser-warning': 'true' },
         }),
@@ -57,10 +46,6 @@ export function IntentScreen({ serverUrl }: Props) {
           headers: { 'ngrok-skip-browser-warning': 'true' },
         }),
       ]);
-      if (filesRes.ok) {
-        const data = await filesRes.json() as { files: IntentFile[] };
-        setFiles(data.files.filter(f => MARKDOWN_FILES.includes(f.name)));
-      }
       if (intentsRes.ok) {
         const data = await intentsRes.json() as { intents: IntentArtifact[] };
         setIntents(data.intents);
@@ -133,7 +118,7 @@ export function IntentScreen({ serverUrl }: Props) {
         <Text style={styles.title}>Intent Context</Text>
       </View>
 
-      {loading && files.length === 0 ? (
+      {loading && intents.length === 0 ? (
         <View style={styles.empty}>
           <ActivityIndicator color="#4ade80" />
         </View>
@@ -189,32 +174,6 @@ export function IntentScreen({ serverUrl }: Props) {
               )}
             </View>
           )}
-
-          {/* Markdown file sections */}
-          {files.map(file => {
-            const label = file.name.replace('.md', '');
-            const isOpen = expanded[file.name] ?? false;
-            return (
-              <View key={file.name} style={styles.section}>
-                <TouchableOpacity
-                  style={styles.sectionHeader}
-                  onPress={() => toggle(file.name)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.chevron}>{isOpen ? '▼' : '▶'}</Text>
-                  <Text style={styles.sectionTitle}>{label}</Text>
-                  <Text style={styles.badge}>
-                    {file.content.split(/\n---\n/).filter(b => b.trim()).length}
-                  </Text>
-                </TouchableOpacity>
-                {isOpen && (
-                  <View style={styles.sectionBody}>
-                    <Text style={styles.markdown}>{file.content}</Text>
-                  </View>
-                )}
-              </View>
-            );
-          })}
 
           {/* Intent artifacts */}
           {intents.length > 0 && (
