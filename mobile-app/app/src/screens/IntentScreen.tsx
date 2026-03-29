@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, RefreshControl, Alert,
+  ActivityIndicator, RefreshControl, Alert, TextInput, Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { progressFetchHeaders } from '../apiHeaders';
 import type { ProgressEvent } from '../types';
@@ -38,6 +38,12 @@ export function IntentScreen({ serverUrl, authToken, events }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const lastEventIdRef = useRef<string | null>(null);
+
+  // Create intent sheet state
+  const [createVisible, setCreateVisible] = useState(false);
+  const [newPrompt, setNewPrompt] = useState('');
+  const [newRisk, setNewRisk] = useState<'low' | 'medium' | 'high'>('medium');
+  const [creating, setCreating] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!serverUrl) return;
@@ -115,6 +121,37 @@ export function IntentScreen({ serverUrl, authToken, events }: Props) {
     }
   };
 
+  const handleCreateIntent = useCallback(async () => {
+    if (!serverUrl || !newPrompt.trim()) return;
+    setCreating(true);
+    try {
+      const r = await fetch(`${serverUrl}/intentra/intent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...progressFetchHeaders(authToken ?? null),
+        },
+        body: JSON.stringify({
+          prompt: newPrompt.trim(),
+          constraints: { risk_tolerance: newRisk },
+        }),
+      });
+      if (!r.ok) {
+        const txt = await r.text();
+        Alert.alert('Could not create intent', txt.slice(0, 200));
+        return;
+      }
+      setCreateVisible(false);
+      setNewPrompt('');
+      setNewRisk('medium');
+      await fetchData();
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : String(err));
+    } finally {
+      setCreating(false);
+    }
+  }, [serverUrl, authToken, newPrompt, newRisk, fetchData]);
+
   if (!serverUrl) {
     return (
       <View style={styles.container}>
@@ -132,7 +169,79 @@ export function IntentScreen({ serverUrl, authToken, events }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Intent Context</Text>
+        <TouchableOpacity
+          onPress={() => setCreateVisible(true)}
+          style={styles.createBtn}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.createBtnText}>+ Intent</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Create Intent Modal */}
+      <Modal
+        visible={createVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setCreateVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setCreateVisible(false)} style={styles.cancelBtn}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>New Intent</Text>
+            <TouchableOpacity
+              onPress={handleCreateIntent}
+              disabled={creating || !newPrompt.trim()}
+              style={[styles.saveBtn, (!newPrompt.trim() || creating) && styles.saveBtnDisabled]}
+            >
+              {creating
+                ? <ActivityIndicator color="#4ade80" size="small" />
+                : <Text style={styles.saveText}>Create</Text>
+              }
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.modalBody}>
+            <Text style={styles.fieldLabel}>Prompt</Text>
+            <TextInput
+              style={styles.promptInput}
+              value={newPrompt}
+              onChangeText={setNewPrompt}
+              placeholder="What should the agent do?"
+              placeholderTextColor="#475569"
+              multiline
+              autoFocus
+              returnKeyType="default"
+            />
+
+            <Text style={styles.fieldLabel}>Risk tolerance</Text>
+            <View style={styles.riskRow}>
+              {(['low', 'medium', 'high'] as const).map(level => (
+                <TouchableOpacity
+                  key={level}
+                  style={[styles.riskChip, newRisk === level && styles.riskChipActive]}
+                  onPress={() => setNewRisk(level)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.riskChipText, newRisk === level && styles.riskChipTextActive]}>
+                    {level}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.modalHint}>
+              Creates a structured JSON artifact in .intentra/ and emits an
+              intent_created SSE event to all connected clients.
+            </Text>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {loading && intents.length === 0 ? (
         <View style={styles.empty}>
@@ -277,6 +386,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#0d0d0d',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 56,
     paddingBottom: 12,
@@ -287,6 +399,97 @@ const styles = StyleSheet.create({
     color: '#f1f5f9',
     fontSize: 20,
     fontWeight: '700',
+  },
+  createBtn: {
+    backgroundColor: '#1e293b',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#4ade80',
+  },
+  createBtnText: {
+    color: '#4ade80',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  // Create intent modal
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#0d0d0d',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#1e293b',
+  },
+  modalTitle: {
+    color: '#f1f5f9',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  cancelBtn: { padding: 4 },
+  cancelText: { color: '#64748b', fontSize: 16 },
+  saveBtn: { padding: 4 },
+  saveBtnDisabled: { opacity: 0.4 },
+  saveText: { color: '#4ade80', fontSize: 16, fontWeight: '600' },
+  modalBody: {
+    padding: 20,
+    gap: 14,
+  },
+  fieldLabel: {
+    color: '#475569',
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  promptInput: {
+    backgroundColor: '#1e293b',
+    borderRadius: 10,
+    padding: 14,
+    color: '#f1f5f9',
+    fontSize: 15,
+    minHeight: 120,
+    textAlignVertical: 'top',
+    lineHeight: 22,
+  },
+  riskRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  riskChip: {
+    flex: 1,
+    backgroundColor: '#1e293b',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  riskChipActive: {
+    backgroundColor: '#0c2a2a',
+    borderColor: '#4ade80',
+  },
+  riskChipText: {
+    color: '#64748b',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  riskChipTextActive: {
+    color: '#4ade80',
+  },
+  modalHint: {
+    color: '#334155',
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 8,
   },
   scroll: {
     flex: 1,
