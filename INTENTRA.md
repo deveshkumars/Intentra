@@ -28,6 +28,9 @@ Intentra-related code is spread across `mobile-app/`, `.intentra/`, and root doc
 | Intentra file API | `GET /intentra/files`, `GET /intentra/latest` | [`mobile-app/server/server.ts`](mobile-app/server/server.ts) |
 | Culture audit API | `GET /intentra/culture` — reads `culture.json` from `GSTACK_STATE_DIR` (same file gstack skills load) | [`mobile-app/server/culture.ts`](mobile-app/server/culture.ts) |
 | Telemetry provenance | `ingest_lane` + `upstream_kind` on `ProgressEvent`; `hook_fire` kind from JSONL `event: hook_fire` | [`mobile-app/server/server.ts`](mobile-app/server/server.ts), app [`types.ts`](mobile-app/app/src/types.ts) |
+| **Intentra guard runtime** | `POST /intentra/guard` — TypeScript command policy (mirrors `/careful` patterns); `culture.json` → `intentra.risk_gates` | [`mobile-app/server/guard.ts`](mobile-app/server/guard.ts) |
+| **Intentra guard telemetry** | Append-only `.intentra/telemetry/intentra-guard.jsonl` (gitignored at runtime) + SSE `hook_fire` with `upstream_kind: intentra_guard` | same |
+| **Committed hook fixture** | Synthetic `skill-usage` sample (20+ `hook_fire` lines) for evaluators / tests | [`mobile-app/fixtures/skill-usage-evaluator-sample.jsonl`](mobile-app/fixtures/skill-usage-evaluator-sample.jsonl) |
 | Mobile app | Expo UI, SSE hook, setup, dashboard, detail, Intent screen (culture + artifacts) | [`mobile-app/app/`](mobile-app/app/) |
 | Markdown intent layer | Append-only `PROMPTS.md`, `PLANS.md`, `HANDOFFS.md` | [`.intentra/`](.intentra/) |
 | Container | `Dockerfile` in `mobile-app/server/` | [`mobile-app/server/Dockerfile`](mobile-app/server/Dockerfile) |

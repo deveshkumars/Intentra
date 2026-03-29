@@ -77,6 +77,19 @@ describe('progress server smoke', () => {
     expect(j.note).toContain('gstack');
   });
 
+  test('POST /intentra/guard denies destructive command', async () => {
+    const r = await fetch(`${BASE}/intentra/guard`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: 'git push --force origin main' }),
+    });
+    expect(r.ok).toBe(true);
+    const j = (await r.json()) as { verdict?: string; pattern?: string; source?: string };
+    expect(j.verdict).toBe('deny');
+    expect(j.pattern).toBe('git_force_push');
+    expect(j.source).toBe('intentra_guard');
+  });
+
   test('INTENTRA_TOKEN rejects POST without Bearer', async () => {
     proc.kill();
     await wait(200);
