@@ -185,17 +185,9 @@ Sidebar agent writes structured messages to `.context/sidebar-inbox/`. Workspace
 **Priority:** P3
 **Depends on:** Headed mode (shipped)
 
-### Sidebar agent needs Write tool + better error visibility
+### ~~Sidebar agent needs Write tool + better error visibility~~ ✅ DONE
 
-**What:** Two issues with the sidebar agent (`sidebar-agent.ts`): (1) `--allowedTools` is hardcoded to `Bash,Read,Glob,Grep`, missing `Write`. Claude can't create files (like CSVs) when asked. (2) When Claude errors or returns empty, the sidebar UI shows nothing, just a green dot. No error message, no "I tried but failed", nothing.
-
-**Why:** Users ask "write this to a CSV" and the sidebar silently can't. Then they think it's broken. The UI needs to surface errors visibly, and Claude needs the tools to actually do what's asked.
-
-**Context:** `sidebar-agent.ts:163` hardcodes `--allowedTools`. The event relay (`handleStreamEvent`) handles `agent_done` and `agent_error` but the extension's sidepanel.js may not be rendering error states. The sidebar should show "Error: ..." or "Claude finished but produced no output" instead of staying on the green dot forever.
-
-**Effort:** S (human: ~2h / CC: ~10min)
-**Priority:** P1
-**Depends on:** None
+Fixed in planimpl (commit be77328): added Write+Edit to `--allowedTools`, added `hadOutput` tracking + stderr capture, surfaces `agent_error` with exit code + hint instead of silent `agent_done` when Claude produces no output.
 
 ### Chrome Web Store publishing
 
