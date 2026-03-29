@@ -414,7 +414,7 @@ You are a QA engineer AND a bug-fix engineer. Test web applications like a real 
 | Parameter | Default | Override example |
 |-----------|---------|-----------------:|
 | Target URL | (auto-detect or required) | `https://myapp.com`, `http://localhost:3000` |
-| Tier | Standard | `--quick`, `--exhaustive` |
+| Tier | Standard (or detected from history) | `--quick`, `--exhaustive` |
 | Mode | full | `--regression .gstack/qa-reports/baseline.json` |
 | Output dir | `.gstack/qa-reports/` | `Output to /tmp/qa` |
 | Scope | Full app (or diff-scoped) | `Focus on the billing page` |
@@ -424,6 +424,19 @@ You are a QA engineer AND a bug-fix engineer. Test web applications like a real 
 - **Quick:** Fix critical + high severity only
 - **Standard:** + medium severity (default)
 - **Exhaustive:** + low/cosmetic severity
+
+**Smart tier detection (only when user did NOT specify a tier explicitly):**
+
+If the user's request does not mention `--quick`, `--exhaustive`, `--standard`, "quick", "exhaustive", or "standard", check previous QA report headers for tier usage:
+
+```bash
+grep -h "^Tier:" .gstack/qa-reports/qa-report-*.md 2>/dev/null | sort | uniq -c | sort -rn | head -3
+```
+
+If 3 or more past reports exist and one tier appears in ≥70% of them, use that tier automatically and note:
+`Using Quick tier (your most common choice — 5 of last 7 runs). Pass --standard or --exhaustive to override.`
+
+If history is mixed or fewer than 3 reports exist, default to Standard silently.
 
 **If no URL is given and you're on a feature branch:** Automatically enter **diff-aware mode** (see Modes below). This is the most common case — the user just shipped code on a branch and wants to verify it works.
 
@@ -1104,11 +1117,55 @@ After all fixes are applied:
 
 ---
 
+## Phase 9.5: Trend Comparison
+
+Compare this run's health score against previous QA runs to detect regressions and track improvement velocity:
+
+```bash
+ls -t .gstack/qa-reports/qa-report-*.md 2>/dev/null | head -6
+```
+
+If 2 or more past reports exist for the same domain, extract their health scores and show a trend table:
+
+```
+QA Trend — <domain>:
+  Run date     | Health | Issues | Fixed | Tier
+  -------------|--------|--------|-------|------
+  2026-03-28   |  82%   |   8    |   6   | Standard
+  2026-03-20   |  71%   |  14    |  10   | Standard
+  TODAY        |  XX%   |   N    |   M   | TIER
+  Δ vs last:   | +11%   |  -6    |       |
+```
+
+Extract health scores from report header lines matching: `Health Score: N%` or `**Health:** N/100`.
+
+**Regression alert:** If today's score is MORE THAN 5 POINTS LOWER than the previous run, output prominently:
+```
+⚠ REGRESSION DETECTED: Health dropped from X% to Y% (−Z pts). Review Phase 8 reverts.
+```
+
+**Improvement milestone:** If today's score is 10+ points higher than any previous run, note:
+```
+✓ Best score yet: X% (previous best: Y% on DATE)
+```
+
+If fewer than 2 past reports exist, skip the trend table silently — note "First QA run for this domain" or "Not enough history for trend."
+
+---
+
 ## Phase 10: Report
 
 Write the report to both local and project-scoped locations:
 
 **Local:** `.gstack/qa-reports/qa-report-{domain}-{YYYY-MM-DD}.md`
+
+The report MUST begin with these header lines (enables smart tier detection and trend tracking in future runs):
+```
+Tier: Quick|Standard|Exhaustive
+Health Score: N%
+Domain: {domain}
+Date: YYYY-MM-DD
+```
 
 **Project-scoped:** Write test outcome artifact for cross-session context:
 ```bash
