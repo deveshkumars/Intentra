@@ -71,17 +71,17 @@ describe('check-careful.sh', () => {
   // --- Destructive rm commands ---
 
   describe('rm -rf / rm -r', () => {
-    test('rm -rf /var/data warns with recursive delete message', () => {
+    test('rm -rf /var/data denies (default verdict: deny)', () => {
       const { exitCode, output } = runHook(CAREFUL_SCRIPT, carefulInput('rm -rf /var/data'));
       expect(exitCode).toBe(0);
-      expect(output.permissionDecision).toBe('ask');
+      expect(output.permissionDecision).toBe('deny');
       expect(output.message).toContain('recursive delete');
     });
 
-    test('rm -r ./some-dir warns', () => {
+    test('rm -r ./some-dir denies', () => {
       const { exitCode, output } = runHook(CAREFUL_SCRIPT, carefulInput('rm -r ./some-dir'));
       expect(exitCode).toBe(0);
-      expect(output.permissionDecision).toBe('ask');
+      expect(output.permissionDecision).toBe('deny');
       expect(output.message).toContain('recursive delete');
     });
 
@@ -93,8 +93,8 @@ describe('check-careful.sh', () => {
         expect(output.permissionDecision).toBeUndefined();
       } else {
         // macOS sed: safe exception regex uses \\s which is unsupported,
-        // so the safe-targets check fails and the command warns
-        expect(output.permissionDecision).toBe('ask');
+        // so the safe-targets check fails and the command denies (default: deny)
+        expect(output.permissionDecision).toBe('deny');
       }
     });
 
@@ -104,14 +104,14 @@ describe('check-careful.sh', () => {
       if (detectSafeRmWorks()) {
         expect(output.permissionDecision).toBeUndefined();
       } else {
-        expect(output.permissionDecision).toBe('ask');
+        expect(output.permissionDecision).toBe('deny');
       }
     });
 
-    test('rm -rf node_modules /var/data warns (mixed safe+unsafe)', () => {
+    test('rm -rf node_modules /var/data denies (mixed safe+unsafe)', () => {
       const { exitCode, output } = runHook(CAREFUL_SCRIPT, carefulInput('rm -rf node_modules /var/data'));
       expect(exitCode).toBe(0);
-      expect(output.permissionDecision).toBe('ask');
+      expect(output.permissionDecision).toBe('deny');
       expect(output.message).toContain('recursive delete');
     });
   });
@@ -123,24 +123,24 @@ describe('check-careful.sh', () => {
   // extraction works and the SQL keywords are visible to the pattern matcher.
 
   describe('SQL destructive commands', () => {
-    test('psql DROP TABLE warns with DROP in message', () => {
+    test('psql DROP TABLE denies (default verdict: deny)', () => {
       const { exitCode, output } = runHook(CAREFUL_SCRIPT, carefulInput('psql -c DROP TABLE users;'));
       expect(exitCode).toBe(0);
-      expect(output.permissionDecision).toBe('ask');
+      expect(output.permissionDecision).toBe('deny');
       expect(output.message).toContain('DROP');
     });
 
-    test('mysql drop database warns (case insensitive)', () => {
+    test('mysql drop database denies (case insensitive)', () => {
       const { exitCode, output } = runHook(CAREFUL_SCRIPT, carefulInput('mysql -e drop database mydb'));
       expect(exitCode).toBe(0);
-      expect(output.permissionDecision).toBe('ask');
+      expect(output.permissionDecision).toBe('deny');
       expect(output.message.toLowerCase()).toContain('drop');
     });
 
-    test('psql TRUNCATE warns', () => {
+    test('psql TRUNCATE denies (default verdict: deny)', () => {
       const { exitCode, output } = runHook(CAREFUL_SCRIPT, carefulInput('psql -c TRUNCATE orders;'));
       expect(exitCode).toBe(0);
-      expect(output.permissionDecision).toBe('ask');
+      expect(output.permissionDecision).toBe('deny');
       expect(output.message).toContain('TRUNCATE');
     });
   });
@@ -148,38 +148,38 @@ describe('check-careful.sh', () => {
   // --- Git destructive commands ---
 
   describe('git destructive commands', () => {
-    test('git push --force warns with force-push', () => {
+    test('git push --force denies (default verdict: deny)', () => {
       const { exitCode, output } = runHook(CAREFUL_SCRIPT, carefulInput('git push --force origin main'));
       expect(exitCode).toBe(0);
-      expect(output.permissionDecision).toBe('ask');
+      expect(output.permissionDecision).toBe('deny');
       expect(output.message).toContain('force-push');
     });
 
-    test('git push -f warns', () => {
+    test('git push -f denies', () => {
       const { exitCode, output } = runHook(CAREFUL_SCRIPT, carefulInput('git push -f origin main'));
       expect(exitCode).toBe(0);
-      expect(output.permissionDecision).toBe('ask');
+      expect(output.permissionDecision).toBe('deny');
       expect(output.message).toContain('force-push');
     });
 
-    test('git reset --hard warns with uncommitted', () => {
+    test('git reset --hard denies (default verdict: deny)', () => {
       const { exitCode, output } = runHook(CAREFUL_SCRIPT, carefulInput('git reset --hard HEAD~3'));
       expect(exitCode).toBe(0);
-      expect(output.permissionDecision).toBe('ask');
+      expect(output.permissionDecision).toBe('deny');
       expect(output.message).toContain('uncommitted');
     });
 
-    test('git checkout . warns', () => {
+    test('git checkout . denies', () => {
       const { exitCode, output } = runHook(CAREFUL_SCRIPT, carefulInput('git checkout .'));
       expect(exitCode).toBe(0);
-      expect(output.permissionDecision).toBe('ask');
+      expect(output.permissionDecision).toBe('deny');
       expect(output.message).toContain('uncommitted');
     });
 
-    test('git restore . warns', () => {
+    test('git restore . denies', () => {
       const { exitCode, output } = runHook(CAREFUL_SCRIPT, carefulInput('git restore .'));
       expect(exitCode).toBe(0);
-      expect(output.permissionDecision).toBe('ask');
+      expect(output.permissionDecision).toBe('deny');
       expect(output.message).toContain('uncommitted');
     });
   });
@@ -258,8 +258,125 @@ describe('check-careful.sh', () => {
       const rawJson = '{"tool_input":{"command":\n"rm -rf /tmp/important"}}';
       const { exitCode, output } = runHookRaw(CAREFUL_SCRIPT, rawJson);
       expect(exitCode).toBe(0);
-      expect(output.permissionDecision).toBe('ask');
+      expect(output.permissionDecision).toBe('deny');
       expect(output.message).toContain('recursive delete');
+    });
+  });
+});
+
+// ============================================================
+// culture.json override tests
+// ============================================================
+
+/**
+ * Helper: create a temp dir with culture.json containing the given risk_gates,
+ * run fn with GSTACK_STATE_DIR pointing to it, then clean up.
+ */
+function withCultureFile(
+  gates: Record<string, string>,
+  fn: (stateDir: string) => void,
+) {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-culture-test-'));
+  try {
+    const culture = { intentra: { risk_gates: gates } };
+    fs.writeFileSync(path.join(stateDir, 'culture.json'), JSON.stringify(culture));
+    fn(stateDir);
+  } finally {
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+}
+
+describe('check-careful.sh culture.json overrides', () => {
+
+  test('deny verdict: rm_recursive with deny → permissionDecision: deny', () => {
+    withCultureFile({ rm_recursive: 'deny' }, (stateDir) => {
+      const { output } = runHook(CAREFUL_SCRIPT, carefulInput('rm -rf /var/data'), { GSTACK_STATE_DIR: stateDir });
+      expect(output.permissionDecision).toBe('deny');
+      expect(output.message).toContain('[careful/deny]');
+    });
+  });
+
+  test('warn verdict: rm_recursive with warn → permissionDecision: ask', () => {
+    withCultureFile({ rm_recursive: 'warn' }, (stateDir) => {
+      const { output } = runHook(CAREFUL_SCRIPT, carefulInput('rm -rf /var/data'), { GSTACK_STATE_DIR: stateDir });
+      expect(output.permissionDecision).toBe('ask');
+      expect(output.message).toContain('[careful/warn]');
+    });
+  });
+
+  test('allow verdict: rm_recursive with allow → passes silently ({})', () => {
+    withCultureFile({ rm_recursive: 'allow' }, (stateDir) => {
+      const { output } = runHook(CAREFUL_SCRIPT, carefulInput('rm -rf /var/data'), { GSTACK_STATE_DIR: stateDir });
+      expect(output.permissionDecision).toBeUndefined();
+    });
+  });
+
+  test('deny verdict: git_force_push with deny → permissionDecision: deny', () => {
+    withCultureFile({ git_force_push: 'deny' }, (stateDir) => {
+      const { output } = runHook(CAREFUL_SCRIPT, carefulInput('git push --force origin main'), { GSTACK_STATE_DIR: stateDir });
+      expect(output.permissionDecision).toBe('deny');
+    });
+  });
+
+  test('allow verdict: kubectl_delete with allow → passes silently', () => {
+    withCultureFile({ kubectl_delete: 'allow' }, (stateDir) => {
+      const { output } = runHook(CAREFUL_SCRIPT, carefulInput('kubectl delete pod my-pod'), { GSTACK_STATE_DIR: stateDir });
+      expect(output.permissionDecision).toBeUndefined();
+    });
+  });
+
+  test('no culture file → rm_recursive falls back to default: deny', () => {
+    const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-noculture-'));
+    try {
+      const { output } = runHook(CAREFUL_SCRIPT, carefulInput('rm -rf /var/data'), { GSTACK_STATE_DIR: emptyDir });
+      expect(output.permissionDecision).toBe('deny');
+    } finally {
+      fs.rmSync(emptyDir, { recursive: true, force: true });
+    }
+  });
+
+  test('no culture file → kubectl_delete falls back to default: warn (ask)', () => {
+    const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-noculture-'));
+    try {
+      const { output } = runHook(CAREFUL_SCRIPT, carefulInput('kubectl delete pod'), { GSTACK_STATE_DIR: emptyDir });
+      expect(output.permissionDecision).toBe('ask');
+    } finally {
+      fs.rmSync(emptyDir, { recursive: true, force: true });
+    }
+  });
+
+  test('malformed culture.json → falls back to default verdict', () => {
+    const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-badculture-'));
+    try {
+      fs.writeFileSync(path.join(stateDir, 'culture.json'), '{ this is not valid json {{{{');
+      const { output } = runHook(CAREFUL_SCRIPT, carefulInput('rm -rf /var/data'), { GSTACK_STATE_DIR: stateDir });
+      expect(output.permissionDecision).toBe('deny'); // falls back to default
+    } finally {
+      fs.rmSync(stateDir, { recursive: true, force: true });
+    }
+  });
+
+  test('missing key in risk_gates → falls back to default verdict', () => {
+    withCultureFile({ drop_table: 'warn' }, (stateDir) => {
+      // rm_recursive key is absent; should fall back to deny
+      const { output } = runHook(CAREFUL_SCRIPT, carefulInput('rm -rf /var/data'), { GSTACK_STATE_DIR: stateDir });
+      expect(output.permissionDecision).toBe('deny');
+    });
+  });
+
+  test('deny verdict message includes [careful/deny] prefix', () => {
+    withCultureFile({ drop_table: 'deny' }, (stateDir) => {
+      const { output } = runHook(CAREFUL_SCRIPT, carefulInput('psql -c DROP TABLE users;'), { GSTACK_STATE_DIR: stateDir });
+      expect(output.permissionDecision).toBe('deny');
+      expect(output.message).toMatch(/^\[careful\/deny\]/);
+    });
+  });
+
+  test('warn verdict message includes [careful/warn] prefix', () => {
+    withCultureFile({ drop_table: 'warn' }, (stateDir) => {
+      const { output } = runHook(CAREFUL_SCRIPT, carefulInput('psql -c DROP TABLE users;'), { GSTACK_STATE_DIR: stateDir });
+      expect(output.permissionDecision).toBe('ask');
+      expect(output.message).toMatch(/^\[careful\/warn\]/);
     });
   });
 });
