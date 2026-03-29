@@ -241,7 +241,7 @@ function readNewJsonlLines(): void {
           });
           continue;
         }
-        // Plain skill start entries written by the preamble: {"skill":"...","ts":"...","repo":"..."}
+        // Plain skill start entries written by the preamble: {"skill":"...","ts":"...","repo":"...","session_id":"..."}
         // No event_type / event field — just skill + ts. Emit as skill_start.
         if (typeof entry.skill === 'string' && !entry.event && !entry.event_type) {
           addEvent({
@@ -250,6 +250,7 @@ function readNewJsonlLines(): void {
             ingest_lane: 'intentra_jsonl_bridge',
             upstream_kind: 'gstack_skill_run',
             skill: entry.skill,
+            session_id: typeof entry.session_id === 'string' ? entry.session_id : undefined,
             message: `Started: ${entry.skill}`,
             ts: typeof entry.ts === 'string' ? entry.ts : now(),
           });
