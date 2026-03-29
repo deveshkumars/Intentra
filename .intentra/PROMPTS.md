@@ -31,3 +31,13 @@ Every prompt that drove this project, verbatim. Newest at the bottom.
 **2026-03-28 — Gordon Beckler**
 
 > ok now. use /handoff first to make a new entry to the bottom of the files. and then: the folder should actually be: one file for prompts, one for plans, and one for general handoff stuff.
+
+---
+
+**2026-03-28 — Gordon Beckler**
+
+> WE HAVE FEEDBACK YAY! optimize now using the following feedback to guide you: [detailed rubric feedback with per-dimension scores and actionable suggestions across all 12 dimensions]
+
+> here's the new feedback. user impact appears to be the worst. make sure that this changes [round-2 rubric feedback with updated scores]
+
+> make a new branch called /implementing-handoff-skill that allows you to type /handoff to trigger the handoff/SKILL.md stuff
