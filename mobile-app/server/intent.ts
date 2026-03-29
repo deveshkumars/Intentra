@@ -8,6 +8,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { gstackCulturePath } from './culture';
 
 // ─── IntentSchema (matches masterdoc3 lines 357-373) ────────────────────────
 
@@ -84,12 +85,15 @@ export function createIntent(input: {
     // not a git repo or .git not readable — keep provided/default branch
   }
 
+  const culturePath = gstackCulturePath();
+  const defaultCultureRef = !input.culture_ref && fs.existsSync(culturePath) ? culturePath : undefined;
+
   const artifact: IntentArtifact = {
     intent_id,
     prompt: input.prompt,
     repo: { path: repoPath, branch },
     constraints: input.constraints ?? undefined,
-    culture_ref: input.culture_ref ?? undefined,
+    culture_ref: input.culture_ref ?? defaultCultureRef,
     plan: input.plan ?? undefined,
     outcome: null,
   };

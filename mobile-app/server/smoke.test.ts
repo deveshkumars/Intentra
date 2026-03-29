@@ -63,6 +63,20 @@ describe('progress server smoke', () => {
     expect(typeof j.count).toBe('number');
   });
 
+  test('GET /intentra/culture returns snapshot shape', async () => {
+    const r = await fetch(`${BASE}/intentra/culture`);
+    expect(r.ok).toBe(true);
+    const j = (await r.json()) as {
+      path?: string;
+      loaded?: boolean;
+      culture?: unknown;
+      note?: string;
+    };
+    expect(typeof j.path).toBe('string');
+    expect(typeof j.loaded).toBe('boolean');
+    expect(j.note).toContain('gstack');
+  });
+
   test('INTENTRA_TOKEN rejects POST without Bearer', async () => {
     proc.kill();
     await wait(200);

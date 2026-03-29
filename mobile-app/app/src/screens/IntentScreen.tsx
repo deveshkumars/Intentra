@@ -23,11 +23,20 @@ interface Props {
   serverUrl: string | null;
 }
 
+interface CulturePayload {
+  path: string;
+  culture: Record<string, unknown> | null;
+  loaded: boolean;
+  error: string | null;
+  note?: string;
+}
+
 const MARKDOWN_FILES = ['PROMPTS.md', 'PLANS.md', 'HANDOFFS.md'];
 
 export function IntentScreen({ serverUrl }: Props) {
   const [files, setFiles] = useState<IntentFile[]>([]);
   const [intents, setIntents] = useState<IntentArtifact[]>([]);
+  const [culture, setCulture] = useState<CulturePayload | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,11 +46,14 @@ export function IntentScreen({ serverUrl }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const [filesRes, intentsRes] = await Promise.all([
+      const [filesRes, intentsRes, cultureRes] = await Promise.all([
         fetch(`${serverUrl}/intentra/files`, {
           headers: { 'ngrok-skip-browser-warning': 'true' },
         }),
         fetch(`${serverUrl}/intentra/intents`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' },
+        }),
+        fetch(`${serverUrl}/intentra/culture`, {
           headers: { 'ngrok-skip-browser-warning': 'true' },
         }),
       ]);
@@ -52,6 +64,12 @@ export function IntentScreen({ serverUrl }: Props) {
       if (intentsRes.ok) {
         const data = await intentsRes.json() as { intents: IntentArtifact[] };
         setIntents(data.intents);
+      }
+      if (cultureRes.ok) {
+        const data = await cultureRes.json() as CulturePayload;
+        setCulture(data);
+      } else {
+        setCulture(null);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch');
@@ -104,6 +122,44 @@ export function IntentScreen({ serverUrl }: Props) {
             />
           }
         >
+          {/* gstack culture.json — surfaced by Intentra for audit (same file skills load) */}
+          {culture && (
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={styles.sectionHeader}
+                onPress={() => toggle('_culture')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.chevron}>
+                  {expanded['_culture'] ? '▼' : '▶'}
+                </Text>
+                <Text style={styles.sectionTitle}>Team culture (gstack)</Text>
+                <Text style={styles.badge}>
+                  {culture.loaded ? 'loaded' : 'none'}
+                </Text>
+              </TouchableOpacity>
+              {expanded['_culture'] && (
+                <View style={styles.sectionBody}>
+                  <Text style={styles.culturePath}>{culture.path}</Text>
+                  {culture.error ? (
+                    <Text style={styles.errorText}>{culture.error}</Text>
+                  ) : culture.loaded && culture.culture ? (
+                    <Text style={styles.markdown}>
+                      {JSON.stringify(culture.culture, null, 2)}
+                    </Text>
+                  ) : (
+                    <Text style={styles.emptyInline}>
+                      No culture.json at this path (create with /setup-culture or copy manually).
+                    </Text>
+                  )}
+                  {culture.note ? (
+                    <Text style={styles.cultureNote}>{culture.note}</Text>
+                  ) : null}
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Markdown file sections */}
           {files.map(file => {
             const label = file.name.replace('.md', '');
@@ -312,5 +368,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 20,
     fontFamily: 'monospace',
+  },
+  culturePath: {
+    color: '#64748b',
+    fontSize: 11,
+    fontFamily: 'monospace',
+    marginBottom: 10,
+  },
+  emptyInline: {
+    color: '#64748b',
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  cultureNote: {
+    color: '#475569',
+    fontSize: 11,
+    marginTop: 12,
+    lineHeight: 16,
+    fontStyle: 'italic',
   },
 });

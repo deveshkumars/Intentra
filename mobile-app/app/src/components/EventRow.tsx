@@ -11,6 +11,7 @@ const KIND_ICON: Record<string, string> = {
   skill_end: '■',
   progress: '●',
   tool_use: '⚙',
+  hook_fire: '!',
 };
 
 const KIND_COLOR: Record<string, string> = {
@@ -18,6 +19,7 @@ const KIND_COLOR: Record<string, string> = {
   skill_end: '#94a3b8',    // grey
   progress: '#60a5fa',     // blue
   tool_use: '#f59e0b',     // amber
+  hook_fire: '#f472b6',    // pink — safety / culture gate
 };
 
 function relativeTime(ts: string): string {
@@ -37,6 +39,7 @@ export function EventRow({ event }: Props) {
     event.tool_name ??
     (event.kind === 'skill_start' ? `${event.skill ?? 'skill'} started` : null) ??
     (event.kind === 'skill_end' ? `${event.skill ?? 'skill'} ${event.outcome ?? 'done'}` : null) ??
+    (event.kind === 'hook_fire' ? `${event.skill ?? 'hook'} · ${event.step ?? 'block'}` : null) ??
     event.kind;
 
   return (
@@ -44,8 +47,14 @@ export function EventRow({ event }: Props) {
       <Text style={[styles.icon, { color }]}>{icon}</Text>
       <View style={styles.body}>
         <Text style={styles.label} numberOfLines={1}>{label}</Text>
-        {event.skill && event.kind !== 'skill_start' && event.kind !== 'skill_end' && (
+        {event.skill && event.kind !== 'skill_start' && event.kind !== 'skill_end' && event.kind !== 'hook_fire' && (
           <Text style={styles.skill}>{event.skill}</Text>
+        )}
+        {event.ingest_lane && (
+          <Text style={styles.lane} numberOfLines={1}>
+            {event.ingest_lane}
+            {event.upstream_kind ? ` · ${event.upstream_kind}` : ''}
+          </Text>
         )}
       </View>
       <Text style={styles.time}>{relativeTime(event.ts)}</Text>
@@ -79,6 +88,12 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontSize: 11,
     marginTop: 1,
+  },
+  lane: {
+    color: '#475569',
+    fontSize: 9,
+    marginTop: 2,
+    fontFamily: 'monospace',
   },
   time: {
     color: '#475569',

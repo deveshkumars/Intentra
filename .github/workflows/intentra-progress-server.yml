@@ -1,0 +1,24 @@
+# Smoke-test the Bun progress server (SSE + Intentra routes) on PRs touching mobile-app/server.
+name: Intentra progress server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile-app/server/**'
+      - '.github/workflows/intentra-progress-server.yml'
+  pull_request:
+    paths:
+      - 'mobile-app/server/**'
+      - '.github/workflows/intentra-progress-server.yml'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Bun smoke tests
+        run: bun test mobile-app/server/smoke.test.ts

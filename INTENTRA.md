@@ -26,15 +26,25 @@ Intentra-related code is spread across `mobile-app/`, `.intentra/`, and root doc
 | Cross-session link | Optional `intent_id` on progress payloads (client + server types) | [`mobile-app/app/src/types.ts`](mobile-app/app/src/types.ts), `server.ts` |
 | Intent-as-Code files | `POST /intentra/intent`, `GET /intentra/intents` → JSON under `.intentra/` | [`mobile-app/server/intent.ts`](mobile-app/server/intent.ts) |
 | Intentra file API | `GET /intentra/files`, `GET /intentra/latest` | [`mobile-app/server/server.ts`](mobile-app/server/server.ts) |
-| Mobile app | Expo UI, SSE hook, setup, dashboard, detail, Intent screen | [`mobile-app/app/`](mobile-app/app/) |
+| Culture audit API | `GET /intentra/culture` — reads `culture.json` from `GSTACK_STATE_DIR` (same file gstack skills load) | [`mobile-app/server/culture.ts`](mobile-app/server/culture.ts) |
+| Telemetry provenance | `ingest_lane` + `upstream_kind` on `ProgressEvent`; `hook_fire` kind from JSONL `event: hook_fire` | [`mobile-app/server/server.ts`](mobile-app/server/server.ts), app [`types.ts`](mobile-app/app/src/types.ts) |
+| Mobile app | Expo UI, SSE hook, setup, dashboard, detail, Intent screen (culture + artifacts) | [`mobile-app/app/`](mobile-app/app/) |
 | Markdown intent layer | Append-only `PROMPTS.md`, `PLANS.md`, `HANDOFFS.md` | [`.intentra/`](.intentra/) |
+| Container | `Dockerfile` in `mobile-app/server/` | [`mobile-app/server/Dockerfile`](mobile-app/server/Dockerfile) |
+| CI | Smoke tests on `mobile-app/server/**` changes | [`.github/workflows/intentra-progress-server.yml`](.github/workflows/intentra-progress-server.yml) |
 
 ## gstack vs Intentra (boundary)
 
 | Layer | Responsibility |
 |-------|----------------|
 | **gstack** | Skills, `~/.gstack/culture.json`, safety hooks, `skill-usage.jsonl` telemetry |
-| **Intentra (this layer)** | Watches JSONL, streams SSE, optional `/intentra/*` HTTP, `.intentra/` JSON + Markdown, mobile monitor |
+| **Intentra (this layer)** | Watches JSONL, **normalizes** lines into a single event model (`ingest_lane`, `upstream_kind`), streams SSE, `/intentra/*` HTTP, `.intentra/` JSON + Markdown, mobile monitor |
+
+## Deployment (progress server)
+
+- **Docker:** from repo root, `docker build -f mobile-app/server/Dockerfile -t intentra-progress mobile-app/server` then run with `-p 7891:7891` and volumes for `GSTACK_STATE_DIR` (e.g. host `~/.gstack` → `/data/gstack`) and `INTENTRA_REPO_ROOT` (host repo → `/repo`). See comments in the Dockerfile.
+- **CI:** GitHub Actions runs `bun test mobile-app/server/smoke.test.ts` when server files change.
+- **Hosted SaaS:** not in-repo; use any container host (Fly.io, Railway, etc.) with the same env vars as local.
 
 ## Environment variables (progress server)
 

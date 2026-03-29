@@ -17,6 +17,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createIntent, listIntents } from './intent';
+import { readCultureSnapshot } from './culture';
 
 // ─── CircularBuffer (copied verbatim from browse/src/buffers.ts) ───────────
 
@@ -67,7 +68,9 @@ class CircularBuffer<T> {
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-export type EventKind = 'skill_start' | 'skill_end' | 'progress' | 'tool_use';
+export type EventKind = 'skill_start' | 'skill_end' | 'progress' | 'tool_use' | 'hook_fire';
+
+export type IngestLane = 'intentra_jsonl_bridge' | 'intentra_http';
 
 export interface ProgressEvent {
   id: string;
@@ -83,6 +86,8 @@ export interface ProgressEvent {
   tool_name?: string;
   outcome?: 'success' | 'error' | 'unknown';
   duration_s?: number;
+  ingest_lane?: IngestLane;
+  upstream_kind?: string;
 }
 
 export interface TrackedAgent {
@@ -182,20 +187,36 @@ function readNewJsonlLines(): void {
     const lines = buf.toString('utf-8').split('\n').filter(Boolean);
     for (const line of lines) {
       try {
-        const entry = JSON.parse(line);
-        // skill-usage.jsonl uses event_type: "skill_run" (both start and end in one record)
-        // The pending marker fires at start; the final record fires at end.
-        // We treat each complete record as a skill_end event, and synthesise a skill_start
-        // from the pending marker timestamp if available.
+        const entry = JSON.parse(line) as Record<string, unknown>;
+        // gstack hook telemetry (careful/freeze) — Intentra normalizes into the shared feed
+        if (entry.event === 'hook_fire') {
+          const pattern = typeof entry.pattern === 'string' ? entry.pattern : 'unknown';
+          const hookSkill = typeof entry.skill === 'string' ? entry.skill : 'hook';
+          addEvent({
+            kind: 'hook_fire',
+            source: 'jsonl_watcher',
+            ingest_lane: 'intentra_jsonl_bridge',
+            upstream_kind: 'gstack_hook_fire',
+            skill: hookSkill,
+            step: pattern,
+            message: `Safety hook blocked: ${hookSkill} · ${pattern}`,
+            session_id: typeof entry.session_id === 'string' ? entry.session_id : undefined,
+            ts: typeof entry.ts === 'string' ? entry.ts : now(),
+          });
+          continue;
+        }
+        // skill-usage.jsonl — gstack-telemetry-log uses event_type: "skill_run"
         if (entry.event_type === 'skill_run') {
           addEvent({
             kind: 'skill_end',
             source: 'jsonl_watcher',
-            skill: entry.skill ?? undefined,
-            session_id: entry.session_id ?? undefined,
-            outcome: entry.outcome ?? 'unknown',
-            duration_s: entry.duration_s ?? undefined,
-            ts: entry.ts ?? now(),
+            ingest_lane: 'intentra_jsonl_bridge',
+            upstream_kind: 'gstack_skill_run',
+            skill: typeof entry.skill === 'string' ? entry.skill : undefined,
+            session_id: typeof entry.session_id === 'string' ? entry.session_id : undefined,
+            outcome: (entry.outcome as ProgressEvent['outcome']) ?? 'unknown',
+            duration_s: typeof entry.duration_s === 'number' ? entry.duration_s : undefined,
+            ts: typeof entry.ts === 'string' ? entry.ts : now(),
           });
         }
       } catch {
@@ -399,6 +420,8 @@ const server = Bun.serve({
       addEvent({
         kind: body.kind ?? 'progress',
         source: body.source ?? 'post',
+        ingest_lane: body.ingest_lane ?? 'intentra_http',
+        upstream_kind: body.upstream_kind,
         session_id: body.session_id,
         intent_id: body.intent_id,
         skill: body.skill,
@@ -515,6 +538,19 @@ const server = Bun.serve({
       return new Response(JSON.stringify({ intents, count: intents.length }), {
         status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
+    }
+
+    // GET /intentra/culture — gstack culture.json (read-only; Intentra demonstration surface)
+    if (req.method === 'GET' && url.pathname === '/intentra/culture') {
+      const snap = readCultureSnapshot();
+      return new Response(
+        JSON.stringify({
+          ...snap,
+          note:
+            'File is written and consumed by gstack skills; Intentra re-serves it for mobile audit and intent linkage.',
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
+      );
     }
 
     return new Response('Not found', { status: 404, headers: corsHeaders });
