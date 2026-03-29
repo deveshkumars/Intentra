@@ -184,6 +184,7 @@ export function appendIntentraGuardTelemetry(entry: {
   ts: string;
   repo?: string;
   risk_score?: number;
+  guard_engine_version?: number;
 }): void {
   const root = intentraRepoRoot();
   const dir = path.join(root, '.intentra', 'telemetry');
