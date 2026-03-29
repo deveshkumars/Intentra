@@ -11,6 +11,7 @@
 FROM oven/bun:1-alpine
 WORKDIR /app
 COPY package.json ./
+COPY schemas ./schemas/
 COPY server.ts intent.ts culture.ts guard.ts guard-types.ts guard-command.ts guard-policy.ts ./
 ENV GSTACK_PROGRESS_PORT=7891
 EXPOSE 7891

@@ -23,6 +23,7 @@ import {
   evaluateCommandGuard,
   listGuardRulePublicMeta,
 } from './guard';
+import { GUARD_ENGINE, GUARD_RULE_COUNT, GUARD_RULE_IDS } from './guard-policy';
 
 // ─── CircularBuffer (copied verbatim from browse/src/buffers.ts) ───────────
 
@@ -474,6 +475,8 @@ const server = Bun.serve({
         subscribers: subscribers.size,
         uptime: Math.floor((Date.now() - startedAt) / 1000),
         jsonl: JSONL_PATH,
+        guard_engine_version: GUARD_ENGINE.version,
+        rule_count: GUARD_RULE_COUNT,
       }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
@@ -549,15 +552,34 @@ const server = Bun.serve({
     if (req.method === 'GET' && url.pathname === '/intentra/guard/rules') {
       return new Response(
         JSON.stringify({
-          engine: {
-            version: 1,
-            tokenizer: 'shell_quote_aware_v1',
-            normalization: 'NFKC_whitespace_collapse',
-          },
+          engine: { ...GUARD_ENGINE },
           rules: listGuardRulePublicMeta(),
         }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
       );
+    }
+
+    // GET /intentra/guard/schema — culture fragment JSON Schema + rule ids (read-only)
+    if (req.method === 'GET' && url.pathname === '/intentra/guard/schema') {
+      try {
+        const schemaPath = path.join(import.meta.dir, 'schemas', 'culture-intentra.fragment.json');
+        const raw = fs.readFileSync(schemaPath, 'utf-8');
+        const culture_fragment_schema = JSON.parse(raw) as unknown;
+        return new Response(
+          JSON.stringify({
+            culture_fragment_schema,
+            culture_fragment_schema_path: 'mobile-app/server/schemas/culture-intentra.fragment.json',
+            rule_ids: [...GUARD_RULE_IDS].sort(),
+            engine: { ...GUARD_ENGINE },
+            rule_count: GUARD_RULE_COUNT,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
+        );
+      } catch {
+        return new Response(JSON.stringify({ error: 'schema_unavailable' }), {
+          status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
     }
 
     // POST /intentra/guard — policy engine (optional debug trace + culture warnings)
@@ -585,6 +607,7 @@ const server = Bun.serve({
           pattern: result.pattern,
           ts,
           risk_score: result.risk_score,
+          guard_engine_version: GUARD_ENGINE.version,
         });
         addEvent({
           kind: 'hook_fire',

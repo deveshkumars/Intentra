@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/deveshkumars/Intentra/blob/main/mobile-app/server/schemas/culture-intentra.fragment.json",
+  "title": "culture.json intentra fragment",
+  "description": "Optional slice inside team culture.json. Keys in risk_gates must match GUARD_RULE_IDS in guard-policy.ts.",
+  "type": "object",
+  "properties": {
+    "intentra": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "risk_gates": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rm_recursive": { "$ref": "#/$defs/gateVerdict" },
+            "drop_table": { "$ref": "#/$defs/gateVerdict" },
+            "truncate": { "$ref": "#/$defs/gateVerdict" },
+            "git_force_push": { "$ref": "#/$defs/gateVerdict" },
+            "git_reset_hard": { "$ref": "#/$defs/gateVerdict" },
+            "git_discard": { "$ref": "#/$defs/gateVerdict" },
+            "kubectl_delete": { "$ref": "#/$defs/gateVerdict" },
+            "docker_destructive": { "$ref": "#/$defs/gateVerdict" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "gateVerdict": {
+      "type": "string",
+      "enum": ["deny", "warn", "allow"]
+    }
+  }
+}

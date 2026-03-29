@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# POST a command to Intentra /intentra/guard and print JSON verdict.
+# Env: INTENTRA_GUARD_URL (default http://127.0.0.1:7891), INTENTRA_TOKEN (optional Bearer).
+set -euo pipefail
+BASE="${INTENTRA_GUARD_URL:-http://127.0.0.1:7891}"
+CMD=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --command|-c)
+      CMD="${2:?}"
+      shift 2
+      ;;
+    --help|-h)
+      echo "Usage: intentra-guard-http --command 'shell command here'"
+      echo "Env: INTENTRA_GUARD_URL, INTENTRA_TOKEN"
+      exit 0
+      ;;
+    *)
+      echo "Unknown arg: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+if [[ -z "$CMD" ]]; then
+  echo "Missing --command" >&2
+  exit 1
+fi
+JSON_CMD="$(printf '%s' "$CMD" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')"
+BODY="$(printf '{"command":%s}' "$JSON_CMD")"
+AUTH=()
+if [[ -n "${INTENTRA_TOKEN:-}" ]]; then
+  AUTH=(-H "Authorization: Bearer ${INTENTRA_TOKEN}")
+fi
+exec curl -sS -X POST "${BASE%/}/intentra/guard" \
+  -H "Content-Type: application/json" \
+  "${AUTH[@]}" \
+  -d "$BODY"

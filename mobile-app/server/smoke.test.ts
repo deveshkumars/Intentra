@@ -41,8 +41,12 @@ describe('progress server smoke', () => {
       try {
         const r = await fetch(`${BASE}/health`);
         if (r.ok) {
-          const j = (await r.json()) as { ok?: boolean };
-          if (j.ok === true) {
+          const j = (await r.json()) as {
+            ok?: boolean;
+            guard_engine_version?: number;
+            rule_count?: number;
+          };
+          if (j.ok === true && typeof j.guard_engine_version === 'number' && typeof j.rule_count === 'number') {
             ok = true;
             break;
           }
@@ -83,7 +87,21 @@ describe('progress server smoke', () => {
     const j = (await r.json()) as { rules?: unknown[]; engine?: { version?: number } };
     expect(Array.isArray(j.rules)).toBe(true);
     expect((j.rules as []).length).toBeGreaterThanOrEqual(8);
-    expect(j.engine?.version).toBe(1);
+    expect(j.engine?.version).toBeGreaterThanOrEqual(2);
+  });
+
+  test('GET /intentra/guard/schema returns rule_ids and schema', async () => {
+    const r = await fetch(`${BASE}/intentra/guard/schema`);
+    expect(r.ok).toBe(true);
+    const j = (await r.json()) as {
+      rule_ids?: string[];
+      rule_count?: number;
+      culture_fragment_schema?: { title?: string };
+    };
+    expect(Array.isArray(j.rule_ids)).toBe(true);
+    expect(j.rule_ids!.length).toBeGreaterThanOrEqual(8);
+    expect(j.rule_count).toBe(j.rule_ids!.length);
+    expect(j.culture_fragment_schema?.title).toBeDefined();
   });
 
   test('POST /intentra/guard denies destructive command', async () => {

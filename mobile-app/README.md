@@ -2,7 +2,7 @@
 
 Real-time agent activity feed for gstack skills. Watch Claude work from your phone.
 
-**Intentra:** Progress server routes, auth, and `/intentra/*` APIs are inventoried in [`INTENTRA.md`](../INTENTRA.md). The canonical product plan is [`masterdoc3.md`](../masterdoc3.md).
+**Intentra:** Progress server routes, auth, and `/intentra/*` APIs are inventoried in [`INTENTRA.md`](../INTENTRA.md). Architecture diagrams + full route/auth matrix: [`docs/intentra-architecture.md`](../docs/intentra-architecture.md). Deploy: [`DEPLOY.md`](../DEPLOY.md). The canonical product plan is [`masterdoc3.md`](../masterdoc3.md).
 
 ```
 Claude Code (running a skill)

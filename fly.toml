@@ -1,0 +1,15 @@
+# Fly.io — set `app` to your unique name, then: fly deploy
+# Build: repo root; Dockerfile below.
+
+app = "intentra-progress-replace-me"
+primary_region = "iad"
+
+[build]
+  dockerfile = "mobile-app/server/Dockerfile"
+
+[env]
+  GSTACK_PROGRESS_PORT = "7891"
+
+[http_service]
+  internal_port = 7891
+  force_https = true

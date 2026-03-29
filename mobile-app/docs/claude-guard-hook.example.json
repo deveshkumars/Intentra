@@ -1,0 +1,16 @@
+{
+  "description": "Wire Intentra guard beside /careful: on PreToolUse (Bash), extract tool_input.command (same idea as careful/bin/check-careful.sh grep+python fallback), then POST JSON to the progress server. Does not replace careful/freeze.",
+  "env": {
+    "INTENTRA_GUARD_URL": "http://127.0.0.1:7891",
+    "INTENTRA_TOKEN": "set when server uses bearer auth"
+  },
+  "post_body_shape": {
+    "command": "the bash command string",
+    "session_id": "optional",
+    "debug": false
+  },
+  "curl_example": "curl -sS -X POST \"http://127.0.0.1:7891/intentra/guard\" -H \"Content-Type: application/json\" -d '{\"command\":\"git push --force\"}'",
+  "curl_with_auth": "curl -sS -X POST \"http://127.0.0.1:7891/intentra/guard\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer $INTENTRA_TOKEN\" -d '{\"command\":\"rm -rf ./src\"}'",
+  "local_helper": "From repo root: bin/intentra-guard-http --command 'git push -f' (reads INTENTRA_GUARD_URL and INTENTRA_TOKEN)",
+  "response_fields": ["verdict", "pattern", "message", "risk_score", "rule", "culture_warnings", "trace"]
+}
