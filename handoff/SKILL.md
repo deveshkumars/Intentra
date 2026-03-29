@@ -48,7 +48,7 @@ echo "LAKE_INTRO: $_LAKE_SEEN"
 _TEL=$(~/.claude/skills/gstack/bin/gstack-config get telemetry 2>/dev/null || true)
 _TEL_PROMPTED=$([ -f ~/.gstack/.telemetry-prompted ] && echo "yes" || echo "no")
 _TEL_START=$(date +%s)
-_SESSION_ID="$$-$(date +%s)"
+_SESSION_ID="${CLAUDE_SESSION_ID:-$$-$(date +%s)}"
 echo "TELEMETRY: ${_TEL:-off}"
 echo "TEL_PROMPTED: $_TEL_PROMPTED"
 _CULTURE_LOADED=$([ -f "$HOME/.gstack/culture.json" ] && echo "yes" || echo "no")
