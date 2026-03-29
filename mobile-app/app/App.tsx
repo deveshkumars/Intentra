@@ -9,12 +9,13 @@ import { DashboardScreen } from './src/screens/DashboardScreen';
 import { DetailScreen } from './src/screens/DetailScreen';
 import { IntentScreen } from './src/screens/IntentScreen';
 import { HandoffScreen } from './src/screens/HandoffScreen';
+import { GuardScreen } from './src/screens/GuardScreen';
 import { useEventStream } from './src/useEventStream';
 import { getServerUrl, getAuthToken } from './src/storage';
 import { TrackedAgent } from './src/types';
 
-type Screen = 'loading' | 'setup' | 'dashboard' | 'intent' | 'handoffs' | 'detail';
-type Tab = 'dashboard' | 'handoffs' | 'intent';
+type Screen = 'loading' | 'setup' | 'dashboard' | 'intent' | 'handoffs' | 'guard' | 'detail';
+type Tab = 'dashboard' | 'handoffs' | 'intent' | 'guard';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('loading');
@@ -25,6 +26,11 @@ export default function App() {
   const [intentEventFilter, setIntentEventFilter] = useState<string | null>(null);
 
   const { events, trackedAgents, status, reconnect } = useEventStream(serverUrl, authToken);
+
+  // Count hook_fire events since last guard tab visit — drives the badge
+  const [lastGuardVisitEventCount, setLastGuardVisitEventCount] = useState(0);
+  const hookFireCount = useMemo(() => events.filter(e => e.kind === 'hook_fire').length, [events]);
+  const unreadHookFires = Math.max(0, hookFireCount - lastGuardVisitEventCount);
 
   // Signal DashboardScreen to re-fetch intent IDs when a new intent is created via SSE
   const [intentRefreshKey, setIntentRefreshKey] = useState(0);
@@ -113,6 +119,8 @@ export default function App() {
               />
             ) : activeTab === 'handoffs' ? (
               <HandoffScreen serverUrl={serverUrl} authToken={authToken} events={events} />
+            ) : activeTab === 'guard' ? (
+              <GuardScreen serverUrl={serverUrl} authToken={authToken} events={events} />
             ) : (
               <IntentScreen serverUrl={serverUrl} authToken={authToken} events={events} />
             )}
@@ -150,6 +158,28 @@ export default function App() {
                 activeTab === 'intent' && tabStyles.tabLabelActive,
               ]}>Intent</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={tabStyles.tab}
+              onPress={() => {
+                setLastGuardVisitEventCount(hookFireCount);
+                setActiveTab('guard');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={tabStyles.tabLabelWrap}>
+                <Text style={[
+                  tabStyles.tabLabel,
+                  activeTab === 'guard' && tabStyles.tabLabelGuardActive,
+                ]}>Guard</Text>
+                {unreadHookFires > 0 && (
+                  <View style={tabStyles.badge}>
+                    <Text style={tabStyles.badgeText}>
+                      {unreadHookFires > 99 ? '99+' : String(unreadHookFires)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
       </SafeAreaProvider>
@@ -177,6 +207,11 @@ const tabStyles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
   },
+  tabLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   tabLabel: {
     color: '#475569',
     fontSize: 13,
@@ -184,6 +219,24 @@ const tabStyles = StyleSheet.create({
   },
   tabLabelActive: {
     color: '#4ade80',
+  },
+  tabLabelGuardActive: {
+    color: '#f87171',
+  },
+  badge: {
+    backgroundColor: '#f87171',
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
+    lineHeight: 12,
   },
 });
 

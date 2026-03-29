@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView, StyleSheet,
-  TouchableOpacity, RefreshControl,
+  TouchableOpacity, RefreshControl, TextInput,
 } from 'react-native';
 import { TrackedAgent, ProgressEvent } from '../types';
 import { AgentCard } from '../components/AgentCard';
@@ -50,6 +50,7 @@ export function DashboardScreen({
 }: Props) {
   const dotColor = STATUS_DOT_COLOR[status];
   const [intentIds, setIntentIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchIntentIds = useCallback(async () => {
     if (!serverUrl) {
@@ -80,6 +81,21 @@ export function DashboardScreen({
     fetchIntentIds();
   }, [onReconnect, fetchIntentIds]);
 
+  const filteredEvents = useMemo(() => {
+    if (!searchQuery.trim()) return events;
+    const q = searchQuery.toLowerCase();
+    return events.filter(e =>
+      (e.message ?? '').toLowerCase().includes(q) ||
+      (e.skill ?? '').toLowerCase().includes(q) ||
+      (e.tool_name ?? '').toLowerCase().includes(q) ||
+      e.kind.toLowerCase().includes(q),
+    );
+  }, [events, searchQuery]);
+
+  // Quick stats for the header summary row
+  const hookFires = useMemo(() => events.filter(e => e.kind === 'hook_fire').length, [events]);
+  const runningAgents = trackedAgents.filter(a => a.status === 'running').length;
+
   const renderEvent = useCallback(({ item }: { item: ProgressEvent }) => (
     <EventRow event={item} />
   ), []);
@@ -103,6 +119,46 @@ export function DashboardScreen({
             <Text style={styles.gear}>⚙</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Stats summary row */}
+      {events.length > 0 && (
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNum}>{events.length}</Text>
+            <Text style={styles.statLabel}>events</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={[styles.statNum, runningAgents > 0 && styles.statNumActive]}>
+              {runningAgents}
+            </Text>
+            <Text style={styles.statLabel}>running</Text>
+          </View>
+          {hookFires > 0 && (
+            <>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statNum, { color: '#f87171' }]}>{hookFires}</Text>
+                <Text style={styles.statLabel}>blocked</Text>
+              </View>
+            </>
+          )}
+        </View>
+      )}
+
+      {/* Search bar */}
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search events…"
+          placeholderTextColor="#334155"
+          autoCapitalize="none"
+          autoCorrect={false}
+          clearButtonMode="while-editing"
+        />
       </View>
 
       {/* Tracked agent cards */}
@@ -153,26 +209,32 @@ export function DashboardScreen({
       )}
 
       {/* Event feed */}
-      <Text style={styles.feedLabel}>Live events</Text>
-      {events.length === 0 ? (
+      <Text style={styles.feedLabel}>
+        {searchQuery.trim()
+          ? `${filteredEvents.length} result${filteredEvents.length === 1 ? '' : 's'}`
+          : 'Live events'}
+      </Text>
+      {filteredEvents.length === 0 ? (
         <View style={styles.empty}>
-          {status === 'connected'
-            ? <Text style={styles.emptyText}>Waiting for agents...</Text>
-            : status === 'connecting'
-              ? <Text style={styles.emptyText}>Connecting...</Text>
-              : (
-                <View style={styles.emptyAction}>
-                  <Text style={styles.emptyText}>Not connected</Text>
-                  <TouchableOpacity onPress={onSetupPress} style={styles.setupBtn}>
-                    <Text style={styles.setupBtnText}>Set up server</Text>
-                  </TouchableOpacity>
-                </View>
-              )
+          {searchQuery.trim()
+            ? <Text style={styles.emptyText}>No events match "{searchQuery}"</Text>
+            : status === 'connected'
+              ? <Text style={styles.emptyText}>Waiting for agents...</Text>
+              : status === 'connecting'
+                ? <Text style={styles.emptyText}>Connecting...</Text>
+                : (
+                  <View style={styles.emptyAction}>
+                    <Text style={styles.emptyText}>Not connected</Text>
+                    <TouchableOpacity onPress={onSetupPress} style={styles.setupBtn}>
+                      <Text style={styles.setupBtnText}>Set up server</Text>
+                    </TouchableOpacity>
+                  </View>
+                )
           }
         </View>
       ) : (
         <FlatList
-          data={events}
+          data={filteredEvents}
           keyExtractor={e => e.id}
           renderItem={renderEvent}
           style={styles.feed}
@@ -225,6 +287,51 @@ const styles = StyleSheet.create({
   gear: {
     color: '#64748b',
     fontSize: 18,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#1e293b',
+    gap: 12,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNum: {
+    color: '#f1f5f9',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  statNumActive: {
+    color: '#4ade80',
+  },
+  statLabel: {
+    color: '#475569',
+    fontSize: 9,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#1e293b',
+  },
+  searchRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#1e293b',
+  },
+  searchInput: {
+    backgroundColor: '#1e293b',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    color: '#e2e8f0',
+    fontSize: 14,
   },
   sessionsSection: {
     paddingTop: 12,
