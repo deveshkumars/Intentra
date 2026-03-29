@@ -8,12 +8,13 @@ import { SetupScreen } from './src/screens/SetupScreen';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { DetailScreen } from './src/screens/DetailScreen';
 import { IntentScreen } from './src/screens/IntentScreen';
+import { HandoffScreen } from './src/screens/HandoffScreen';
 import { useEventStream } from './src/useEventStream';
 import { getServerUrl } from './src/storage';
 import { TrackedAgent } from './src/types';
 
-type Screen = 'loading' | 'setup' | 'dashboard' | 'intent' | 'detail';
-type Tab = 'dashboard' | 'intent';
+type Screen = 'loading' | 'setup' | 'dashboard' | 'intent' | 'handoffs' | 'detail';
+type Tab = 'dashboard' | 'handoffs' | 'intent';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('loading');
@@ -93,6 +94,8 @@ export default function App() {
                 }}
                 onSetupPress={() => setScreen('setup')}
               />
+            ) : activeTab === 'handoffs' ? (
+              <HandoffScreen serverUrl={serverUrl} />
             ) : (
               <IntentScreen serverUrl={serverUrl} />
             )}
@@ -109,6 +112,16 @@ export default function App() {
                 tabStyles.tabLabel,
                 activeTab === 'dashboard' && tabStyles.tabLabelActive,
               ]}>Dashboard</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={tabStyles.tab}
+              onPress={() => setActiveTab('handoffs')}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                tabStyles.tabLabel,
+                activeTab === 'handoffs' && tabStyles.tabLabelActive,
+              ]}>Handoffs</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={tabStyles.tab}
