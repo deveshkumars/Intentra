@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# POST a command to Intentra /intentra/guard and print JSON verdict.
+# POST a command to Intentra /intentra/guard. Exits non-zero on deny so
+# Claude Code's PreToolUse hook blocks the tool call.
 # Env: INTENTRA_GUARD_URL (default http://127.0.0.1:7891), INTENTRA_TOKEN (optional Bearer).
 set -euo pipefail
 BASE="${INTENTRA_GUARD_URL:-http://127.0.0.1:7891}"
@@ -31,7 +32,17 @@ AUTH=()
 if [[ -n "${INTENTRA_TOKEN:-}" ]]; then
   AUTH=(-H "Authorization: Bearer ${INTENTRA_TOKEN}")
 fi
-exec curl -sS -X POST "${BASE%/}/intentra/guard" \
+RESPONSE="$(curl -sS -X POST "${BASE%/}/intentra/guard" \
   -H "Content-Type: application/json" \
   "${AUTH[@]}" \
-  -d "$BODY"
+  -d "$BODY" 2>/dev/null)" || {
+  # Server unreachable — allow (non-blocking design)
+  exit 0
+}
+printf '%s\n' "$RESPONSE"
+# Exit non-zero on deny so Claude Code blocks the tool call
+VERDICT="$(printf '%s' "$RESPONSE" | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("verdict","allow"))' 2>/dev/null || echo "allow")"
+if [[ "$VERDICT" == "deny" ]]; then
+  exit 1
+fi
+exit 0
