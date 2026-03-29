@@ -32,6 +32,35 @@ export function SetupScreen({ onConnected }: Props) {
       });
       clearTimeout(timer);
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
+
+      // Mutating routes require Bearer when INTENTRA_TOKEN is set — probe so we fail fast in setup.
+      const controller2 = new AbortController();
+      const timer2 = setTimeout(() => controller2.abort(), 8000);
+      const authHeader = token.trim() ? { Authorization: `Bearer ${token.trim()}` } : {};
+      let mutProbe: Response;
+      try {
+        mutProbe = await fetch(`${trimmed}/agents`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true',
+            ...authHeader,
+          },
+          body: '{}',
+          signal: controller2.signal,
+        });
+      } finally {
+        clearTimeout(timer2);
+      }
+      if (mutProbe.status === 401 && !token.trim()) {
+        throw new Error(
+          'This server requires a bearer token (INTENTRA_TOKEN). Enter it below and tap Connect again.',
+        );
+      }
+      if (token.trim() && mutProbe.status === 401) {
+        throw new Error('Bearer token was rejected (401). Check it matches the server’s INTENTRA_TOKEN.');
+      }
+
       await setServerUrl(trimmed);
       const resolvedToken = token.trim() || null;
       await setAuthToken(token.trim());

@@ -56,9 +56,15 @@ export function parseEntry(raw: string): HandoffEntry {
   return { body: raw.trim(), date, author, summary: summary || '(no content)' };
 }
 
+/** Normalize Windows / old-Mac newlines so `---` delimiters split reliably */
+function normalizeNewlines(content: string): string {
+  return content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
 /** Split markdown on `\n---\n`; newest block first */
 export function parseEntries(content: string): HandoffEntry[] {
-  const blocks = content.split(/\n---\n/).map(b => b.trim()).filter(Boolean);
+  const n = normalizeNewlines(content);
+  const blocks = n.split(/\n---\n/).map(b => b.trim()).filter(Boolean);
   return blocks.map(parseEntry).reverse();
 }
 
@@ -78,5 +84,5 @@ export function formatDate(dateStr: string): string {
 /** Count `---`-separated blocks */
 export function countHandoffBlocks(content: string): number {
   if (!content.trim()) return 0;
-  return content.split(/\n---\n/).filter(b => b.trim()).length;
+  return normalizeNewlines(content).split(/\n---\n/).filter(b => b.trim()).length;
 }

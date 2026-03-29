@@ -4,9 +4,11 @@ import {
   ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { parseEntries, formatDate, countHandoffBlocks } from '../../../shared/handoff-parse';
+import { progressFetchHeaders } from '../apiHeaders';
 
 interface Props {
   serverUrl: string | null;
+  authToken?: string | null;
 }
 
 interface IntentFile {
@@ -42,7 +44,7 @@ const DOC_LABELS: Record<DocType, { title: string; icon: string; description: st
 
 const DOC_ORDER: DocType[] = ['HANDOFFS', 'PROMPTS', 'PLANS'];
 
-export function HandoffScreen({ serverUrl }: Props) {
+export function HandoffScreen({ serverUrl, authToken = null }: Props) {
   const [files, setFiles] = useState<Record<string, string>>({});
   const [activeDoc, setActiveDoc] = useState<DocType>('HANDOFFS');
   const [expandedEntries, setExpandedEntries] = useState<Record<string, boolean>>({});
@@ -55,7 +57,7 @@ export function HandoffScreen({ serverUrl }: Props) {
     setError(null);
     try {
       const res = await fetch(`${serverUrl}/intentra/files`, {
-        headers: { 'ngrok-skip-browser-warning': 'true' },
+        headers: progressFetchHeaders(authToken),
       });
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const data = await res.json() as { files: IntentFile[] };
@@ -71,7 +73,7 @@ export function HandoffScreen({ serverUrl }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [serverUrl]);
+  }, [serverUrl, authToken]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

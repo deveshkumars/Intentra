@@ -7,12 +7,14 @@ import { TrackedAgent, ProgressEvent } from '../types';
 import { AgentCard } from '../components/AgentCard';
 import { EventRow } from '../components/EventRow';
 import { ConnectionStatus } from '../useEventStream';
+import { progressFetchHeaders } from '../apiHeaders';
 
 interface Props {
   events: ProgressEvent[];
   trackedAgents: TrackedAgent[];
   status: ConnectionStatus;
   serverUrl: string | null;
+  authToken?: string | null;
   intentEventFilter: string | null;
   onIntentEventFilterChange: (intentId: string | null) => void;
   onReconnect: () => void;
@@ -36,6 +38,7 @@ export function DashboardScreen({
   trackedAgents,
   status,
   serverUrl,
+  authToken = null,
   intentEventFilter,
   onIntentEventFilterChange,
   onReconnect,
@@ -52,7 +55,7 @@ export function DashboardScreen({
     }
     try {
       const r = await fetch(`${serverUrl}/intentra/intents`, {
-        headers: { 'ngrok-skip-browser-warning': 'true' },
+        headers: progressFetchHeaders(authToken),
       });
       if (!r.ok) return;
       const data = (await r.json()) as { intents?: { intent_id: string }[] };
@@ -61,7 +64,7 @@ export function DashboardScreen({
     } catch {
       setIntentIds([]);
     }
-  }, [serverUrl]);
+  }, [serverUrl, authToken]);
 
   useEffect(() => {
     fetchIntentIds();

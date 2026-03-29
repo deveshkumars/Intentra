@@ -139,7 +139,8 @@ export function useEventStream(
 
       reconnectTimer.current = setTimeout(() => connect(), delay);
     });
-  }, [serverUrl, addEvents, upsertAgent, backfill]);
+    // authToken in deps so changing the bearer token reconnects SSE + backfill with new headers
+  }, [serverUrl, authToken, addEvents, upsertAgent, backfill]);
 
   const reconnect = useCallback(() => {
     if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
@@ -160,7 +161,7 @@ export function useEventStream(
       esRef.current?.close();
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
     };
-  }, [serverUrl, connect]);
+  }, [serverUrl, authToken, connect]);
 
   return { events, trackedAgents, status, reconnect };
 }

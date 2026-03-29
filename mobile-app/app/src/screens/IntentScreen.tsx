@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
+import { progressFetchHeaders } from '../apiHeaders';
 
 interface IntentArtifact {
   intent_id: string;
@@ -39,13 +40,10 @@ export function IntentScreen({ serverUrl, authToken }: Props) {
     setLoading(true);
     setError(null);
     try {
+      const h = progressFetchHeaders(authToken ?? null);
       const [intentsRes, cultureRes] = await Promise.all([
-        fetch(`${serverUrl}/intentra/intents`, {
-          headers: { 'ngrok-skip-browser-warning': 'true' },
-        }),
-        fetch(`${serverUrl}/intentra/culture`, {
-          headers: { 'ngrok-skip-browser-warning': 'true' },
-        }),
+        fetch(`${serverUrl}/intentra/intents`, { headers: h }),
+        fetch(`${serverUrl}/intentra/culture`, { headers: h }),
       ]);
       if (intentsRes.ok) {
         const data = await intentsRes.json() as { intents: IntentArtifact[] };
@@ -62,7 +60,7 @@ export function IntentScreen({ serverUrl, authToken }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [serverUrl]);
+  }, [serverUrl, authToken]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -76,14 +74,12 @@ export function IntentScreen({ serverUrl, authToken }: Props) {
   ) => {
     if (!serverUrl) return;
     try {
-      const patchHeaders: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
-      };
-      if (authToken) patchHeaders['Authorization'] = `Bearer ${authToken}`;
       const r = await fetch(`${serverUrl}/intentra/intent`, {
         method: 'PATCH',
-        headers: patchHeaders,
+        headers: {
+          'Content-Type': 'application/json',
+          ...progressFetchHeaders(authToken ?? null),
+        },
         body: JSON.stringify({ intent_id: intent.intent_id, outcome }),
       });
       const body = await r.text();
