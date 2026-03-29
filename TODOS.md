@@ -543,17 +543,13 @@ Shipped as v0.5.0 on main. Includes `/plan-design-review` (report-only design au
 
 Shipped in v0.8.3. Step 8.5 added to `/ship` — after creating the PR, `/ship` automatically reads `document-release/SKILL.md` and executes the doc update workflow. Zero-friction doc updates.
 
-### `{{DOC_VOICE}}` shared resolver
+### `{{DOC_VOICE}}` shared resolver — SHIPPED
 
-**What:** Create a placeholder resolver in gen-skill-docs.ts encoding the gstack voice guide (friendly, user-forward, lead with benefits). Inject into /ship Step 5, /document-release Step 5, and reference from CLAUDE.md.
+~~**What:** Create a placeholder resolver in gen-skill-docs.ts encoding the gstack voice guide (friendly, user-forward, lead with benefits). Inject into /ship Step 5, /document-release Step 5, and reference from CLAUDE.md.~~
 
-**Why:** DRY — voice rules currently live inline in 3 places (CLAUDE.md CHANGELOG style section, /ship Step 5, /document-release Step 5). When the voice evolves, all three drift.
+`generateDocVoice()` resolver added to `scripts/resolvers/utility.ts` and registered as `{{DOC_VOICE}}` in the RESOLVERS table. Injected into both `/ship` Step 5 and `/document-release` Step 5. Single source of truth — voice evolves in one place, propagates to all templates at next `gen:skill-docs` run.
 
-**Context:** Same pattern as `{{QA_METHODOLOGY}}` — shared block injected into multiple templates to prevent drift. ~20 lines in gen-skill-docs.ts.
-
-**Effort:** S
-**Priority:** P2
-**Depends on:** None
+**Completed:** refactor/shared-utils-error-handling (2026-03-29)
 
 ## Ship Confidence Dashboard
 
