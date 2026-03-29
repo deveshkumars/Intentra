@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "bun run server.ts",
-    "dev": "bun --watch run server.ts"
+    "dev": "bun --watch run server.ts",
+    "test": "bun test smoke.test.ts"
   }
 }

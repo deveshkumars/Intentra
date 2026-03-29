@@ -1,5 +1,7 @@
 # Intentra
 
+> **Legacy pitch variant — not canonical.** The project follows [`masterdoc3.md`](masterdoc3.md). A shorter alternate is [`masterdoc.md`](masterdoc.md).
+
 > Git tracks what changed. Intentra tracks **why** — so teams running agents can trust what shipped and know why it shipped that way.
 
 **One-line pitch:** The infrastructure layer for the agentic era. Durable intent, executable culture, real-time mobile observability — the trust substrate that every future AI coding tool will need underneath it.

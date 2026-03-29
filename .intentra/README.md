@@ -1,25 +1,40 @@
 # .intentra/
 
-The intent layer. Along with code, you share the **prompts + plans + handoff docs**.
+The intent layer. Along with code, you share **prompts, plans, and handoff state**.
 
-## Files
+**Product narrative:** See the canonical plan in [`../masterdoc3.md`](../masterdoc3.md). Shipped HTTP surface: [`../INTENTRA.md`](../INTENTRA.md).
+
+## What lives here
 
 ```
 .intentra/
-├── README.md      ← you are here
-├── PROMPTS.md     ← every prompt, verbatim, append-only
-├── PLANS.md       ← how the work was done, append-only
-└── HANDOFFS.md    ← state, decisions, next actions, append-only
+├── README.md           ← you are here
+├── PROMPTS.md          ← prompts, append-only (human- or agent-maintained)
+├── PLANS.md            ← approach and architecture notes, append-only
+├── HANDOFFS.md         ← state, decisions, next actions, append-only
+└── intent_*.json       ← optional: structured Intent-as-Code (from API)
 ```
 
-**PROMPTS.md** — the raw prompts. Exact words, copy-pasted. Each entry is dated and attributed.
+## Markdown files (convention)
 
-**PLANS.md** — the approach. Numbered steps, architecture decisions, how things were built.
+**PROMPTS.md** — Raw prompts: exact words, dated and attributed when possible.
 
-**HANDOFFS.md** — the current state. Branch, last commit, decisions made, blockers, next actions.
+**PLANS.md** — How the work was done: steps, decisions, build order.
 
-All three are **append-only**. New sessions add entries at the bottom. Never edit old entries.
+**HANDOFFS.md** — Current state: branch, last commit, blockers, **next actions**. Entries are often separated by `---`; `GET /intentra/latest` returns the last block.
+
+All three are **append-only** by convention: add at the bottom; avoid rewriting older entries.
+
+## JSON intent artifacts (generated)
+
+Structured intents are created by the progress server:
+
+- **HTTP:** `POST /intentra/intent` (body shape in [`mobile-app/README.md`](../mobile-app/README.md)).
+- **Types:** [`mobile-app/server/intent.ts`](../mobile-app/server/intent.ts) (`IntentArtifact`, `IntentPlanStep`, etc.).
+- **On disk:** Files such as `intent_<timestamp>.json` (see `createIntent` in `intent.ts`).
+
+JSON files are **API outputs**; the Markdown files are **team narrative** artifacts. Both can live in git.
 
 ## English as code
 
-These files are programs written in English. The "Next actions" in HANDOFFS.md is executable. The plan in PLANS.md is the architecture doc. The prompt in PROMPTS.md is the raw intent. Any agent or human reads them and knows what to do.
+Markdown here is meant for humans and agents: HANDOFFS “next actions” should be executable context; PLANS is the living architecture note; PROMPTS preserves the original ask.

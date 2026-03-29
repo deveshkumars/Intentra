@@ -1,5 +1,9 @@
 # Intentra
 
+> **Canonical master plan.** The project follows **this file** (`masterdoc3.md`). Shorter or alternate rubric-tight wording lives in [`masterdoc.md`](masterdoc.md); older pitch variants in [`masterdoc2.md`](masterdoc2.md). When documents disagree, **this one wins.**
+
+> **Telemetry honesty:** Counts of `hook_fire` or “safety hook” activations describe **gstack** (`/careful`, `/freeze`, and related patterns) writing to `~/.gstack/analytics/skill-usage.jsonl`. Figures such as “20+ activations in one session” refer to a **specific example session** when that file contains those entries—they are **not** a guaranteed invariant. Intentra’s progress server **watches** that JSONL and can surface lines on the mobile feed; it does **not** implement hook pattern-matching.
+
 > Git tracks what changed. Intentra tracks **why** — so teams running agents can trust what shipped and know why it shipped that way.
 
 **One-line pitch:** The infrastructure layer for the agentic era. Durable intent, executable culture, real-time mobile observability — the trust substrate that every future AI coding tool will need underneath it.
