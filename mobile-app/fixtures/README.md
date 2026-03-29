@@ -13,3 +13,13 @@
 - Show evaluators the telemetry contract without cloning a developer’s home directory
 
 The live progress server still watches **`$GSTACK_STATE_DIR/analytics/skill-usage.jsonl`** at runtime; this file is **not** watched automatically unless you copy or symlink it for demos.
+
+## Redacting a local JSONL for sharing
+
+To produce a shareable sample from your machine (paths and session-like fields scrubbed):
+
+```bash
+bun run scripts/redact-skill-usage-sample.ts ~/.gstack/analytics/skill-usage.jsonl > /tmp/skill-usage-redacted.jsonl
+```
+
+Review the output before committing or publishing. The committed [`skill-usage-evaluator-sample.jsonl`](skill-usage-evaluator-sample.jsonl) remains **synthetic**; redacted exports are optional evidence aligned with [`masterdoc3.md`](../../masterdoc3.md) telemetry claims.

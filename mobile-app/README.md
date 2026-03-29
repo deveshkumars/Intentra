@@ -206,6 +206,7 @@ Resolve `.intentra/` from `INTENTRA_REPO_ROOT` if set, otherwise the server’s 
 | `GET` | `/intentra/intents` | No | List parsed intent JSON artifacts |
 | `GET` | `/intentra/culture` | No | Snapshot of `culture.json` from `GSTACK_STATE_DIR` (same file gstack loads; Intentra re-serves for mobile audit) |
 | `POST` | `/intentra/intent` | Yes (`Bearer`) | Create intent JSON (`prompt` required; optional `repo`, `constraints`, `culture_ref`, `plan`). If `culture_ref` is omitted and `culture.json` exists, server sets `culture_ref` to that path. |
+| `PATCH` | `/intentra/intent` | Yes (`Bearer`) | Set `outcome`: JSON `{ "intent_id": "…", "outcome": "success" \| "error" \| "cancelled" }` |
 
 ```bash
 # List intent JSON files (empty array if none)
@@ -223,7 +224,9 @@ curl -s -X POST http://localhost:7891/intentra/intent \
   -d '{"prompt":"Example"}'
 ```
 
-`POST /progress` accepts optional `intent_id` to tie events to an intent across sessions.
+`POST /progress` accepts optional `intent_id` to tie events to an intent across sessions. The **Dashboard** loads known intents from `GET /intentra/intents` and can **filter** the live feed by `intent_id`. The **Intent** tab can set outcome via `PATCH` (open servers) or shows an auth hint if `INTENTRA_TOKEN` is enabled.
+
+**gstack-progress:** pass `--intent-id <id>` or set **`INTENTRA_INTENT_ID`** so progress lines carry the same `intent_id` as your `.intentra/{id}.json` artifact.
 
 ### Intentra command guard (policy engine)
 
@@ -285,6 +288,7 @@ docker run --rm -p 7891:7891 \
 | `GSTACK_PROGRESS_URL` | `http://localhost:$PORT` | Full URL override |
 | `GSTACK_SKILL` | `` | Auto-set in skill preambles |
 | `CLAUDE_SESSION_ID` | `` | Set by Claude Code runtime |
+| `INTENTRA_INTENT_ID` | `` | Optional; forwarded as `intent_id` on `POST /progress` |
 
 ---
 
