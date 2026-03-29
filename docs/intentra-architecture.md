@@ -30,6 +30,15 @@ flowchart LR
 
 Implementation: [`mobile-app/server/server.ts`](../mobile-app/server/server.ts).
 
+## Runtime model and data-plane invariants
+
+These properties matter for anyone embedding the server, running multiple replicas, or building deterministic tests.
+
+- **Single-process memory state:** `eventBuffer`, `trackedAgents`, and the SSE `subscribers` set live in one Bun process. **Do not** run two instances behind a naive load balancer expecting shared history — IDs and buffers are not replicated.
+- **Event identity:** `ProgressEvent.id` comes from an in-process monotonic counter (`makeId()` in `server.ts`). IDs are **stable only for the lifetime of that process**; they reset on restart and must not be treated as globally unique keys.
+- **Ring buffer:** Fixed capacity **200** (see `CircularBuffer` in `server.ts`). Under sustained load, older events are dropped; `GET /events/history` and the SSE connect replay both read this same bounded window.
+- **JSONL availability:** If `GSTACK_STATE_DIR/analytics/skill-usage.jsonl` is missing, HTTP and SSE still work. The watcher uses `fs.watch` and a polling fallback until the file appears; corrupt lines are skipped so one bad JSONL row does not stop the server.
+
 ## Guard pipeline (command → verdict)
 
 ```mermaid
@@ -77,6 +86,12 @@ When **`INTENTRA_TOKEN`** is unset, the server is open. When set, every **POST**
 | POST | `/intentra/guard` | Bearer | JSON `{ command, session_id?, debug? }` |
 
 `checkAuth` runs once for all POST/PATCH/DELETE before route matching: [`server.ts`](../mobile-app/server/server.ts) (search `checkAuth`).
+
+## CORS and preflight (browser / Expo / ngrok)
+
+- **`OPTIONS`:** Any path with method `OPTIONS` returns **204** with `Access-Control-Allow-Origin`, `-Methods`, and `-Headers`. **No bearer token is required** on preflight — the browser sends `OPTIONS` before attaching `Authorization` on the real request.
+- **Reflective origin:** The server echoes the request `Origin` header (or `*` if absent), which keeps tunnel URLs (ngrok, Fly, LAN IP) workable without a fixed allowlist in code.
+- **Custom header:** `ngrok-skip-browser-warning` is explicitly allowlisted so clients can bypass ngrok’s HTML warning page without CORS failures.
 
 **Health introspection:** `GET /health` includes `guard_engine_version`, `rule_count`, buffer and uptime fields, plus **`metrics`**: `post_progress_total`, `jsonl_lines_ingested_total`, `sse_subscriber_opens_total`, `sse_subscriber_closes_total` (MVP counters for evaluator verification).
 
