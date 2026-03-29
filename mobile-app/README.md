@@ -128,6 +128,8 @@ To see every tool Claude uses (Read, Edit, Bash, etc.) in real time, add this to
 
 The app has a dark theme (`#0d0d0d` background) designed for glanceable monitoring.
 
+**Tab bar:** **Dashboard** (live SSE feed + agents), **Handoffs** (structured view of `HANDOFFS.md` / `PROMPTS.md` / `PLANS.md` from `GET /intentra/files`), **Intent** (culture + Markdown + intent JSON artifacts).
+
 ### Setup screen
 
 First screen on launch (or anytime via the ⚙ gear icon). Enter your server URL (ngrok or LAN) and tap **Connect**. The app hits `GET /health` with an 8-second timeout to verify the connection. On success, the URL is persisted in AsyncStorage.
@@ -194,13 +196,24 @@ Tap an agent card on the Dashboard to see its full detail:
 
 Tap **← Back** to return to the Dashboard.
 
+### Handoffs screen
+
+Dedicated visibility for append-only handoff Markdown (aligned with masterdoc “stateful handoffs”):
+
+- **Source:** `GET /intentra/files` — same `.intentra/` directory as the Intent tab, but focused on the three narrative files.
+- **Chips:** Switch between Handoffs, Prompts, and Plans; badge shows `---`-separated entry count per file.
+- **Cards:** Newest entry first; **LATEST** on the top card; tap to expand full body text.
+- **Parsing:** Implemented in [`app/src/handoff-parse.ts`](app/src/handoff-parse.ts) (unit-tested — see [`TESTING.md`](TESTING.md)).
+
+Set **`INTENTRA_REPO_ROOT`** to your git repo root when running the server so `.intentra/` resolves to the project you care about.
+
 ### Intent Context screen
 
 Accessed via tab navigation. Shows the `.intentra/` contents and culture configuration:
 
 **Team culture (gstack)** — Expandable section showing `culture.json` from the server's `GSTACK_STATE_DIR`. Shows the full JSON (monospace), file path, and a note explaining that gstack writes and consumes this file.
 
-**PROMPTS / PLANS / HANDOFFS** — One expandable section per `.intentra/` Markdown file. Badge shows the entry count (entries separated by `---`). Content is rendered as monospace text.
+**PROMPTS / PLANS / HANDOFFS** — One expandable section per `.intentra/` Markdown file (same files as the **Handoffs** tab, which offers a card-based reader). Badge shows the entry count (entries separated by `---`). Content is rendered as monospace text.
 
 **Intent Artifacts** — Cards for each intent JSON artifact:
 - Intent ID (monospace, grey)

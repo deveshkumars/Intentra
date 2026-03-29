@@ -2,8 +2,10 @@
  * Spawns the real progress server on a free port and hits a few routes.
  * Run: cd mobile-app/server && bun test
  */
+import path from 'node:path';
 import { describe, test, expect, afterAll } from 'bun:test';
 import { spawn, type Subprocess } from 'bun';
+import { parseEntries } from '../app/src/handoff-parse.ts';
 
 const PORT = 18000 + Math.floor(Math.random() * 2000);
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -235,6 +237,49 @@ describe('progress server smoke', () => {
     const j1 = (await h1.json()) as { events: number };
     // Creating an intent should add at least 1 event (the intent_created SSE)
     expect(j1.events).toBeGreaterThan(beforeCount);
+  });
+
+  test('GET /intentra/files serves .intentra from INTENTRA_REPO_ROOT (Handoffs tab data)', async () => {
+    proc.kill();
+    await wait(200);
+
+    const repoRoot = path.resolve(import.meta.dir, '..', '..');
+    proc = spawn({
+      cmd: ['bun', 'run', 'server.ts'],
+      cwd: import.meta.dir,
+      env: {
+        ...process.env,
+        GSTACK_PROGRESS_PORT: String(PORT),
+        HOME: process.env.HOME ?? '/tmp',
+        INTENTRA_REPO_ROOT: repoRoot,
+      },
+      stdout: 'ignore',
+      stderr: 'pipe',
+    });
+
+    let up = false;
+    for (let i = 0; i < 80; i++) {
+      try {
+        const r = await fetch(`${BASE}/health`);
+        if (r.ok) {
+          up = true;
+          break;
+        }
+      } catch {
+        /* retry */
+      }
+      await wait(50);
+    }
+    expect(up).toBe(true);
+
+    const r = await fetch(`${BASE}/intentra/files`);
+    expect(r.ok).toBe(true);
+    const j = (await r.json()) as { files: Array<{ name: string; content: string }> };
+    const names = j.files.map(f => f.name);
+    expect(names).toContain('HANDOFFS.md');
+    const handoff = j.files.find(f => f.name === 'HANDOFFS.md');
+    expect(handoff?.content.length).toBeGreaterThan(20);
+    expect(parseEntries(handoff!.content).length).toBeGreaterThan(0);
   });
 
   test('INTENTRA_TOKEN rejects POST without Bearer', async () => {

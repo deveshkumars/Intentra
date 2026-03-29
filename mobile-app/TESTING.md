@@ -33,6 +33,16 @@ Integration tests that spawn a real server process on a random port and hit actu
 | `POST /intentra/intent SSE` | Creating an intent increments the event counter (SSE emission) |
 | `INTENTRA_TOKEN auth` | Restarts server with token → POST without header returns 401 → with header returns 201 |
 
+### Handoff markdown parsing (`app/src/handoff-parse.test.ts`)
+
+Pure unit tests for `parseEntry`, `parseEntries`, `formatDate`, and `countHandoffBlocks` — the same logic the **Handoffs** tab uses for `HANDOFFS.md` / `PROMPTS.md` / `PLANS.md`. Run from repo root:
+
+```bash
+bun test mobile-app/app/src/handoff-parse.test.ts
+```
+
+Smoke tests also restart the server with **`INTENTRA_REPO_ROOT`** set to the git repo root and assert **`GET /intentra/files`** returns **`HANDOFFS.md`** whose content parses to at least one entry (end-to-end with committed `.intentra/`).
+
 ### Guard tests
 
 Unit tests for the guard policy engine modules (tokenizer, normalizer, rule matching). Located alongside the guard source files.

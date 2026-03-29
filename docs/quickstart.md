@@ -87,6 +87,14 @@ bunx expo start
 
 Scan the QR code with Expo Go. On the Setup screen, paste the ngrok URL from step 2.
 
+For **Handoffs**, **PROMPTS**, and **PLANS** on the **Handoffs** tab, point the server at your repo root so `.intentra/` resolves:
+
+```bash
+INTENTRA_REPO_ROOT=/path/to/your/repo bun run server.ts
+```
+
+(Otherwise the tab still loads, but `.intentra/` may be empty relative to the server’s working directory.)
+
 ## 6. (Optional) Enable bearer auth
 
 Set `INTENTRA_TOKEN` to require authentication on write endpoints:
@@ -110,6 +118,7 @@ GET endpoints (`/health`, `/events/stream`, `/agents`, etc.) remain public.
 
 - **[API Reference](api-reference.md)** — full endpoint docs with request/response schemas
 - **[Intent Lifecycle](intent-lifecycle.md)** — create → track → resolve workflow
+- **[Handoffs (mobile)](handoffs-mobile.md)** — Handoffs tab + `handoff-parse` tests
 - **[Guard Engine](guard-engine.md)** — command safety policy engine
 - **[Culture Config](culture-config.md)** — customize guard rules via `culture.json`
 - **[Architecture](intentra-architecture.md)** — route matrix, auth model, evaluator playbook
