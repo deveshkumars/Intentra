@@ -10,6 +10,8 @@ Skills live in `.agents/skills/` (or `.claude/skills/gstack` after install). Inv
 
 The table below is the **full inventory** of top-level skills shipped in this repository (alphabetical).
 
+**Also see:** [Root README](README.md) (sprint narrative + power tools) · [docs/skills.md](docs/skills.md) (deep dives) · [docs/README.md](docs/README.md) (all repo docs).
+
 | Skill | What it does |
 |-------|-------------|
 | `/autoplan` | Auto-run CEO → design → eng plan reviews with encoded decision rules. |

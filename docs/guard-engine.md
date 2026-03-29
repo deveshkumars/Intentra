@@ -2,6 +2,8 @@
 
 The guard engine intercepts destructive shell commands before they execute, using a multi-stage pipeline: normalize, tokenize, match, and apply culture overrides. This document covers the architecture, rule registry, and culture integration.
 
+**Related:** [Documentation hub](README.md) · [Guard rules reference](guard-rules-reference.md) · [Culture config](culture-config.md) · [API: POST /intentra/guard](api-reference.md#post-intentraguard)
+
 ## Pipeline stages
 
 ```mermaid

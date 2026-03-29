@@ -1,5 +1,7 @@
 # Testing the Intentra Progress Server
 
+**Related docs:** [Documentation hub](../docs/README.md) · [INTENTRA.md](../INTENTRA.md) · [API reference](../docs/api-reference.md) · [Architecture](../docs/intentra-architecture.md) · [Root README](../README.md) (Intentra + `test:progress-server`)
+
 ## Quick start
 
 ```bash

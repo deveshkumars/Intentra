@@ -2,7 +2,7 @@
 
 The Bun server in [`mobile-app/server/`](mobile-app/server/) exposes SSE, Intentra HTTP routes, and JSONL watching. Pick **one** path below.
 
-**Related docs:** [Quickstart](docs/quickstart.md) · [Env Reference](docs/env-reference.md) · [Security](docs/security.md) · [Scaling](docs/scaling.md) · [Troubleshooting](docs/troubleshooting.md)
+**Related docs:** [Documentation hub](docs/README.md) · [Quickstart](docs/quickstart.md) · [Env Reference](docs/env-reference.md) · [Security](docs/security.md) · [Scaling](docs/scaling.md) · [Troubleshooting](docs/troubleshooting.md) · [INTENTRA.md](INTENTRA.md)
 
 ## Prerequisites
 
