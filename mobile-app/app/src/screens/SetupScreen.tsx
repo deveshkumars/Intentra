@@ -5,6 +5,20 @@ import {
 } from 'react-native';
 import { setServerUrl, setAuthToken } from '../storage';
 
+interface ServerHealth {
+  ok: boolean;
+  events: number;
+  uptime: number;
+  guard_engine_version: number;
+  rule_count: number;
+  metrics: {
+    post_progress_total: number;
+    hook_fires_total?: number;
+    intents_created_total?: number;
+    guard_evaluations_total?: number;
+  };
+}
+
 interface Props {
   onConnected: (url: string, token: string | null) => void;
 }
@@ -14,6 +28,7 @@ export function SetupScreen({ onConnected }: Props) {
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [health, setHealth] = useState<ServerHealth | null>(null);
 
   async function handleConnect() {
     const trimmed = url.trim().replace(/\/$/, '');
@@ -32,6 +47,10 @@ export function SetupScreen({ onConnected }: Props) {
       });
       clearTimeout(timer);
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      try {
+        const h = await res.json() as ServerHealth;
+        setHealth(h);
+      } catch { /* health parse failure — non-fatal */ }
 
       // Mutating routes require Bearer when INTENTRA_TOKEN is set — probe so we fail fast in setup.
       const controller2 = new AbortController();
@@ -109,6 +128,39 @@ export function SetupScreen({ onConnected }: Props) {
           returnKeyType="go"
           onSubmitEditing={handleConnect}
         />
+
+        {/* Server health panel — shown after a successful health probe */}
+        {health && !error && (
+          <View style={styles.healthPanel}>
+            <Text style={styles.healthTitle}>Server info</Text>
+            <View style={styles.healthRow}>
+              <Text style={styles.healthKey}>Guard engine</Text>
+              <Text style={styles.healthVal}>v{health.guard_engine_version} · {health.rule_count} rules</Text>
+            </View>
+            <View style={styles.healthRow}>
+              <Text style={styles.healthKey}>Uptime</Text>
+              <Text style={styles.healthVal}>{health.uptime}s</Text>
+            </View>
+            <View style={styles.healthRow}>
+              <Text style={styles.healthKey}>Events</Text>
+              <Text style={styles.healthVal}>{health.events}</Text>
+            </View>
+            {(health.metrics.hook_fires_total ?? 0) > 0 && (
+              <View style={styles.healthRow}>
+                <Text style={styles.healthKey}>Hook fires</Text>
+                <Text style={[styles.healthVal, { color: '#f87171' }]}>
+                  {health.metrics.hook_fires_total}
+                </Text>
+              </View>
+            )}
+            {(health.metrics.intents_created_total ?? 0) > 0 && (
+              <View style={styles.healthRow}>
+                <Text style={styles.healthKey}>Intents</Text>
+                <Text style={styles.healthVal}>{health.metrics.intents_created_total}</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {error && <Text style={styles.error}>{error}</Text>}
 
@@ -193,5 +245,35 @@ const styles = StyleSheet.create({
   code: {
     fontFamily: 'monospace',
     color: '#94a3b8',
+  },
+  healthPanel: {
+    backgroundColor: '#1e293b',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#4ade8044',
+  },
+  healthTitle: {
+    color: '#4ade80',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  healthRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  healthKey: {
+    color: '#64748b',
+    fontSize: 13,
+  },
+  healthVal: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontFamily: 'monospace',
   },
 });
