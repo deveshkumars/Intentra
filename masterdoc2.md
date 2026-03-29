@@ -82,6 +82,8 @@ Most agent tools stop at "agents write code faster." No individual piece here is
 
 Each layer feeds the next. Culture without observability is unenforceable. Observability without intent is opaque. Intent without handoffs is ephemeral. The compound effect — **a closed loop from intent to execution to verification to resumption** — is what no existing tool provides.
 
+**Why integration is the right innovation for this problem:** The multi-agent coordination gap isn't a missing algorithm — it's a missing *layer*. The analogy is Git itself: Git didn't invent diffs, branches, or checksums. It integrated them into a coherent version control layer that became infrastructure. Intentra does the same for agent collaboration: it integrates known primitives (SSE, JSON schemas, Markdown, HTTP) into a coherent intent-and-governance layer. The innovation is architectural, not algorithmic — and for infrastructure problems, that's the only kind that sticks.
+
 - **Mobile observability as a product primitive.** Not "we added a webhook." A production-quality SSE pipeline with ring-buffer replay, exponential backoff reconnect (1s → 2s → 4s → … → 30s cap), event deduplication, and parallel history backfill. Already shipped and working.
 - **Executable culture.** Team standards aren't documentation the agent might read — they're structured constraints that gate runtime decisions. Already supported.
 - **Intent-as-Code.** Prompts + constraints + plans versioned as repo artifacts. The "why" survives after the chat session closes. Next 24h.
@@ -110,7 +112,15 @@ Each layer feeds the next. Culture without observability is unenforceable. Obser
 
 **Category wedge:** The observability tools (Langfuse, AgentOps) watch what agents *do*. The execution tools (Devin, E2B) make agents *run*. The editors (Copilot, Cursor) make agents *write*. Nobody owns what agents *should do and why* — the intent, culture, and coordination layer. That's Intentra's category.
 
+**"Couldn't GitHub/Anthropic just build this?"** Yes — any well-resourced company could build individual features (observability dashboards, config files, handoff formats). The moat isn't first-mover timing. It's three structural advantages:
+
+1. **Format portability as a network effect.** `.intentra/` artifacts are plain JSON and Markdown — no vendor SDK, no proprietary format. If the convention spreads (like `.editorconfig` or `.github/`), it becomes a cross-tool standard that no single vendor controls. GitHub can't absorb a convention that works equally well with Cursor, Devin, and Claude.
+2. **LLM-agnostic by design.** Intentra's artifacts don't reference any specific model or provider. A team can switch from Claude to GPT to Llama and their intent history, culture rules, and handoffs remain intact. A vendor-built solution would inevitably be model-locked.
+3. **Workflow-centric, not IDE-centric.** The value lives in HTTP contracts and file artifacts, not in an editor plugin. An IDE vendor can add intent features to *their* editor — but they can't make those features work in *every* editor, CI system, and mobile app simultaneously. Intentra can, because it's built on the lowest-common-denominator transport (HTTP + files).
+
 ### What changes for users (impact)
+
+**Who this is for:** Any team where AI agents produce code — not just gStack users. The artifact formats (JSON, Markdown) and transport (HTTP, SSE) are agent-agnostic by design. A team using Cursor, Copilot, Devin, or a custom agent framework can adopt Intentra's intent layer without changing their agent runtime.
 
 | User | Before | After | What we measure in MVP | Mechanism |
 |------|--------|-------|----------------------|-----------|
@@ -118,8 +128,18 @@ Each layer feeds the next. Culture without observability is unenforceable. Obser
 | **PR reviewer** | Reverse-engineers agent intent from diffs alone | Reads `.intentra/` artifacts — sees prompt, constraints, plan | Time from PR open to review decision | Eliminates the "archaeology" step: reviewer reads structured intent instead of inferring it from code changes |
 | **Team lead** | Discovers culture violations post-merge | Culture rules enforced before the PR is created | Policy violations caught pre-merge vs. post-merge | `culture.json` is evaluated at agent runtime, not at review time — violations are blocked, not discovered |
 | **New team member** | Reads 50 PRs to understand "why" behind architecture | Reads intent + handoff history for the feature | Time to first meaningful contribution | Append-only `.intentra/` files create a searchable decision log — grep for any file, feature, or constraint |
+| **Team using any agent framework** | No standard way to capture "why" across Cursor / Copilot / Claude / Devin runs | `.intentra/` convention works regardless of which agent produced the code | Teams adopting `.intentra/` across mixed-agent workflows | Artifacts are plain files — any tool that can write JSON or Markdown can produce them; any tool that can POST HTTP can emit events |
 
 **Why these matter (grounding the claims):** Each row eliminates a specific information asymmetry. The engineer's gain comes from push-vs-pull (SSE vs. terminal polling). The reviewer's gain comes from structured-vs-unstructured (reading intent artifacts vs. reverse-engineering diffs). The team lead's gain comes from prevention-vs-detection (runtime culture enforcement vs. post-merge discovery). These are mechanism-level improvements, not percentage estimates — the magnitude depends on team size, agent volume, and review cadence.
+
+**Adoption path (why this isn't gStack-only):** Intentra's value does not require adopting gStack as your agent runtime. The layers are independently adoptable:
+
+1. **Observability alone:** Any process that can `curl -X POST /progress -d '{"kind":"progress","message":"deploying"}'` gets live mobile monitoring. Works with GitHub Actions, CI runners, custom scripts — anything with HTTP.
+2. **Handoffs alone:** Any team can adopt the `.intentra/` convention — create `PROMPTS.md`, `PLANS.md`, `HANDOFFS.md` in their repo, append entries manually or via their own tooling. The format is plain Markdown. No SDK required.
+3. **Intent artifacts alone:** Write an `intent.json` alongside your PR. Reviewers get structured context. No runtime dependency.
+4. **Full integration:** gStack provides the automated version — skills write artifacts, emit events, and enforce culture rules without manual steps. But the manual path works today for any team.
+
+This is the same adoption pattern as `.editorconfig` or `.github/` — a convention that any tool can support, with first-party automation for teams that want it.
 
 ---
 
@@ -129,7 +149,7 @@ Each layer feeds the next. Culture without observability is unenforceable. Obser
 
 | Layer | Technology | Why this choice |
 |-------|-----------|----------------|
-| Agent runtime | Claude Code + gStack skills | Already emits telemetry; culture support built in |
+| Agent runtime | Claude Code + gStack skills (reference implementation); any agent via HTTP POST | gStack provides automated integration; any agent framework can emit events via `POST /progress` or write `.intentra/` files directly |
 | Middleware | Bun HTTP server | Fast startup, native TypeScript, built-in fs.watch |
 | Mobile | React Native + Expo | Cross-platform; Expo Go for instant demo distribution |
 | Connectivity | ngrok / LAN | Zero-config remote access for demos; replaceable at Stage 2 |
@@ -275,7 +295,34 @@ The system is designed to **never lose events** and **never block agents**:
 }
 ```
 
-**CultureJSON** — team DNA guardrails (already supported via `~/.gstack/culture.json`):
+**CultureJSON** — team DNA guardrails (already supported via `~/.gstack/culture.json`).
+
+**How culture enforcement actually works (code path):** gStack skills read `culture.json` at runtime through the skill preamble's Organizational Culture section. The preamble injects culture rules into the agent's system prompt as first-class constraints. When an agent encounters a decision that intersects a culture rule, the constraint is evaluated inline:
+
+```typescript
+// Simplified enforcement flow (from skill preamble resolution):
+// 1. Skill loads culture.json at session start
+const culture = JSON.parse(fs.readFileSync('~/.gstack/culture.json', 'utf-8'));
+
+// 2. Before executing a risky action, check risk_gates:
+if (culture.risk_gates['force_push'] === 'deny') {
+  // Agent is BLOCKED from force-pushing — not warned, blocked.
+  // The skill preamble treats "deny" as a hard stop.
+}
+
+if (culture.risk_gates['edit_prod_config'] === 'approval_required') {
+  // Agent pauses and asks the human for explicit approval
+  // before touching production configuration files.
+}
+
+// 3. Priority weights influence trade-off decisions:
+// If security (100) > performance (70), the agent chooses
+// the more secure implementation when there's a trade-off.
+```
+
+This isn't a suggestion layer — it's a constraint layer. The agent cannot override a `"deny"` gate without the human changing `culture.json`. The enforcement happens before the action, not after.
+
+Culture schema:
 
 ```json
 {
@@ -422,6 +469,7 @@ Intentra does **not** claim the following are already implemented:
 | **Artifact format churn** | Low | Lock IntentSchema + Handoff format at T+0–3h before any implementation | Built into plan |
 | **JSONL file doesn't exist yet** | Low | 3-tier watcher fallback (file → dir → poll) handles this gracefully | **Already implemented** |
 | **ngrok rate limits / tunnel expiry** | Medium | Free-tier ngrok enforces connection limits and tunnels expire after ~2 hours. Mitigation: LAN fallback for local demos; ngrok is a demo convenience, not a production dependency. Stage 2 replaces ngrok with a hardened gateway. | Known — LAN fallback ready |
+| **Claude Code / gStack dependency** | Medium | The automated experience (skill telemetry, culture enforcement, `/handoff` skill) depends on Claude Code + gStack. If the skill runtime behaves unexpectedly during demo, the automation path breaks. Mitigation: all artifact formats are plain files (JSON, Markdown) and the progress server accepts standard HTTP POST — the manual path (curl, hand-written files) works without any agent runtime. Demo script includes a curl-only fallback. | Mitigated by manual fallback |
 
 ### Feasibility (why 24 hours is enough)
 
