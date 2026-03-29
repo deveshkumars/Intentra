@@ -3,6 +3,8 @@ Reinventing Agentic Software Development Collaboration: We provide an agentic co
 
 This is not a fork, rather it's a new agentic platform.
 
+**Master plan (canonical):** [`masterdoc3.md`](masterdoc3.md). **Intentra shipped surface (mobile + APIs):** [`INTENTRA.md`](INTENTRA.md).
+
 # Installation
 
 1. Install gstack (30 seconds — see below)

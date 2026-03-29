@@ -1,5 +1,7 @@
 # Intentra
 
+> **Alternate / concise master plan.** The team’s **canonical** product and rubric document is [`masterdoc3.md`](masterdoc3.md). Use this file for a shorter, evaluator-tight summary; if anything conflicts, follow `masterdoc3.md`.
+
 ## Master Plan: Intentra, The Agentic Software Collaboration Platform
 
 **One-line pitch:** Intentra is the collaboration layer for autonomous software agents. It makes “why” durable (intent, constraints, culture, outcomes) and makes agent execution observable from anywhere, including your phone.

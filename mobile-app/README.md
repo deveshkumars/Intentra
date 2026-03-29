@@ -2,6 +2,8 @@
 
 Real-time agent activity feed for gstack skills. Watch Claude work from your phone.
 
+**Intentra:** Progress server routes, auth, and `/intentra/*` APIs are inventoried in [`INTENTRA.md`](../INTENTRA.md). The canonical product plan is [`masterdoc3.md`](../masterdoc3.md).
+
 ```
 Claude Code (running a skill)
         │
@@ -193,6 +195,35 @@ curl -X POST http://localhost:7891/progress \
 curl -N http://localhost:7891/events/stream
 ```
 
+### Intentra HTTP (repo artifacts)
+
+Resolve `.intentra/` from `INTENTRA_REPO_ROOT` if set, otherwise the server’s current working directory.
+
+| Method | Path | Auth if `INTENTRA_TOKEN` set | Description |
+|--------|------|------------------------------|-------------|
+| `GET` | `/intentra/files` | No | List non-hidden files under `.intentra/` with full text |
+| `GET` | `/intentra/latest` | No | Last `---`-separated block from `HANDOFFS.md` |
+| `GET` | `/intentra/intents` | No | List parsed intent JSON artifacts |
+| `POST` | `/intentra/intent` | Yes (`Bearer`) | Create intent JSON (`prompt` required; optional `repo`, `constraints`, `culture_ref`, `plan`) |
+
+```bash
+# List intent JSON files (empty array if none)
+curl -s http://localhost:7891/intentra/intents
+
+# Create an intent (add Authorization when INTENTRA_TOKEN is set)
+curl -s -X POST http://localhost:7891/intentra/intent \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt":"Ship feature X with tests","repo":{"path":".","branch":"main"}}'
+
+# With bearer token
+curl -s -X POST http://localhost:7891/intentra/intent \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -d '{"prompt":"Example"}'
+```
+
+`POST /progress` accepts optional `intent_id` to tie events to an intent across sessions.
+
 ---
 
 ## Environment variables (server)
@@ -201,6 +232,8 @@ curl -N http://localhost:7891/events/stream
 |----------|---------|-------------|
 | `GSTACK_PROGRESS_PORT` | `7891` | Server port |
 | `GSTACK_STATE_DIR` | `~/.gstack` | gstack state dir (for JSONL watcher) |
+| `INTENTRA_TOKEN` | _(unset)_ | If set, requires `Authorization: Bearer <token>` on every `POST`, `PATCH`, and `DELETE` |
+| `INTENTRA_REPO_ROOT` | server `cwd` | Repo root used for `.intentra/` reads and intent JSON writes |
 
 ## Environment variables (gstack-progress script)
 
@@ -219,18 +252,21 @@ curl -N http://localhost:7891/events/stream
 mobile-app/
 ├── README.md          ← you are here
 ├── server/
-│   ├── server.ts      ← Bun HTTP server (~180 lines)
+│   ├── server.ts      ← Bun HTTP server (progress + Intentra routes)
+│   ├── intent.ts      ← Intent-as-Code file I/O + schema types
+│   ├── smoke.test.ts  ← optional smoke tests (bun test)
 │   └── package.json
 └── app/
     ├── App.tsx        ← navigation root
     ├── src/
-    │   ├── types.ts              ← ProgressEvent, AgentSession
+    │   ├── types.ts              ← ProgressEvent, TrackedAgent, …
     │   ├── storage.ts            ← AsyncStorage wrapper
     │   ├── useEventStream.ts     ← SSE hook + reconnect
     │   ├── screens/
     │   │   ├── SetupScreen.tsx
     │   │   ├── DashboardScreen.tsx
-    │   │   └── DetailScreen.tsx
+    │   │   ├── DetailScreen.tsx
+    │   │   └── IntentScreen.tsx
     │   └── components/
     │       ├── EventRow.tsx
     │       └── AgentCard.tsx
