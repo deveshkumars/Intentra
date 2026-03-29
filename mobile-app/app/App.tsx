@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { registerRootComponent } from 'expo';
 import { StatusBar } from 'expo-status-bar';
@@ -25,6 +25,17 @@ export default function App() {
   const [intentEventFilter, setIntentEventFilter] = useState<string | null>(null);
 
   const { events, trackedAgents, status, reconnect } = useEventStream(serverUrl, authToken);
+
+  // Signal DashboardScreen to re-fetch intent IDs when a new intent is created via SSE
+  const [intentRefreshKey, setIntentRefreshKey] = useState(0);
+  const lastIntentEventRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (events.length === 0) return;
+    const latest = events[events.length - 1];
+    if (!latest || latest.id === lastIntentEventRef.current) return;
+    lastIntentEventRef.current = latest.id;
+    if (latest.upstream_kind === 'intent_created') setIntentRefreshKey(k => k + 1);
+  }, [events]);
 
   const filteredEvents = useMemo(
     () =>
@@ -91,6 +102,7 @@ export default function App() {
                 serverUrl={serverUrl}
                 authToken={authToken}
                 intentEventFilter={intentEventFilter}
+                intentRefreshKey={intentRefreshKey}
                 onIntentEventFilterChange={setIntentEventFilter}
                 onReconnect={reconnect}
                 onAgentPress={agent => {
