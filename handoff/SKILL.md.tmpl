@@ -1,10 +1,10 @@
 ---
 name: handoff
 preamble-tier: 2
-version: 0.2.0
+version: 0.3.0
 description: |
-  Stateful Markdown handoffs — English as code. Appends to two files:
-  PROMPTS.md (exact prompts, verbatim) and HANDOFFS.md (prompt + plan + state).
+  Stateful Markdown handoffs — English as code. Appends to three files:
+  PROMPTS.md (exact prompts), PLANS.md (how), and HANDOFFS.md (state + next actions).
   Along with code, you share the prompts + plans + handoff docs.
   Use when asked to "write a handoff", "save my progress", "hand off to the next
   agent", "create a resume point", or "snapshot this session".
@@ -25,10 +25,11 @@ allowed-tools:
 # Stateful Markdown Handoff — English as Code
 
 You are running the `/handoff` skill. Your job: capture the current session by
-appending to two files:
+appending to three files in `.intentra/`:
 
-- **`.intentra/PROMPTS.md`** — just the prompts, verbatim
-- **`.intentra/HANDOFFS.md`** — full session snapshot (prompt + plan + state)
+- **`PROMPTS.md`** — the exact prompts, verbatim
+- **`PLANS.md`** — how the work was done (steps, approach)
+- **`HANDOFFS.md`** — current state, decisions, next actions
 
 Along with code, you share the prompts + plans + handoff docs. That's the whole idea.
 
@@ -123,13 +124,13 @@ git diff <base>...HEAD --stat
 git log <base>..HEAD --oneline
 ```
 
-### Step 3: Ensure `.intentra/` exists
+### Step 3: Ensure `.intentra/` and all three files exist
 
 ```bash
 mkdir -p .intentra
 ```
 
-If `PROMPTS.md` doesn't exist, create it with this header:
+If `PROMPTS.md` doesn't exist, create it with:
 
 ```markdown
 # Prompts
@@ -137,18 +138,25 @@ If `PROMPTS.md` doesn't exist, create it with this header:
 Every prompt that drove this project, verbatim. Newest at the bottom.
 ```
 
-If `HANDOFFS.md` doesn't exist, create it with this header:
+If `PLANS.md` doesn't exist, create it with:
+
+```markdown
+# Plans
+
+How work was done — approach, steps, architecture. Newest at the bottom.
+```
+
+If `HANDOFFS.md` doesn't exist, create it with:
 
 ```markdown
 # Handoffs
 
-Session snapshots — prompt, plan, and state. Newest at the bottom. Each `---` separator marks a new handoff entry.
+Session state — where things stand, decisions made, what's next. Newest at the bottom.
 ```
 
 ### Step 4: Append to PROMPTS.md
 
-Append the exact prompt(s) to the bottom of `.intentra/PROMPTS.md`. Use the Edit
-tool to append after the last line of the file. Format:
+Append the exact prompt(s) to the bottom of `.intentra/PROMPTS.md`. Format:
 
 ```markdown
 
@@ -162,57 +170,59 @@ tool to append after the last line of the file. Format:
 If there were multiple prompts in this session, add each one as a separate
 blockquote under the same date/author header, separated by blank lines.
 
-### Step 5: Append to HANDOFFS.md
+### Step 5: Append to PLANS.md
 
-Append a new handoff entry to the bottom of `.intentra/HANDOFFS.md`. Use the Edit
-tool to append after the last line of the file. Format:
+Append the plan to the bottom of `.intentra/PLANS.md`. Format:
 
 ```markdown
 
 ---
 
-## <Brief title of the work>
-
-**Author:** <name>
-**Date:** <YYYY-MM-DD>
+**<YYYY-MM-DD> — <Brief title>**
 **Branch:** `<branch>`
-**Status:** <done | blocked | needs-decision | in-progress>
-
-### Prompt
-
-> <exact prompt, verbatim — same text as PROMPTS.md>
-
-### Plan
 
 1. <step>
 2. <step>
 3. <step>
+```
 
-### State
+Write the plan as a numbered list of concrete steps. If the work is done, describe
+what WAS done. If in progress, what IS being done. If blocked, what was PLANNED.
+
+### Step 6: Append to HANDOFFS.md
+
+Append a new entry to the bottom of `.intentra/HANDOFFS.md`. Format:
+
+```markdown
+
+---
+
+**<YYYY-MM-DD> — <Brief title>**
+**Author:** <name>
+**Branch:** `<branch>`
+**Status:** <done | blocked | needs-decision | in-progress>
 
 **Last commit:** `<hash>` <message>
 **Uncommitted changes:** <list or "none">
-**Tests:** <passing / failing / not run>
 
-### Decisions
+**Decisions:**
+- <decision — choice. reason.>
 
-- **<Decision>:** <Choice>. <One-line reason.>
-
-### Next actions
-
+**Next actions:**
 1. <specific, executable step>
 2. <step>
-3. <step>
 ```
 
-**Omit empty subsections.** If there are no decisions, skip "Decisions." If status
-is done, skip "Next actions." If status is blocked, add a "Blocked on" subsection.
+**Omit empty fields.** If there are no decisions, skip "Decisions." If status
+is done and there are no follow-ups, skip "Next actions." If status is blocked,
+add a "Blocked on:" line.
 
-### Step 6: Output
+### Step 7: Output
 
 ```
 Handoff appended:
   PROMPTS.md:  +1 entry
+  PLANS.md:    +1 entry
   HANDOFFS.md: +1 entry
   Status: <status>
   Branch: <branch>
@@ -222,9 +232,9 @@ To commit: git add .intentra/ && git commit -m "handoff: <brief description>"
 
 ### Ground-truth rule
 
-Every factual claim in the handoff (commit hashes, file paths, branch names,
-test results) MUST be verified via git/bash before writing. Run the command,
-read the output, then write the claim. Never guess.
+Every factual claim (commit hashes, file paths, branch names, test results)
+MUST be verified via git/bash before writing. Run the command, read the output,
+then write the claim. Never guess.
 
 ---
 
@@ -237,9 +247,9 @@ Read `.intentra/HANDOFFS.md`. The latest entry is at the bottom — find the las
 
 If the file doesn't exist: "No handoffs found. Run `/handoff` to create one."
 
-### Step R2: Verify state
+Also read the latest entry from `PLANS.md` and `PROMPTS.md` for full context.
 
-Run the verify commands implicit in the "State" subsection:
+### Step R2: Verify state
 
 ```bash
 git branch --show-current
@@ -259,7 +269,7 @@ or ahead? Any unexpected changes?
 
 ### Step R3: Execute
 
-Present the "Next actions" list from the handoff. AskUserQuestion:
+Present the "Next actions" from the handoff. AskUserQuestion:
 - Header: "Resume"
 - Question: "Ready to execute these actions?"
 - Options:
@@ -286,16 +296,14 @@ Verdict: DIVERGED — run /handoff to write a fresh one.
 
 ## Rules
 
-- **Exact prompts.** The Prompt section must contain the exact words the human
-  typed. Not a summary. Not a paraphrase. The literal prompt. If there were
-  multiple prompts, include all of them. This is the most important section —
-  it's the raw intent, preserved verbatim.
-- **Append only.** Never edit old entries. Add new entries at the bottom.
-  Old entries document what was true at a point in time.
+- **Exact prompts.** PROMPTS.md must contain the exact words the human typed.
+  Not a summary. Not a paraphrase. The literal prompt.
+- **Append only.** Never edit old entries in any of the three files. Add new
+  entries at the bottom. Old entries are immutable history.
 - **Ground truth.** Verify every claim with a real command. Never guess.
-- **No empty sections.** Omit subsections that have no content.
+- **No empty fields.** Omit fields that have no content.
 - **Executable Next Actions.** Each step must be specific enough for a cold-start
   agent. Bad: "Fix the tests." Good: "Run `bun test`. The failure is in
   `test/auth.test.ts:42` — the middleware isn't applied to POST /agents."
-- **All Markdown, all the time.** No JSON, no YAML, no schemas. Two `.md` files.
+- **All Markdown, all the time.** Three `.md` files. No JSON, no YAML, no schemas.
   Human-readable is machine-readable.

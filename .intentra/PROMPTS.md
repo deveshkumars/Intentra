@@ -25,3 +25,9 @@ Every prompt that drove this project, verbatim. Newest at the bottom.
 **2026-03-28 — Gordon Beckler**
 
 > sounds good. Now, organize the handoffs folder so it has one file that the handoffs keep adding onto, rather than this weird maze of files and folders. additionally, add another file, prompts.md, that contains JUST THE PROMPTS that the users put in and similarly appends onto itself
+
+---
+
+**2026-03-28 — Gordon Beckler**
+
+> ok now. use /handoff first to make a new entry to the bottom of the files. and then: the folder should actually be: one file for prompts, one for plans, and one for general handoff stuff.
