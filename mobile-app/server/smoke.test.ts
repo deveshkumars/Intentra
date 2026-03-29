@@ -224,6 +224,76 @@ describe('progress server smoke', () => {
     expect(j.trace!.length).toBeGreaterThan(0);
   });
 
+  // ─── haildk: new endpoint tests ────────────────────────────────────────────
+
+  test('GET /intentra/guard/telemetry returns entries + stats structure', async () => {
+    // Hit guard with a deny command to produce at least one telemetry entry
+    await fetch(`${BASE}/intentra/guard`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: 'rm -rf /important' }),
+    });
+    const r = await fetch(`${BASE}/intentra/guard/telemetry?limit=10`);
+    expect(r.ok).toBe(true);
+    const j = (await r.json()) as {
+      entries?: unknown[];
+      stats?: {
+        total?: number;
+        deny?: number;
+        warn?: number;
+        allow?: number;
+        by_pattern?: Record<string, number>;
+      };
+    };
+    expect(Array.isArray(j.entries)).toBe(true);
+    expect(typeof j.stats).toBe('object');
+    expect(typeof j.stats!.total).toBe('number');
+    expect(typeof j.stats!.deny).toBe('number');
+    expect(typeof j.stats!.warn).toBe('number');
+    expect(typeof j.stats!.allow).toBe('number');
+    expect(typeof j.stats!.by_pattern).toBe('object');
+    // deny count must be at least 1 (from our rm -rf call above)
+    expect(j.stats!.deny).toBeGreaterThanOrEqual(1);
+    expect(j.stats!.by_pattern!['rm_recursive']).toBeGreaterThanOrEqual(1);
+  });
+
+  test('GET /intentra/guard/telemetry respects limit param', async () => {
+    const r = await fetch(`${BASE}/intentra/guard/telemetry?limit=2`);
+    expect(r.ok).toBe(true);
+    const j = (await r.json()) as { entries?: unknown[] };
+    expect(j.entries!.length).toBeLessThanOrEqual(2);
+  });
+
+  test('GET /health metrics include new lifecycle counters', async () => {
+    // Post a guard evaluation to increment guard_evaluations_total
+    await fetch(`${BASE}/intentra/guard`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: 'ls -la' }),
+    });
+    // Create an intent to increment intents_created_total
+    await fetch(`${BASE}/intentra/intent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: 'metrics counter test' }),
+    });
+    const r = await fetch(`${BASE}/health`);
+    const j = (await r.json()) as {
+      metrics?: {
+        guard_evaluations_total?: number;
+        intents_created_total?: number;
+        hook_fires_total?: number;
+      };
+    };
+    expect(typeof j.metrics?.guard_evaluations_total).toBe('number');
+    expect(j.metrics!.guard_evaluations_total!).toBeGreaterThanOrEqual(1);
+    expect(typeof j.metrics?.intents_created_total).toBe('number');
+    expect(j.metrics!.intents_created_total!).toBeGreaterThanOrEqual(1);
+    expect(typeof j.metrics?.hook_fires_total).toBe('number');
+  });
+
+  // ─── end haildk tests ─────────────────────────────────────────────────────
+
   test('POST /intentra/intent emits SSE intent_created event', async () => {
     const h0 = await fetch(`${BASE}/health`);
     const j0 = (await h0.json()) as { events: number };
