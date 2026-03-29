@@ -254,6 +254,62 @@ If no documentation files exist, skip this step silently.
 
 {{ADVERSARIAL_STEP}}
 
+## Step 5.75: Post inline PR annotations
+
+If a PR already exists for this branch, post CRITICAL and INFORMATIONAL findings
+as inline review comments at the exact file:line where each issue occurs.
+
+**Only run this step if a PR exists:**
+```bash
+gh pr view --json number,url 2>/dev/null
+```
+If the above fails or returns no PR, skip this step entirely — it is additive only.
+
+**Collect findings from Steps 5a–5d that remain unresolved** (i.e., issues that
+were not auto-fixed or user-skipped). For each finding that has a specific file:line:
+
+1. Determine `COMMIT_ID` (the HEAD commit SHA on this branch):
+   ```bash
+   git rev-parse HEAD
+   ```
+
+2. Get the PR number:
+   ```bash
+   gh pr view --json number --jq .number
+   ```
+
+3. Post each inline comment using `gh api`:
+   ```bash
+   gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/comments \
+     --method POST \
+     --field body="**[gstack/review]** SEVERITY: FINDING_DESCRIPTION\n\nRecommended fix: FIX_DESCRIPTION" \
+     --field commit_id="COMMIT_ID" \
+     --field path="FILE_PATH" \
+     --field line=LINE_NUMBER \
+     --field side="RIGHT"
+   ```
+
+   Use `gh repo view --json nameWithOwner --jq .nameWithOwner` to get `{owner}/{repo}`.
+
+4. After posting all comments, submit the review:
+   ```bash
+   gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/reviews \
+     --method POST \
+     --field commit_id="COMMIT_ID" \
+     --field body="gstack /review: N issues found (X critical, Y informational). See inline annotations." \
+     --field event="COMMENT"
+   ```
+
+**Limits and fallbacks:**
+- Post at most 20 inline comments per review. If there are more, post the first 20 by severity (CRITICAL first) and add a summary comment for the rest.
+- If a finding has no specific file:line (e.g., an architectural concern), skip inline annotation for that finding — it's already in the text output.
+- If `gh api` fails for any comment (e.g., the line is not in the diff), skip that comment silently and continue.
+- If the entire step fails, warn but continue — inline annotations are a bonus, not a gate.
+
+**Only annotate findings from YOUR review** — never duplicate Greptile's own comments.
+
+---
+
 ## Step 5.8: Persist Eng Review result
 
 After all review passes complete, persist the final `/review` outcome so `/ship` can
