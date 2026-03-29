@@ -19,6 +19,18 @@ describe('tokenizeShell', () => {
   test('respects single quotes', () => {
     expect(tokenizeShell("echo 'a b'")).toEqual(['echo', 'a b']);
   });
+
+  test('double-quoted backslash escapes', () => {
+    expect(tokenizeShell('echo "a\\"b"')).toEqual(['echo', 'a"b']);
+  });
+
+  test('empty double-quoted token', () => {
+    expect(tokenizeShell('rm -rf ""')).toEqual(['rm', '-rf', '']);
+  });
+
+  test('chained short flags rm -rf -f', () => {
+    expect(tokenizeShell('rm -rf -f target')).toEqual(['rm', '-rf', '-f', 'target']);
+  });
 });
 
 describe('buildCommandContext', () => {

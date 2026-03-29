@@ -33,6 +33,8 @@ export function tokenizeShell(input: string): string[] {
 
     if (quote === "'") {
       if (c === "'") {
+        tokens.push(cur);
+        cur = '';
         quote = null;
         i++;
         continue;
@@ -49,6 +51,8 @@ export function tokenizeShell(input: string): string[] {
         continue;
       }
       if (c === '"') {
+        tokens.push(cur);
+        cur = '';
         quote = null;
         i++;
         continue;

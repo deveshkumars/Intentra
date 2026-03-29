@@ -5,6 +5,15 @@
 
 import type { CommandContext, GuardRule, GuardVerdict } from './guard-types';
 
+/** Bump when rule set or matching semantics change (mirror in telemetry + /health). */
+export const GUARD_ENGINE_VERSION = 2;
+
+export const GUARD_ENGINE = {
+  version: GUARD_ENGINE_VERSION,
+  tokenizer: 'shell_quote_aware_v1',
+  normalization: 'NFKC_whitespace_collapse',
+} as const;
+
 function isSafeRmTarget(token: string): boolean {
   const t = token.replace(/\/+$/, '');
   return /(^|\/)(node_modules|\.next|dist|__pycache__|\.cache|build|\.turbo|coverage)$/.test(t);
@@ -131,6 +140,8 @@ export const GUARD_RULES: readonly GuardRule[] = [
 ] as const;
 
 export const GUARD_RULE_IDS: ReadonlySet<string> = new Set(GUARD_RULES.map((r) => r.id));
+
+export const GUARD_RULE_COUNT: number = GUARD_RULES.length;
 
 export function findFirstMatchingRule(ctx: CommandContext): GuardRule | null {
   for (const rule of GUARD_RULES) {
