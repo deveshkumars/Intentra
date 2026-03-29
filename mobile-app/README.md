@@ -225,6 +225,21 @@ curl -s -X POST http://localhost:7891/intentra/intent \
 
 `POST /progress` accepts optional `intent_id` to tie events to an intent across sessions.
 
+### Intentra command guard (executable runtime)
+
+`POST /intentra/guard` with JSON `{ "command": "…", "session_id?": "…" }` evaluates the shell command against the same destructive patterns as gstack **`/careful`** (implemented in TypeScript, not Markdown). Verdict comes from **`culture.json` → `intentra.risk_gates`** (`deny` | `warn` | `allow` per pattern; default `deny` if omitted).
+
+On `deny` or `warn`, the server appends a line to **`.intentra/telemetry/intentra-guard.jsonl`** and emits an SSE event (`upstream_kind: intentra_guard`). Requires `Authorization: Bearer …` when `INTENTRA_TOKEN` is set (same as other POSTs).
+
+```bash
+curl -s -X POST http://localhost:7891/intentra/guard \
+  -H 'Content-Type: application/json' \
+  -d '{"command":"git push --force origin main"}'
+# → {"verdict":"deny","pattern":"git_force_push","message":"...","source":"intentra_guard"}
+```
+
+Committed **sample** gstack JSONL (for docs/tests): [`fixtures/skill-usage-evaluator-sample.jsonl`](fixtures/skill-usage-evaluator-sample.jsonl) (not watched automatically).
+
 ### Telemetry lanes (Intentra-native provenance)
 
 Events from the JSONL watcher include **`ingest_lane`: `intentra_jsonl_bridge`** and **`upstream_kind`**: `gstack_skill_run` (skill telemetry) or `gstack_hook_fire` (safety hooks from `event: hook_fire` lines). HTTP posts default to **`ingest_lane`: `intentra_http`**. The mobile feed shows `hook_fire` as a distinct row (shield icon) so gstack safety telemetry is visible **through** Intentra’s pipeline, not only in raw JSONL.
@@ -272,6 +287,7 @@ mobile-app/
 │   ├── server.ts      ← Bun HTTP server (progress + Intentra routes)
 │   ├── intent.ts      ← Intent-as-Code file I/O + schema types
 │   ├── culture.ts     ← read gstack culture.json for GET /intentra/culture
+│   ├── guard.ts       ← POST /intentra/guard command policy + culture gates
 │   ├── Dockerfile     ← optional container deploy
 │   ├── smoke.test.ts  ← smoke tests (bun test)
 │   └── package.json

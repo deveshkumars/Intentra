@@ -15,6 +15,10 @@ bun.lock
 .env.local
 .env.*
 !.env.example
+# Intentra guard runtime telemetry (local only)
+.intentra/telemetry/
+mobile-app/server/.intentra/
+
 supabase/.temp/
 # Ignore local GitHub metadata; tracked workflows live under .github/workflows/
 .github/**

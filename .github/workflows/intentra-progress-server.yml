@@ -6,10 +6,12 @@ on:
     branches: [main]
     paths:
       - 'mobile-app/server/**'
+      - 'mobile-app/fixtures/**'
       - '.github/workflows/intentra-progress-server.yml'
   pull_request:
     paths:
       - 'mobile-app/server/**'
+      - 'mobile-app/fixtures/**'
       - '.github/workflows/intentra-progress-server.yml'
 
 jobs:
@@ -20,5 +22,5 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - name: Bun smoke tests
-        run: bun test mobile-app/server/smoke.test.ts
+      - name: Bun progress server + guard + fixtures
+        run: bun run test:progress-server

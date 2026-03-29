@@ -18,6 +18,7 @@ import fs from 'fs';
 import path from 'path';
 import { createIntent, listIntents } from './intent';
 import { readCultureSnapshot } from './culture';
+import { appendIntentraGuardTelemetry, evaluateCommandGuard } from './guard';
 
 // ─── CircularBuffer (copied verbatim from browse/src/buffers.ts) ───────────
 
@@ -536,6 +537,46 @@ const server = Bun.serve({
     if (req.method === 'GET' && url.pathname === '/intentra/intents') {
       const intents = listIntents();
       return new Response(JSON.stringify({ intents, count: intents.length }), {
+        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // POST /intentra/guard — Intentra-native command policy (TypeScript runtime + culture gates)
+    if (req.method === 'POST' && url.pathname === '/intentra/guard') {
+      let body: { command?: string; session_id?: string } = {};
+      try {
+        body = await req.json();
+      } catch {
+        /* ignore */
+      }
+      if (!body.command || typeof body.command !== 'string') {
+        return new Response(JSON.stringify({ error: 'command is required' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+      const snap = readCultureSnapshot();
+      const result = evaluateCommandGuard(body.command, snap.culture);
+      const ts = now();
+      if (result.verdict === 'deny' || result.verdict === 'warn') {
+        appendIntentraGuardTelemetry({
+          event: 'intentra_guard',
+          verdict: result.verdict,
+          pattern: result.pattern,
+          ts,
+        });
+        addEvent({
+          kind: 'hook_fire',
+          source: 'post',
+          ingest_lane: 'intentra_http',
+          upstream_kind: 'intentra_guard',
+          skill: 'intentra_guard',
+          step: result.pattern,
+          message: result.message,
+          session_id: body.session_id,
+          ts,
+        });
+      }
+      return new Response(JSON.stringify(result), {
         status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }

@@ -37,5 +37,17 @@
     "decision_making": "data-driven",
     "ownership": "you-build-it-you-own-it",
     "timezone": "America/New_York"
+  },
+  "intentra": {
+    "risk_gates": {
+      "git_force_push": "deny",
+      "rm_recursive": "deny",
+      "drop_table": "deny",
+      "truncate": "deny",
+      "git_reset_hard": "deny",
+      "git_discard": "deny",
+      "kubectl_delete": "warn",
+      "docker_destructive": "warn"
+    }
   }
 }
