@@ -204,7 +204,8 @@ Resolve `.intentra/` from `INTENTRA_REPO_ROOT` if set, otherwise the server’s 
 | `GET` | `/intentra/files` | No | List non-hidden files under `.intentra/` with full text |
 | `GET` | `/intentra/latest` | No | Last `---`-separated block from `HANDOFFS.md` |
 | `GET` | `/intentra/intents` | No | List parsed intent JSON artifacts |
-| `POST` | `/intentra/intent` | Yes (`Bearer`) | Create intent JSON (`prompt` required; optional `repo`, `constraints`, `culture_ref`, `plan`) |
+| `GET` | `/intentra/culture` | No | Snapshot of `culture.json` from `GSTACK_STATE_DIR` (same file gstack loads; Intentra re-serves for mobile audit) |
+| `POST` | `/intentra/intent` | Yes (`Bearer`) | Create intent JSON (`prompt` required; optional `repo`, `constraints`, `culture_ref`, `plan`). If `culture_ref` is omitted and `culture.json` exists, server sets `culture_ref` to that path. |
 
 ```bash
 # List intent JSON files (empty array if none)
@@ -223,6 +224,22 @@ curl -s -X POST http://localhost:7891/intentra/intent \
 ```
 
 `POST /progress` accepts optional `intent_id` to tie events to an intent across sessions.
+
+### Telemetry lanes (Intentra-native provenance)
+
+Events from the JSONL watcher include **`ingest_lane`: `intentra_jsonl_bridge`** and **`upstream_kind`**: `gstack_skill_run` (skill telemetry) or `gstack_hook_fire` (safety hooks from `event: hook_fire` lines). HTTP posts default to **`ingest_lane`: `intentra_http`**. The mobile feed shows `hook_fire` as a distinct row (shield icon) so gstack safety telemetry is visible **through** Intentra’s pipeline, not only in raw JSONL.
+
+### Docker (optional)
+
+```bash
+docker build -f mobile-app/server/Dockerfile -t intentra-progress mobile-app/server
+docker run --rm -p 7891:7891 \
+  -v "$HOME/.gstack:/data/gstack" \
+  -v "$(pwd):/repo" \
+  -e GSTACK_STATE_DIR=/data/gstack \
+  -e INTENTRA_REPO_ROOT=/repo \
+  intentra-progress
+```
 
 ---
 
@@ -254,7 +271,9 @@ mobile-app/
 ├── server/
 │   ├── server.ts      ← Bun HTTP server (progress + Intentra routes)
 │   ├── intent.ts      ← Intent-as-Code file I/O + schema types
-│   ├── smoke.test.ts  ← optional smoke tests (bun test)
+│   ├── culture.ts     ← read gstack culture.json for GET /intentra/culture
+│   ├── Dockerfile     ← optional container deploy
+│   ├── smoke.test.ts  ← smoke tests (bun test)
 │   └── package.json
 └── app/
     ├── App.tsx        ← navigation root

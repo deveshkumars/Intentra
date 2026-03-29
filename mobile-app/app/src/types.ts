@@ -1,4 +1,7 @@
-export type EventKind = 'skill_start' | 'skill_end' | 'progress' | 'tool_use';
+export type EventKind = 'skill_start' | 'skill_end' | 'progress' | 'tool_use' | 'hook_fire';
+
+/** Where the event entered the Intentra pipeline (provenance for evaluators). */
+export type IngestLane = 'intentra_jsonl_bridge' | 'intentra_http';
 
 export interface ProgressEvent {
   id: string;
@@ -14,6 +17,10 @@ export interface ProgressEvent {
   tool_name?: string;
   outcome?: 'success' | 'error' | 'unknown';
   duration_s?: number;
+  /** Intentra aggregation layer — always set for JSONL-backed events */
+  ingest_lane?: IngestLane;
+  /** Origin taxonomy in gstack JSONL, e.g. gstack_skill_run, gstack_hook_fire */
+  upstream_kind?: string;
 }
 
 export interface TrackedAgent {

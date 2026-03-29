@@ -16,4 +16,7 @@ bun.lock
 .env.*
 !.env.example
 supabase/.temp/
-.github
+# Ignore local GitHub metadata; tracked workflows live under .github/workflows/
+.github/**
+!.github/workflows/
+!.github/workflows/**
