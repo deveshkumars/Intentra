@@ -10,7 +10,7 @@ import { DetailScreen } from './src/screens/DetailScreen';
 import { IntentScreen } from './src/screens/IntentScreen';
 import { HandoffScreen } from './src/screens/HandoffScreen';
 import { useEventStream } from './src/useEventStream';
-import { getServerUrl } from './src/storage';
+import { getServerUrl, getAuthToken } from './src/storage';
 import { TrackedAgent } from './src/types';
 
 type Screen = 'loading' | 'setup' | 'dashboard' | 'intent' | 'handoffs' | 'detail';
@@ -20,10 +20,11 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('loading');
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [serverUrl, setServerUrl] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<TrackedAgent | null>(null);
   const [intentEventFilter, setIntentEventFilter] = useState<string | null>(null);
 
-  const { events, trackedAgents, status, reconnect } = useEventStream(serverUrl);
+  const { events, trackedAgents, status, reconnect } = useEventStream(serverUrl, authToken);
 
   const filteredEvents = useMemo(
     () =>
@@ -34,9 +35,10 @@ export default function App() {
   );
 
   useEffect(() => {
-    getServerUrl().then(url => {
+    Promise.all([getServerUrl(), getAuthToken()]).then(([url, token]) => {
       if (url) {
         setServerUrl(url);
+        setAuthToken(token);
         setScreen('dashboard');
       } else {
         setScreen('setup');
@@ -51,8 +53,9 @@ export default function App() {
       <SafeAreaProvider>
         <StatusBar style="light" />
         <SetupScreen
-          onConnected={url => {
+          onConnected={(url, token) => {
             setServerUrl(url);
+            setAuthToken(token);
             setScreen('dashboard');
           }}
         />
@@ -66,6 +69,7 @@ export default function App() {
         <StatusBar style="light" />
         <DetailScreen
           agent={selectedAgent}
+          events={events}
           onBack={() => setScreen(activeTab)}
         />
       </SafeAreaProvider>
@@ -97,7 +101,7 @@ export default function App() {
             ) : activeTab === 'handoffs' ? (
               <HandoffScreen serverUrl={serverUrl} />
             ) : (
-              <IntentScreen serverUrl={serverUrl} />
+              <IntentScreen serverUrl={serverUrl} authToken={authToken} />
             )}
           </View>
 
