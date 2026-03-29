@@ -1,0 +1,41 @@
+{
+  "$schema": "https://gstack.dev/schemas/culture/v1.json",
+  "version": "1.0.0",
+  "org": {
+    "name": "Intentra",
+    "mission": "Trust infrastructure for the agentic era",
+    "values": ["ship fast", "quality matters", "own your work"]
+  },
+  "coding": {
+    "languages": ["TypeScript"],
+    "style": "functional-preferred",
+    "test_coverage_min": 80,
+    "forbidden_patterns": ["any type", "console.log in production"],
+    "preferred_patterns": ["typed errors", "structured logging"]
+  },
+  "risk": {
+    "frontend": "moderate",
+    "backend": "moderate",
+    "infra": "conservative",
+    "new_features": "experimental"
+  },
+  "review": {
+    "required_approvals": 1,
+    "pr_size_max_lines": 400,
+    "conventional_commits": true,
+    "merge_strategy": "squash"
+  },
+  "priorities": {
+    "stability": 10,
+    "performance": 8,
+    "features": 7,
+    "refactoring": 5,
+    "docs": 4
+  },
+  "team": {
+    "communication": "async-first",
+    "decision_making": "data-driven",
+    "ownership": "you-build-it-you-own-it",
+    "timezone": "America/New_York"
+  }
+}
