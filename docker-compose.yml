@@ -1,0 +1,19 @@
+# Local / demo: progress server + volumes for gstack state and repo.
+# Usage: docker compose up --build
+services:
+  progress:
+    build:
+      context: ./mobile-app/server
+      dockerfile: Dockerfile
+    ports:
+      - "7891:7891"
+    environment:
+      GSTACK_PROGRESS_PORT: "7891"
+      # Host paths — adjust for your machine
+      GSTACK_STATE_DIR: /data/gstack
+      INTENTRA_REPO_ROOT: /repo
+      # INTENTRA_TOKEN: "set-for-production"
+    volumes:
+      # rw: server may append `.intentra/` telemetry under repo root
+      - ${HOME}/.gstack:/data/gstack
+      - .:/repo
