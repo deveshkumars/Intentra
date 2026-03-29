@@ -20,6 +20,18 @@ Detailed guides for every gstack skill — philosophy, workflow, and examples.
 | [`/retro`](#retro) | **Eng Manager** | Team-aware weekly retro. Per-person breakdowns, shipping streaks, test health trends, growth opportunities. |
 | [`/browse`](#browse) | **QA Engineer** | Give the agent eyes. Real Chromium browser, real clicks, real screenshots. ~100ms per command. |
 | [`/setup-browser-cookies`](#setup-browser-cookies) | **Session Manager** | Import cookies from your real browser (Chrome, Arc, Brave, Edge) into the headless session. Test authenticated pages. |
+| [`/setup-culture`](#setup-culture) | **Culture Lead** | Configure your org's coding standards, values, risk tolerance, and review norms. Saved to `~/.gstack/culture.json` and applied by every gstack skill automatically. |
+| [`/autoplan`](#autoplan) | **Review Pipeline** | One command, fully reviewed plan. Runs CEO → design → eng review automatically with encoded decision principles. Surfaces only taste decisions at a final approval gate. |
+| [`/connect-chrome`](#connect-chrome) | **Live Browser** | Launch real Chrome controlled by gstack with the Side Panel extension auto-loaded. Watch every action in real time. |
+| | | |
+| **Deploy & Monitor** | | |
+| [`/land-and-deploy`](#land-and-deploy) | **Release Engineer** | Merge the PR, wait for CI and deploy, verify production health via canary checks. One command from "approved" to "verified in prod." |
+| [`/canary`](#canary) | **SRE** | Post-deploy monitoring loop. Watches for console errors, performance regressions, and page failures. |
+| [`/benchmark`](#benchmark) | **Performance Engineer** | Baseline page load times, Core Web Vitals, and resource sizes. Compare before/after on every PR. |
+| [`/setup-deploy`](#setup-deploy) | **Deploy Configurator** | One-time setup for `/land-and-deploy`. Detects your platform, production URL, and deploy commands. |
+| | | |
+| **Team Collaboration** | | |
+| [`/collab-agent`](#collab-agent) | **Git Collaboration Specialist** | Multi-person and agentic git workflows: resolve merge conflicts, coordinate branches, orchestrate PR reviews, write handoff docs. |
 | | | |
 | **Multi-AI** | | |
 | [`/codex`](#codex) | **Second Opinion** | Independent review from OpenAI Codex CLI. Three modes: code review (pass/fail gate), adversarial challenge, and open consultation with session continuity. Cross-model analysis when both `/review` and `/codex` have run. |
@@ -818,6 +830,170 @@ Claude: Current version: 0.7.4
 ```
 
 Set `auto_upgrade: true` in `~/.gstack/config.yaml` to skip the prompt entirely — gstack upgrades silently at the start of each session when a new version is available.
+
+---
+
+## `/setup-culture`
+
+This is how you teach gstack about your team.
+
+Every gstack skill applies your organization's culture automatically — code review standards, risk tolerance, test requirements, PR norms. But first you have to tell it what your culture is. `/setup-culture` asks a focused set of questions and saves the answers to `~/.gstack/culture.json`. From that point on, every skill in every session loads it without you doing anything.
+
+```
+You:   /setup-culture
+
+Claude: Let's configure your organization's culture. I'll ask about
+        coding standards, values, risk tolerance, and review norms.
+        This takes about 5 minutes and is saved permanently.
+
+        What languages and frameworks does your team use?
+
+        [You answer a series of questions]
+
+        Culture saved to ~/.gstack/culture.json.
+        All gstack skills will now apply your team's standards.
+```
+
+The saved file is also read by the Intentra guard engine at `GET /intentra/culture` — so the mobile app can surface your culture config and the command guard engine can apply your `risk_gates` to incoming shell commands. One config, used everywhere.
+
+---
+
+## `/autoplan`
+
+This is the fastest path from idea to approved plan.
+
+`/autoplan` runs the full planning gauntlet — `/plan-ceo-review`, `/plan-design-review`, and `/plan-eng-review` — in one command, with encoded decision principles for the non-taste choices. You only see the decisions that genuinely require your judgment: borderline scope calls, close aesthetic approaches, cases where Codex disagrees with Claude.
+
+```
+You:   /autoplan
+
+Claude: Running full auto-review pipeline on your plan...
+
+        CEO Review: Selective expansion — the narrower scope is right.
+        Design Review: 8/10 — one aesthetic choice needs your call.
+        Eng Review: Architecture locked. 3 edge cases added. Tests specified.
+
+        TASTE DECISION: The design uses monospace headers (industrial, your
+        space) vs sans-serif (warmer, safer). Recommend: monospace.
+        Accept? [Y/n]
+
+You:   Y
+
+Claude: Plan fully reviewed and approved. Ready to build.
+```
+
+---
+
+## `/connect-chrome`
+
+This is co-presence mode — Claude in your actual browser, not a hidden headless one.
+
+`$B connect` (or `/connect-chrome`) launches your real Chrome as a headed window with the gstack Side Panel extension loaded. You watch Claude click, fill, and navigate in real time. A subtle green shimmer at the top edge identifies which window gstack controls. A side panel shows a live activity feed of every browse command and a chat input where you can direct Claude mid-session.
+
+The extension is built on the same `browse` command set as headless mode — all 40+ commands work unchanged. `$B disconnect` returns to headless at any point.
+
+```
+You:   /connect-chrome
+
+Claude: Launched Chrome with gstack Side Panel. Green shimmer visible.
+        All browse commands now run in your visible Chrome window.
+        Type instructions in the Side Panel or tell me what to do here.
+```
+
+---
+
+## `/land-and-deploy`
+
+This picks up where `/ship` leaves off.
+
+After `/ship` creates the PR and it gets approved, `/land-and-deploy` merges it, waits for CI to pass, triggers the deploy, waits for the deploy to complete, then runs a canary pass against production to verify the deploy is healthy. One command from "approved" to "verified in prod."
+
+```
+You:   /land-and-deploy
+
+Claude: Merging PR #42... done.
+        Waiting for CI... 3m 41s — passed.
+        Deploy triggered. Waiting for Fly.io rollout... 2m 18s — live.
+        Running canary checks against https://myapp.fly.dev...
+        ✓ Home page loads (312ms)
+        ✓ No console errors
+        ✓ Signup flow works end-to-end
+        Deploy verified. Version 0.4.2 is live.
+```
+
+Run `/setup-deploy` once to configure your platform, production URL, and health check endpoints. After that, `/land-and-deploy` knows what to do automatically.
+
+---
+
+## `/canary`
+
+This is your post-deploy SRE.
+
+After a deploy, `/canary` monitors the live app in a loop — checking for console errors, performance regressions, and page failures. It takes periodic screenshots, compares against a pre-deploy baseline, and pages you if anything degrades. Run it manually after deploys or let `/land-and-deploy` invoke it automatically.
+
+```
+You:   /canary https://myapp.fly.dev
+
+Claude: Canary monitoring started. Checking every 2 minutes for 10 minutes.
+
+        [2m] All good — home, dashboard, settings all loading clean.
+        [4m] WARNING: dashboard p95 latency jumped from 180ms to 890ms.
+              Screenshot attached. Possible N+1 query after deploy.
+
+You:   investigate it
+
+Claude: [opens the dashboard, traces the slow query, finds the cause]
+```
+
+---
+
+## `/benchmark`
+
+This is your performance regression detector.
+
+Before a PR merges, `/benchmark` establishes baselines for page load times, Core Web Vitals (LCP, CLS, FID), and resource sizes. After a deploy, it re-runs and compares. If a page got slower by more than your threshold, the PR doesn't ship without a conversation.
+
+```
+You:   /benchmark https://staging.myapp.com
+
+Claude: Benchmark run complete.
+
+        Home:      LCP 1.2s  CLS 0.02  FID 18ms  JS bundle 142KB
+        Dashboard: LCP 1.8s  CLS 0.00  FID 22ms  JS bundle 248KB
+        Settings:  LCP 0.9s  CLS 0.01  FID 14ms  JS bundle 89KB
+
+        Baseline saved. Run again after deploy to detect regressions.
+```
+
+---
+
+## `/setup-deploy`
+
+One-time setup for `/land-and-deploy`.
+
+Run it once per project. `/setup-deploy` detects your deploy platform (Fly.io, Render, Vercel, Netlify, Heroku, GitHub Actions, or custom), your production URL, health check endpoints, and the deploy commands to run. Saves to `.gstack/deploy.json` in your project. After that, `/land-and-deploy` reads it automatically — no flags, no prompts.
+
+---
+
+## `/collab-agent`
+
+This is for when code review is also a coordination problem.
+
+`/collab-agent` specializes in multi-person and agentic git workflows: resolving merge conflicts that require semantic understanding (not just `ours`/`theirs`), coordinating diverged branches across contributors, writing handoff documents for context handoffs between humans or AI agents, and surfacing coordination gaps in shared repos.
+
+```
+You:   /collab-agent — resolve the merge conflict in payments.ts
+
+Claude: Reading both sides of the conflict. The divergence is semantic:
+        main added retry logic; your branch moved the function to a helper.
+        The right resolution is: keep the helper, apply retry logic there.
+
+        [Resolves conflict with correct merge, explains reasoning]
+
+        Conflict resolved. Here's a summary for the PR description.
+```
+
+Distinct from `/review`, which focuses on code correctness in your branch. `/collab-agent` focuses on coordination across branches and people.
 
 ---
 
