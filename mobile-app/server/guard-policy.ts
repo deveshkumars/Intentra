@@ -1,6 +1,21 @@
 /**
  * Declarative guard rules: ordered registry, categories, risk weights, matchers.
  * Order matches careful/bin/check-careful.sh priority (rm before git, etc.).
+ *
+ * Scoring rationale (baseRisk values):
+ *   88 rm_recursive       — can destroy entire directory trees; high but safe-target bypass lowers it
+ *   92 drop_table         — unrecoverable data loss; highest risk category
+ *   85 truncate           — data loss but table structure preserved; slightly below DROP
+ *   82 git_force_push     — rewrites remote history; recoverable via reflog but destructive to collaborators
+ *   78 git_reset_hard     — discards local changes; recoverable if committed elsewhere
+ *   72 git_discard        — mass discard of working tree; lower than reset (no index loss)
+ *   80 kubectl_delete     — cluster resource removal; production impact
+ *   75 docker_destructive — container/image cleanup; lower than k8s (usually local dev)
+ *
+ * Risk score formula (see guard.ts evaluateCommandGuard):
+ *   deny  → baseRisk (capped at 100)
+ *   warn  → baseRisk × 0.72
+ *   allow → baseRisk × 0.12 (culture override acknowledged)
  */
 
 import type { CommandContext, GuardRule, GuardVerdict } from './guard-types';

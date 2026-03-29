@@ -347,7 +347,12 @@ const server = Bun.serve({
       if (denied) return denied;
     }
 
-    // POST /agents — register a new tracked agent
+    /**
+     * POST /agents — register a new tracked agent.
+     * Requires JSON body with `name` (string, required) and optional `description`.
+     * Returns 201 with the created TrackedAgent. Broadcasts `agent_update` SSE event.
+     * Returns 400 if `name` is missing.
+     */
     if (req.method === 'POST' && url.pathname === '/agents') {
       let body: { name?: string; description?: string } = {};
       try { body = await req.json(); } catch { /* ignore */ }
@@ -371,7 +376,11 @@ const server = Bun.serve({
       });
     }
 
-    // PATCH /agents/:id — update a tracked agent's status/message
+    /**
+     * PATCH /agents/:id — update a tracked agent's status, name, description, or message.
+     * Accepts partial TrackedAgent JSON body. Broadcasts `agent_update` SSE event.
+     * Returns 404 if the agent ID doesn't exist.
+     */
     if (req.method === 'PATCH' && url.pathname.startsWith('/agents/')) {
       const agentId = url.pathname.slice('/agents/'.length);
       const agent = trackedAgents.get(agentId);
@@ -397,7 +406,11 @@ const server = Bun.serve({
       });
     }
 
-    // DELETE /agents/:id — remove a tracked agent
+    /**
+     * DELETE /agents/:id — remove a tracked agent.
+     * Broadcasts `agent_delete` SSE event with the removed agent's ID.
+     * Returns 404 if the agent ID doesn't exist.
+     */
     if (req.method === 'DELETE' && url.pathname.startsWith('/agents/')) {
       const agentId = url.pathname.slice('/agents/'.length);
       if (!trackedAgents.has(agentId)) {
@@ -417,7 +430,7 @@ const server = Bun.serve({
       });
     }
 
-    // GET /agents — list all tracked agents
+    /** GET /agents — list all tracked agents sorted by creation time (newest first). */
     if (req.method === 'GET' && url.pathname === '/agents') {
       const agents = Array.from(trackedAgents.values()).sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -427,7 +440,11 @@ const server = Bun.serve({
       });
     }
 
-    // POST /progress
+    /**
+     * POST /progress — ingest a progress event. Always returns 201, even with
+     * malformed or empty body (fire-and-forget design for hooks and scripts).
+     * Defaults: kind='progress', source='post', ingest_lane='intentra_http'.
+     */
     if (req.method === 'POST' && url.pathname === '/progress') {
       let body: Partial<ProgressEvent> = {};
       try {
@@ -458,7 +475,11 @@ const server = Bun.serve({
       });
     }
 
-    // GET /events/stream — SSE
+    /**
+     * GET /events/stream — Server-Sent Events stream.
+     * On connect: replays all tracked agents (agent_update events) and the ring
+     * buffer (progress events), then streams live events. 15s heartbeat keep-alive.
+     */
     if (req.method === 'GET' && url.pathname === '/events/stream') {
       return new Response(makeSSEStream(), {
         headers: {
@@ -470,7 +491,11 @@ const server = Bun.serve({
       });
     }
 
-    // GET /events/history?limit=N
+    /**
+     * GET /events/history?limit=N — REST fallback for event backfill.
+     * Returns the last N events from the ring buffer (default 50, max 200).
+     * Use this when SSE reconnect needs historical context.
+     */
     if (req.method === 'GET' && url.pathname === '/events/history') {
       const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '50', 10), 200);
       const events = eventBuffer.last(limit);
@@ -479,7 +504,11 @@ const server = Bun.serve({
       });
     }
 
-    // GET /health
+    /**
+     * GET /health — connection check (no auth, no side effects).
+     * Returns ok status, event/subscriber counts, uptime, guard engine metadata,
+     * and MVP metrics counters for evaluator verification.
+     */
     if (req.method === 'GET' && url.pathname === '/health') {
       return new Response(JSON.stringify({
         ok: true,
@@ -496,7 +525,7 @@ const server = Bun.serve({
       });
     }
 
-    // GET /intentra/files — list all .intentra/ files with contents
+    /** GET /intentra/files — list all non-hidden files in .intentra/ with full text content. */
     if (req.method === 'GET' && url.pathname === '/intentra/files') {
       const dir = path.join(process.env.INTENTRA_REPO_ROOT ?? process.cwd(), '.intentra');
       if (!fs.existsSync(dir)) {
@@ -514,7 +543,7 @@ const server = Bun.serve({
       });
     }
 
-    // GET /intentra/latest — latest handoff entry from HANDOFFS.md
+    /** GET /intentra/latest — extract the last '---'-separated entry from HANDOFFS.md. */
     if (req.method === 'GET' && url.pathname === '/intentra/latest') {
       const handoffsPath = path.join(
         process.env.INTENTRA_REPO_ROOT ?? process.cwd(), '.intentra', 'HANDOFFS.md'
@@ -533,7 +562,7 @@ const server = Bun.serve({
       });
     }
 
-    // GET /intentra/intent/:id — fetch a single intent artifact by id
+    /** GET /intentra/intent/:id — fetch a single intent artifact by its exact ID. Returns 404 if not found. */
     if (req.method === 'GET' && url.pathname.startsWith('/intentra/intent/')) {
       const intentId = decodeURIComponent(url.pathname.slice('/intentra/intent/'.length));
       const intent = getIntent(intentId);
@@ -547,7 +576,12 @@ const server = Bun.serve({
       });
     }
 
-    // PATCH /intentra/intent — set outcome on an existing intent artifact
+    /**
+     * PATCH /intentra/intent — set outcome on an existing intent artifact.
+     * Body: { intent_id: string, outcome: 'success'|'error'|'cancelled' }.
+     * Emits SSE event with upstream_kind='intent_resolved'. Returns 400 for
+     * invalid outcome, 404 if intent not found.
+     */
     if (req.method === 'PATCH' && url.pathname === '/intentra/intent') {
       let body: { intent_id?: string; outcome?: string } = {};
       try {
@@ -587,7 +621,12 @@ const server = Bun.serve({
       });
     }
 
-    // POST /intentra/intent — create a new intent artifact
+    /**
+     * POST /intentra/intent — create a new intent artifact under .intentra/.
+     * Body: { prompt (required), repo?, constraints?, culture_ref?, plan? }.
+     * Auto-detects git branch and culture.json path. Emits SSE event with
+     * upstream_kind='intent_created'. Returns 400 if prompt is missing.
+     */
     if (req.method === 'POST' && url.pathname === '/intentra/intent') {
       let body: Record<string, unknown> = {};
       try { body = await req.json(); } catch { /* ignore */ }
@@ -617,7 +656,7 @@ const server = Bun.serve({
       });
     }
 
-    // GET /intentra/intents — list all intent artifacts
+    /** GET /intentra/intents — list all intent JSON artifacts from .intentra/, sorted chronologically. */
     if (req.method === 'GET' && url.pathname === '/intentra/intents') {
       const intents = listIntents();
       return new Response(JSON.stringify({ intents, count: intents.length }), {
@@ -625,7 +664,7 @@ const server = Bun.serve({
       });
     }
 
-    // GET /intentra/guard/rules — policy registry (metadata only)
+    /** GET /intentra/guard/rules — public guard rule metadata (ids, categories, risk scores). No matcher functions exposed. */
     if (req.method === 'GET' && url.pathname === '/intentra/guard/rules') {
       return new Response(
         JSON.stringify({
@@ -636,7 +675,7 @@ const server = Bun.serve({
       );
     }
 
-    // GET /intentra/guard/schema — culture fragment JSON Schema + rule ids (read-only)
+    /** GET /intentra/guard/schema — JSON Schema for culture.json intentra fragment + valid rule IDs. */
     if (req.method === 'GET' && url.pathname === '/intentra/guard/schema') {
       try {
         const schemaPath = path.join(import.meta.dir, 'schemas', 'culture-intentra.fragment.json');
@@ -659,7 +698,13 @@ const server = Bun.serve({
       }
     }
 
-    // POST /intentra/guard — policy engine (optional debug trace + culture warnings)
+    /**
+     * POST /intentra/guard — evaluate a command against the guard policy engine.
+     * Body: { command (required), session_id?, debug? }. Returns verdict (allow/warn/deny),
+     * pattern, risk_score, rule metadata, and optional debug trace. On deny/warn, appends
+     * to .intentra/telemetry/intentra-guard.jsonl and emits SSE hook_fire event.
+     * Enable debug via body `debug: true` or header `X-Intentra-Guard-Debug: 1`.
+     */
     if (req.method === 'POST' && url.pathname === '/intentra/guard') {
       let body: { command?: string; session_id?: string; debug?: boolean } = {};
       try {
@@ -703,7 +748,7 @@ const server = Bun.serve({
       });
     }
 
-    // GET /intentra/culture — gstack culture.json (read-only; Intentra demonstration surface)
+    /** GET /intentra/culture — re-serve gstack's culture.json for mobile audit and intent linkage (read-only). */
     if (req.method === 'GET' && url.pathname === '/intentra/culture') {
       const snap = readCultureSnapshot();
       return new Response(

@@ -153,3 +153,5 @@ This means you can answer: "For intent X, what progress events fired, which guar
 - **[Quickstart](quickstart.md)** — create your first intent in 5 minutes
 - **[Architecture](intentra-architecture.md)** — route/auth matrix and event pipeline diagram
 - **[Guard Engine](guard-engine.md)** — how guard telemetry links to intents
+- **[Error Handling](error-handling.md)** — HTTP error codes and client retry patterns
+- **[Security](security.md)** — auth model and data protection for intent artifacts

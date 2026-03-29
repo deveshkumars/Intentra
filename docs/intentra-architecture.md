@@ -2,7 +2,7 @@
 
 Single reference for the Bun server in `mobile-app/server/` (port **7891**): event pipeline, guard engine, routes, and auth.
 
-**Related docs:** [Quickstart](quickstart.md) · [API Reference](api-reference.md) · [Intent Lifecycle](intent-lifecycle.md) · [Guard Engine](guard-engine.md) · [Guard Rules Reference](guard-rules-reference.md) · [Culture Config](culture-config.md) · [Testing](../mobile-app/TESTING.md) · [Deploy](../DEPLOY.md)
+**Related docs:** [Quickstart](quickstart.md) · [API Reference](api-reference.md) · [Intent Lifecycle](intent-lifecycle.md) · [Guard Engine](guard-engine.md) · [Guard Rules Reference](guard-rules-reference.md) · [Culture Config](culture-config.md) · [Error Handling](error-handling.md) · [Troubleshooting](troubleshooting.md) · [Env Reference](env-reference.md) · [Scaling](scaling.md) · [Security](security.md) · [Testing](../mobile-app/TESTING.md) · [Deploy](../DEPLOY.md)
 
 ## Event pipeline (JSONL + HTTP → SSE)
 
