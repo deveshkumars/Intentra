@@ -35,13 +35,20 @@ Integration tests that spawn a real server process on a random port and hit actu
 
 ### Handoff markdown parsing (`shared/handoff-parse.test.ts`)
 
-Pure unit tests for `parseEntry`, `parseEntries`, `formatDate`, and `countHandoffBlocks` — the same logic the **Handoffs** tab and **`GET /intentra/handoffs/summary`** use for `HANDOFFS.md` / `PROMPTS.md` / `PLANS.md`. Run from repo root:
+Pure unit tests for `parseEntry`, `parseEntries`, `formatDate`, and `countHandoffBlocks` — the same logic the **Handoffs** tab and **`GET /intentra/handoffs/summary`** use for `HANDOFFS.md` / `PROMPTS.md` / `PLANS.md` (including CRLF newline normalization). Run from repo root:
 
 ```bash
 bun test mobile-app/shared/handoff-parse.test.ts
 ```
 
 Smoke tests also restart the server with **`INTENTRA_REPO_ROOT`** set to the git repo root and assert **`GET /intentra/files`** returns **`HANDOFFS.md`** whose content parses to at least one entry, and **`GET /intentra/handoffs/summary`** returns a matching `count` (end-to-end with committed `.intentra/`).
+
+### Mobile app (manual completeness checks)
+
+The Expo app is exercised manually via Expo Go. After auth-related changes, sanity-check:
+
+- **Setup:** With `INTENTRA_TOKEN` unset, Connect succeeds. With the server started **with** `INTENTRA_TOKEN`, Connect **without** a bearer token should show a clear error; with the correct token, Connect succeeds (the app probes `POST /agents` before saving settings).
+- **Dashboard / Intent / Handoffs:** Pull-to-refresh and tab switches still load after updating the stored token (SSE reconnects and REST calls include `Authorization` when present).
 
 ### Agent CRUD tests (`agents.test.ts`)
 

@@ -46,6 +46,15 @@ describe('parseEntries', () => {
     expect(parseEntries('')).toEqual([]);
     expect(parseEntries('   \n')).toEqual([]);
   });
+
+  test('CRLF line endings still split on ---', () => {
+    const md =
+      '**2026-03-01 — A**\r\n\r\nFirst block body line.\r\n---\r\n**2026-03-02 — B**\r\n\r\nSecond block body here.';
+    const entries = parseEntries(md);
+    expect(entries.length).toBe(2);
+    expect(entries[0]!.summary).toContain('Second block');
+    expect(countHandoffBlocks(md)).toBe(2);
+  });
 });
 
 describe('formatDate', () => {

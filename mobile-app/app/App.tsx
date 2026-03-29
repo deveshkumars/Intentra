@@ -89,6 +89,7 @@ export default function App() {
                 trackedAgents={trackedAgents}
                 status={status}
                 serverUrl={serverUrl}
+                authToken={authToken}
                 intentEventFilter={intentEventFilter}
                 onIntentEventFilterChange={setIntentEventFilter}
                 onReconnect={reconnect}
@@ -99,7 +100,7 @@ export default function App() {
                 onSetupPress={() => setScreen('setup')}
               />
             ) : activeTab === 'handoffs' ? (
-              <HandoffScreen serverUrl={serverUrl} />
+              <HandoffScreen serverUrl={serverUrl} authToken={authToken} />
             ) : (
               <IntentScreen serverUrl={serverUrl} authToken={authToken} />
             )}

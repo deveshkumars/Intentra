@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, FlatList,
+  ScrollView,
 } from 'react-native';
 import { TrackedAgent, ProgressEvent } from '../types';
 import { EventRow } from '../components/EventRow';
@@ -39,15 +39,18 @@ const STATUS_COLOR = {
 function filterAgentEvents(agent: TrackedAgent, events: ProgressEvent[]): ProgressEvent[] {
   if (agent.session_id) {
     const bySession = events.filter(e => e.session_id === agent.session_id);
-    if (bySession.length > 0) return bySession;
+    if (bySession.length > 0) {
+      return [...bySession].sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+    }
   }
   // Time-window fallback: events that occurred while the agent was running
   const start = new Date(agent.created_at).getTime();
   const end = new Date(agent.updated_at).getTime() + 5_000;
-  return events.filter(e => {
+  const list = events.filter(e => {
     const t = new Date(e.ts).getTime();
     return t >= start && t <= end;
   });
+  return list.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
 }
 
 export function DetailScreen({ agent, events, onBack }: Props) {
@@ -154,6 +157,10 @@ export function DetailScreen({ agent, events, onBack }: Props) {
           <Text style={styles.hintCode}>
             {`curl -X PATCH <server>/agents/${agent.id} \\\n  -H 'Content-Type: application/json' \\\n  -d '{"status":"done","message":"Task complete"}'`}
           </Text>
+          <Text style={styles.hintNote}>
+            If the server uses INTENTRA_TOKEN, add{' '}
+            <Text style={styles.hintMono}>-H &apos;Authorization: Bearer …&apos;</Text>
+          </Text>
         </View>
       </ScrollView>
     </View>
@@ -253,5 +260,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'monospace',
     lineHeight: 18,
+  },
+  hintNote: {
+    color: '#475569',
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  hintMono: {
+    fontFamily: 'monospace',
+    color: '#64748b',
   },
 });
