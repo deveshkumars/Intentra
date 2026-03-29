@@ -77,6 +77,15 @@ describe('progress server smoke', () => {
     expect(j.note).toContain('gstack');
   });
 
+  test('GET /intentra/guard/rules exposes registry', async () => {
+    const r = await fetch(`${BASE}/intentra/guard/rules`);
+    expect(r.ok).toBe(true);
+    const j = (await r.json()) as { rules?: unknown[]; engine?: { version?: number } };
+    expect(Array.isArray(j.rules)).toBe(true);
+    expect((j.rules as []).length).toBeGreaterThanOrEqual(8);
+    expect(j.engine?.version).toBe(1);
+  });
+
   test('POST /intentra/guard denies destructive command', async () => {
     const r = await fetch(`${BASE}/intentra/guard`, {
       method: 'POST',
@@ -84,10 +93,19 @@ describe('progress server smoke', () => {
       body: JSON.stringify({ command: 'git push --force origin main' }),
     });
     expect(r.ok).toBe(true);
-    const j = (await r.json()) as { verdict?: string; pattern?: string; source?: string };
+    const j = (await r.json()) as {
+      verdict?: string;
+      pattern?: string;
+      source?: string;
+      risk_score?: number;
+      rule?: { category?: string };
+    };
     expect(j.verdict).toBe('deny');
     expect(j.pattern).toBe('git_force_push');
     expect(j.source).toBe('intentra_guard');
+    expect(typeof j.risk_score).toBe('number');
+    expect(j.risk_score).toBeGreaterThan(0);
+    expect(j.rule?.category).toBe('vcs');
   });
 
   test('INTENTRA_TOKEN rejects POST without Bearer', async () => {
