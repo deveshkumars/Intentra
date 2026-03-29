@@ -10,6 +10,15 @@ CI runs `bun run scripts/check-intentra-contracts.ts` (also part of `bun run tes
 
 **Narrative tour:** [Root README](../README.md) — gstack positioning, install copy-paste prompts, sprint skill table, Intentra overview.
 
+### Reading paths (by role)
+
+| Role | Start here | Then |
+|------|------------|------|
+| **Server / API implementer** | [Architecture](intentra-architecture.md) — invariants, route matrix, guard pipeline | [API reference](api-reference.md), source [`server.ts`](../mobile-app/server/server.ts) |
+| **Mobile or client author** | [Mobile app architecture](mobile-app.md) | [API reference — mobile client](api-reference.md#mobile-client-behavior), [Handoffs (mobile)](handoffs-mobile.md) |
+| **Security / threat review** | [Security](security.md) | [Architecture — auth + CORS](intentra-architecture.md#http-route-and-auth-matrix), [Guard engine](guard-engine.md) |
+| **SRE / deploy** | [Deploy](../DEPLOY.md) | [Env reference](env-reference.md), [Scaling](scaling.md), [Troubleshooting](troubleshooting.md) |
+
 ---
 
 ## Intentra runtime
