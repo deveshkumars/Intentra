@@ -160,7 +160,7 @@ async function askClaude(queueEntry: any): Promise<void> {
   return new Promise((resolve) => {
     // Build args fresh — don't trust --resume from queue (session may be stale)
     let claudeArgs = ['-p', prompt, '--output-format', 'stream-json', '--verbose',
-      '--allowedTools', 'Bash,Read,Glob,Grep'];
+      '--allowedTools', 'Bash,Read,Write,Edit,Glob,Grep'];
 
     // Validate cwd exists — queue may reference a stale worktree
     let effectiveCwd = cwd || process.cwd();
@@ -175,6 +175,7 @@ async function askClaude(queueEntry: any): Promise<void> {
     proc.stdin.end();
 
     let buffer = '';
+    let hadOutput = false; // track whether any visible content was produced
 
     proc.stdout.on('data', (data: Buffer) => {
       buffer += data.toString();
@@ -182,20 +183,47 @@ async function askClaude(queueEntry: any): Promise<void> {
       buffer = lines.pop() || '';
       for (const line of lines) {
         if (!line.trim()) continue;
-        try { handleStreamEvent(JSON.parse(line)); } catch {}
+        try {
+          const parsed = JSON.parse(line);
+          handleStreamEvent(parsed);
+          // Mark output if we got text, a result, or tool use
+          if (parsed.type === 'result' || parsed.type === 'content_block_delta' ||
+              (parsed.type === 'assistant' && parsed.message?.content?.length)) {
+            hadOutput = true;
+          }
+        } catch {}
       }
     });
 
-    proc.stderr.on('data', () => {}); // Claude logs to stderr, ignore
+    let stderrOutput = '';
+    proc.stderr.on('data', (data: Buffer) => {
+      stderrOutput += data.toString();
+    });
 
     proc.on('close', (code) => {
       if (buffer.trim()) {
-        try { handleStreamEvent(JSON.parse(buffer)); } catch {}
+        try {
+          const parsed = JSON.parse(buffer);
+          handleStreamEvent(parsed);
+          if (parsed.type === 'result' || parsed.type === 'content_block_delta') hadOutput = true;
+        } catch {}
       }
-      sendEvent({ type: 'agent_done' }).then(() => {
-        isProcessing = false;
-        resolve();
-      });
+
+      if (!hadOutput) {
+        // Claude exited without producing any visible output — surface this as an error
+        const hint = stderrOutput.trim()
+          ? `Claude exited (code ${code}) with no output. stderr: ${stderrOutput.trim().slice(0, 200)}`
+          : `Claude finished without producing output (exit code ${code}). Check that the claude CLI is working and your ANTHROPIC_API_KEY is set.`;
+        sendEvent({ type: 'agent_error', error: hint }).then(() => {
+          isProcessing = false;
+          resolve();
+        });
+      } else {
+        sendEvent({ type: 'agent_done' }).then(() => {
+          isProcessing = false;
+          resolve();
+        });
+      }
     });
 
     proc.on('error', (err) => {

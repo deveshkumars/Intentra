@@ -1,5 +1,7 @@
 # Chrome vs Chromium: Why We Use Playwright's Bundled Chromium
 
+> **Status: Design exploration — historical context and tradeoffs.** For current CLI behavior, see [`browse/SKILL.md`](../../browse/SKILL.md) and the browse source under [`browse/src/`](../../browse/src/).
+
 ## The Original Vision
 
 When we built `$B connect`, the plan was to connect to the user's **real Chrome browser** — the one with their cookies, sessions, extensions, and open tabs. No more cookie import. The design called for:

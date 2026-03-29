@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 import { progressFetchHeaders } from '../apiHeaders';
+import type { ProgressEvent } from '../types';
 
 interface IntentArtifact {
   intent_id: string;
@@ -18,6 +19,8 @@ interface IntentArtifact {
 interface Props {
   serverUrl: string | null;
   authToken?: string | null;
+  /** SSE event stream — used to auto-refresh when intent_created or intent_resolved arrives */
+  events?: ProgressEvent[];
 }
 
 interface CulturePayload {
@@ -28,12 +31,13 @@ interface CulturePayload {
   note?: string;
 }
 
-export function IntentScreen({ serverUrl, authToken }: Props) {
+export function IntentScreen({ serverUrl, authToken, events }: Props) {
   const [intents, setIntents] = useState<IntentArtifact[]>([]);
   const [culture, setCulture] = useState<CulturePayload | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const lastEventIdRef = useRef<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!serverUrl) return;
@@ -63,6 +67,19 @@ export function IntentScreen({ serverUrl, authToken }: Props) {
   }, [serverUrl, authToken]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Auto-refresh when intent_created or intent_resolved SSE events arrive
+  useEffect(() => {
+    if (!events || events.length === 0) return;
+    const latest = events[events.length - 1];
+    if (!latest) return;
+    if (latest.id === lastEventIdRef.current) return;
+    lastEventIdRef.current = latest.id;
+    const isIntentEvent =
+      latest.upstream_kind === 'intent_created' ||
+      latest.upstream_kind === 'intent_resolved';
+    if (isIntentEvent) fetchData();
+  }, [events, fetchData]);
 
   const toggle = (key: string) => {
     setExpanded(prev => ({ ...prev, [key]: !prev[key] }));

@@ -185,17 +185,9 @@ Sidebar agent writes structured messages to `.context/sidebar-inbox/`. Workspace
 **Priority:** P3
 **Depends on:** Headed mode (shipped)
 
-### Sidebar agent needs Write tool + better error visibility
+### ~~Sidebar agent needs Write tool + better error visibility~~ ✅ DONE
 
-**What:** Two issues with the sidebar agent (`sidebar-agent.ts`): (1) `--allowedTools` is hardcoded to `Bash,Read,Glob,Grep`, missing `Write`. Claude can't create files (like CSVs) when asked. (2) When Claude errors or returns empty, the sidebar UI shows nothing, just a green dot. No error message, no "I tried but failed", nothing.
-
-**Why:** Users ask "write this to a CSV" and the sidebar silently can't. Then they think it's broken. The UI needs to surface errors visibly, and Claude needs the tools to actually do what's asked.
-
-**Context:** `sidebar-agent.ts:163` hardcodes `--allowedTools`. The event relay (`handleStreamEvent`) handles `agent_done` and `agent_error` but the extension's sidepanel.js may not be rendering error states. The sidebar should show "Error: ..." or "Claude finished but produced no output" instead of staying on the green dot forever.
-
-**Effort:** S (human: ~2h / CC: ~10min)
-**Priority:** P1
-**Depends on:** None
+Fixed in planimpl (commit be77328): added Write+Edit to `--allowedTools`, added `hadOutput` tracking + stderr capture, surfaces `agent_error` with exit code + hint instead of silent `agent_done` when Claude produces no output.
 
 ### Chrome Web Store publishing
 
@@ -572,13 +564,11 @@ Shipped in v0.8.3. Step 8.5 added to `/ship` — after creating the PR, `/ship` 
 
 ## Codex
 
-### Codex→Claude reverse buddy check skill
+### ~~Codex→Claude reverse buddy check skill~~ ✅ DONE
 
-**What:** A Codex-native skill (`.agents/skills/gstack-claude/SKILL.md`) that runs `claude -p` to get an independent second opinion from Claude — the reverse of what `/codex` does today from Claude Code.
+**What:** ~~A Codex-native skill (`.agents/skills/gstack-claude/SKILL.md`) that runs `claude -p` to get an independent second opinion from Claude — the reverse of what `/codex` does today from Claude Code.~~
 
-**Why:** Codex users deserve the same cross-model challenge that Claude users get via `/codex`. Currently the flow is one-way (Claude→Codex). Codex users have no way to get a Claude second opinion.
-
-**Context:** The `/codex` skill template (`codex/SKILL.md.tmpl`) shows the pattern — it wraps `codex exec` with JSONL parsing, timeout handling, and structured output. The reverse skill would wrap `claude -p` with similar infrastructure. Would be generated into `.agents/skills/gstack-claude/` by `gen-skill-docs --host codex`.
+Shipped as `/claude-review` (`claude-review/SKILL.md.tmpl` → `.agents/skills/gstack-claude-review/SKILL.md`). Three modes: review (P1/P2/P3 gate), challenge (adversarial), consult (open Q&A). Cross-model comparison block included when both Codex and Claude have reviewed the same diff.
 
 **Effort:** M (human: ~2 weeks / CC: ~30 min)
 **Priority:** P1

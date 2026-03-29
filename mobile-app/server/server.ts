@@ -239,6 +239,44 @@ function readNewJsonlLines(): void {
             duration_s: typeof entry.duration_s === 'number' ? entry.duration_s : undefined,
             ts: typeof entry.ts === 'string' ? entry.ts : now(),
           });
+          continue;
+        }
+        // Plain entries written by the preamble — no event/event_type field.
+        // Discriminate by presence of duration_s: epilogue entries (skill completion)
+        // have duration_s; preamble start entries do not.
+        if (typeof entry.skill === 'string' && !entry.event && !entry.event_type) {
+          const hasDuration = typeof entry.duration_s === 'number' || typeof entry.duration_s === 'string';
+          const sessionId = typeof entry.session_id === 'string' ? entry.session_id
+            : typeof entry.session === 'string' ? entry.session : undefined;
+          if (hasDuration) {
+            // Telemetry epilogue: {"skill":"...","duration_s":"...","outcome":"...","ts":"..."}
+            const durationS = typeof entry.duration_s === 'number' ? entry.duration_s
+              : parseFloat(entry.duration_s as string) || undefined;
+            addEvent({
+              kind: 'skill_end',
+              source: 'jsonl_watcher',
+              ingest_lane: 'intentra_jsonl_bridge',
+              upstream_kind: 'gstack_skill_run',
+              skill: entry.skill,
+              session_id: sessionId,
+              outcome: (entry.outcome as ProgressEvent['outcome']) ?? 'unknown',
+              duration_s: durationS,
+              message: `Completed: ${entry.skill} (${entry.outcome ?? 'unknown'})`,
+              ts: typeof entry.ts === 'string' ? entry.ts : now(),
+            });
+          } else {
+            // Preamble start entry: {"skill":"...","ts":"...","repo":"...","session_id":"..."}
+            addEvent({
+              kind: 'skill_start',
+              source: 'jsonl_watcher',
+              ingest_lane: 'intentra_jsonl_bridge',
+              upstream_kind: 'gstack_skill_run',
+              skill: entry.skill,
+              session_id: sessionId,
+              message: `Started: ${entry.skill}`,
+              ts: typeof entry.ts === 'string' ? entry.ts : now(),
+            });
+          }
         }
       } catch {
         // skip malformed lines

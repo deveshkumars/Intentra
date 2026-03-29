@@ -39,23 +39,21 @@ afterAll(() => {
   try { proc?.kill(); } catch { /* ignore */ }
 });
 
-/** Read SSE lines from a stream with a timeout */
+/** Read SSE lines from a stream with a timeout.
+ * Uses a single reader.read() loop — no concurrent reads, no race condition. */
 async function readSSELines(
   controller: AbortController,
   maxMs: number,
 ): Promise<string[]> {
   const lines: string[] = [];
-  const r = await fetch(`${BASE}/events/stream`, { signal: controller.signal });
-  const reader = r.body!.getReader();
-  const decoder = new TextDecoder();
-  const deadline = Date.now() + maxMs;
-
+  // Auto-abort after maxMs so we don't hang if the caller doesn't abort first
+  const tid = setTimeout(() => controller.abort(), maxMs);
   try {
-    while (Date.now() < deadline) {
-      const { value, done } = await Promise.race([
-        reader.read(),
-        wait(100).then(() => ({ value: undefined, done: false })),
-      ]);
+    const r = await fetch(`${BASE}/events/stream`, { signal: controller.signal });
+    const reader = r.body!.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+      const { value, done } = await reader.read();
       if (done) break;
       if (value) {
         const chunk = decoder.decode(value, { stream: true });
@@ -63,9 +61,10 @@ async function readSSELines(
       }
     }
   } catch {
-    // aborted or timeout
+    // aborted by controller or timeout — expected
+  } finally {
+    clearTimeout(tid);
   }
-  controller.abort();
   return lines;
 }
 

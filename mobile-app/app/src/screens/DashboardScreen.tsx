@@ -16,6 +16,8 @@ interface Props {
   serverUrl: string | null;
   authToken?: string | null;
   intentEventFilter: string | null;
+  /** Increment to trigger an immediate re-fetch of intent IDs (e.g. when intent_created SSE arrives). */
+  intentRefreshKey?: number;
   onIntentEventFilterChange: (intentId: string | null) => void;
   onReconnect: () => void;
   onAgentPress: (agent: TrackedAgent) => void;
@@ -40,6 +42,7 @@ export function DashboardScreen({
   serverUrl,
   authToken = null,
   intentEventFilter,
+  intentRefreshKey,
   onIntentEventFilterChange,
   onReconnect,
   onAgentPress,
@@ -68,7 +71,9 @@ export function DashboardScreen({
 
   useEffect(() => {
     fetchIntentIds();
-  }, [fetchIntentIds]);
+    // intentRefreshKey is incremented by App when intent_created SSE arrives
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchIntentIds, intentRefreshKey]);
 
   const handleRefresh = useCallback(() => {
     onReconnect();

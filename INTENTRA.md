@@ -8,6 +8,8 @@ This repository is primarily **gstack** (Claude Code skills, browse, analytics).
 
 | Doc | What it covers |
 |-----|---------------|
+| **[Documentation hub](docs/README.md)** | Grouped index + maintenance rule for route/OpenAPI changes |
+| **[AGENTS.md](AGENTS.md)** | Full gstack slash-command inventory (repo root) |
 | **[Quickstart](docs/quickstart.md)** | 5-minute local setup: install → server → ngrok → mobile app |
 | **[API Reference](docs/api-reference.md)** | Every endpoint with request/response schemas and JSON examples |
 | **[Architecture](docs/intentra-architecture.md)** | Route/auth matrix, event pipeline diagram, evaluator playbook |
@@ -50,7 +52,7 @@ Intentra-related code is spread across `mobile-app/`, `.intentra/`, and root doc
 | Cross-session link | Optional `intent_id` on progress payloads (client + server types) | [`mobile-app/app/src/types.ts`](mobile-app/app/src/types.ts), `server.ts` |
 | Intent-as-Code files | `POST /intentra/intent`, `PATCH /intentra/intent` (set `outcome`), `GET /intentra/intents`, `GET /intentra/intent/:id` → JSON under `.intentra/` | [`mobile-app/server/intent.ts`](mobile-app/server/intent.ts) |
 | Intent SSE events | `POST` and `PATCH /intentra/intent` emit SSE events (`upstream_kind: intent_created` / `intent_resolved`) so mobile gets notified without polling | [`mobile-app/server/server.ts`](mobile-app/server/server.ts) |
-| Intentra file API | `GET /intentra/files`, `GET /intentra/latest` | [`mobile-app/server/server.ts`](mobile-app/server/server.ts) |
+| Intentra file API | `GET /intentra/files`, `GET /intentra/handoffs/summary`, `GET /intentra/latest` | [`mobile-app/server/server.ts`](mobile-app/server/server.ts) |
 | Culture audit API | `GET /intentra/culture` — reads `culture.json` from `GSTACK_STATE_DIR` (same file gstack skills load) | [`mobile-app/server/culture.ts`](mobile-app/server/culture.ts) |
 | Telemetry provenance | `ingest_lane` + `upstream_kind` on `ProgressEvent`; `hook_fire` kind from JSONL `event: hook_fire` | [`mobile-app/server/server.ts`](mobile-app/server/server.ts), app [`types.ts`](mobile-app/app/src/types.ts) |
 | **Intentra guard runtime** | Policy engine: NFKC normalize → quote-aware tokenizer → ordered rule registry (categories, `baseRisk`, CWE hints) → culture gates → optional debug trace | [`guard-policy.ts`](mobile-app/server/guard-policy.ts), [`guard-command.ts`](mobile-app/server/guard-command.ts), [`guard.ts`](mobile-app/server/guard.ts) |

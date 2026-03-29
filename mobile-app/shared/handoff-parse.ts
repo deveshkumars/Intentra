@@ -61,16 +61,23 @@ function normalizeNewlines(content: string): string {
   return content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 }
 
-/** Split markdown on `\n---\n`; newest block first */
+/** Split markdown on `\n---\n`; newest block first (sorted by date descending, undated last) */
 export function parseEntries(content: string): HandoffEntry[] {
   const n = normalizeNewlines(content);
   const blocks = n.split(/\n---\n/).map(b => b.trim()).filter(Boolean);
-  return blocks.map(parseEntry).reverse();
+  const entries = blocks.map(parseEntry);
+  return entries.sort((a, b) => {
+    if (a.date && b.date) return b.date.localeCompare(a.date);
+    if (a.date) return -1;
+    if (b.date) return 1;
+    return 0;
+  });
 }
 
 export function formatDate(dateStr: string): string {
   try {
     const d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return dateStr;
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',

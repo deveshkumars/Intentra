@@ -47,13 +47,14 @@ echo "LAKE_INTRO: $_LAKE_SEEN"
 _TEL=$(~/.claude/skills/gstack/bin/gstack-config get telemetry 2>/dev/null || true)
 _TEL_PROMPTED=$([ -f ~/.gstack/.telemetry-prompted ] && echo "yes" || echo "no")
 _TEL_START=$(date +%s)
-_SESSION_ID="$$-$(date +%s)"
+_SESSION_ID="${CLAUDE_SESSION_ID:-$$-$(date +%s)}"
 echo "TELEMETRY: ${_TEL:-off}"
 echo "TEL_PROMPTED: $_TEL_PROMPTED"
 _CULTURE_LOADED=$([ -f "$HOME/.gstack/culture.json" ] && echo "yes" || echo "no")
 echo "CULTURE_LOADED: $_CULTURE_LOADED"
 mkdir -p ~/.gstack/analytics
-echo '{"skill":"plan-design-review","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","repo":"'$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")'"}'  >> ~/.gstack/analytics/skill-usage.jsonl 2>/dev/null || true
+export GSTACK_SKILL="plan-design-review"
+echo '{"skill":"plan-design-review","ts":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","repo":"'$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")'","session_id":"'"$_SESSION_ID"'"}' >> ~/.gstack/analytics/skill-usage.jsonl 2>/dev/null || true
 # zsh-compatible: use find instead of glob to avoid NOMATCH error
 for _PF in $(find ~/.gstack/analytics -maxdepth 1 -name '.pending-*' 2>/dev/null); do
   if [ -f "$_PF" ]; then

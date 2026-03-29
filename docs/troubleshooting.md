@@ -64,6 +64,16 @@ rm -rf node_modules package-lock.json
 npm install --legacy-peer-deps
 ```
 
+### Expo Go stuck on “Opening project…”
+
+Expo Go is trying to load the JavaScript bundle from the **Metro** dev server (default **8081**), not from the ngrok URL you pasted on the Setup screen (that URL is only for the **progress server** on **7891**).
+
+1. **Same Wi‑Fi:** Put the phone and dev machine on the same network; run `bunx expo start` or `npx expo start` from `mobile-app/app` and use **LAN** (`npx expo start --lan` if connections fail).
+2. **Firewall:** Allow incoming **8081** (and **7891** if you use raw LAN for the server) on the dev machine.
+3. **Tunnel mode:** If LAN is blocked, use Expo’s tunnel for Metro (`npx expo start --tunnel`) or run a **second ngrok** (or similar) tunnel for port **8081** and use the URL Expo prints for that tunnel.
+
+More context: [mobile-app/README.md](../mobile-app/README.md#development-lan-vs-tunnel).
+
 ### "Network request failed" when connecting
 
 The phone and your Mac are on different networks. Verify:
