@@ -25,6 +25,8 @@
     "test:gemini:all": "EVALS=1 EVALS_ALL=1 bun test test/gemini-e2e.test.ts",
     "skill:check": "bun run scripts/skill-check.ts",
     "dev:skill": "bun run scripts/dev-skill.ts",
+    "dev:mobile": "bash mobile-app/scripts/start-mobile-one-scan.sh",
+    "dev:mobile:lan": "bash mobile-app/scripts/start-mobile-one-scan.sh --lan",
     "start": "bun run browse/src/server.ts",
     "eval:list": "bun run scripts/eval-list.ts",
     "eval:compare": "bun run scripts/eval-compare.ts",
