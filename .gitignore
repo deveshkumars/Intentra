@@ -3,7 +3,8 @@ node_modules/
 browse/dist/
 bin/gstack-global-discover
 .gstack/
-.claude/skills/
+.claude/skills/*
+!.claude/skills/handoff
 .agents/
 .context/
 .gstack-worktrees/
