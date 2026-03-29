@@ -76,6 +76,14 @@ Intentra-related code is spread across `mobile-app/`, `.intentra/`, and root doc
 | **gstack** | Skills, `~/.gstack/culture.json`, safety hooks, `skill-usage.jsonl` telemetry |
 | **Intentra (this layer)** | Watches JSONL, **normalizes** lines into a single event model (`ingest_lane`, `upstream_kind`), streams SSE, `/intentra/*` HTTP, `.intentra/` JSON + Markdown, mobile monitor |
 
+## Ingestion and observability contract
+
+For tools feeding the progress server (hooks, `gstack-progress`, JSONL bridge):
+
+- **Provenance fields:** Normalized `ProgressEvent` rows carry **`ingest_lane`** (e.g. `intentra_http`, `intentra_jsonl_bridge`) and often **`upstream_kind`** (e.g. `skill_end`, `hook_fire`, `intent_created`). Consumers should key off these instead of re-parsing raw JSONL when possible — see types in [`mobile-app/server/server.ts`](mobile-app/server/server.ts) and the mobile [`types.ts`](mobile-app/app/src/types.ts).
+- **No content deduplication:** Identical `POST /progress` bodies still allocate **new** event IDs. If you need at-most-once semantics, implement dedupe in the producer (e.g. stable idempotency keys are not a first-class server feature today).
+- **Guard telemetry path:** Deny/warn outcomes from `POST /intentra/guard` can append to **`.intentra/telemetry/intentra-guard.jsonl`** (see server implementation) and may surface on SSE as `hook_fire` with `upstream_kind: intentra_guard` — useful for auditing policy hits without reading local disk on the phone.
+
 ## Deployment (progress server)
 
 See **[`DEPLOY.md`](DEPLOY.md)** for Docker, `docker compose`, Fly.io, and GHCR image tags.
