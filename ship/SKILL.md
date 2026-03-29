@@ -1663,6 +1663,25 @@ High-confidence findings (agreed on by multiple sources) should be prioritized f
    - Insert after the file header (line 5), dated today
    - Format: `## [X.Y.Z.W] - YYYY-MM-DD`
 
+### CHANGELOG voice rules
+
+CHANGELOG.md is **for users**, not contributors. Write it like product release notes:
+
+- **Lead with what the user can now do** that they couldn't before. Sell the feature.
+  - "You can now..." / "X now works correctly..." — not "Refactored the X layer..."
+- **Plain language, not implementation details.** Describe the outcome, not the mechanism.
+  - Good: "Guard rules now fire even when culture.json is absent"
+  - Bad: "Fixed null-check in evaluateCommandGuard path"
+- **Sell test:** Would a user reading each bullet think "oh nice, I want to try that"?
+  If not, rewrite the wording without changing the substance.
+- **Never mention** TODOS.md, internal tracking, eval infrastructure, or contributor-facing
+  details. These are invisible to users and meaningless to them.
+- **Contributor / internal changes** (refactors, test infra, CI, type fixes) belong in a
+  separate "### For contributors" subsection at the bottom — never in the user-facing bullets.
+- **No jargon.** Describe the user-visible behavior, not the TypeScript symbol that changed.
+  - Good: "every question now tells you which project and branch you're in"
+  - Bad: "AskUserQuestion format standardized via preamble resolver"
+
 6. **Cross-check:** Compare your CHANGELOG entry against the commit list from step 2.
    Every commit must map to at least one bullet point. If any commit is unrepresented,
    add it now. If the branch has N commits spanning K themes, the CHANGELOG must

@@ -372,3 +372,34 @@ export function generateCoAuthorTrailer(ctx: TemplateContext): string {
   }
   return 'Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>';
 }
+
+/**
+ * {{DOC_VOICE}} — shared CHANGELOG / release-note voice rules.
+ *
+ * Injected wherever CHANGELOG entries are written or polished:
+ *   - /ship Step 5 (CHANGELOG generation)
+ *   - /document-release Step 5 (voice polish)
+ *
+ * Keeping it here means a single edit propagates everywhere. Do NOT
+ * duplicate these rules in individual SKILL.md.tmpl files.
+ */
+export function generateDocVoice(_ctx: TemplateContext): string {
+  return `### CHANGELOG voice rules
+
+CHANGELOG.md is **for users**, not contributors. Write it like product release notes:
+
+- **Lead with what the user can now do** that they couldn't before. Sell the feature.
+  - "You can now..." / "X now works correctly..." — not "Refactored the X layer..."
+- **Plain language, not implementation details.** Describe the outcome, not the mechanism.
+  - Good: "Guard rules now fire even when culture.json is absent"
+  - Bad: "Fixed null-check in evaluateCommandGuard path"
+- **Sell test:** Would a user reading each bullet think "oh nice, I want to try that"?
+  If not, rewrite the wording without changing the substance.
+- **Never mention** TODOS.md, internal tracking, eval infrastructure, or contributor-facing
+  details. These are invisible to users and meaningless to them.
+- **Contributor / internal changes** (refactors, test infra, CI, type fixes) belong in a
+  separate "### For contributors" subsection at the bottom — never in the user-facing bullets.
+- **No jargon.** Describe the user-visible behavior, not the TypeScript symbol that changed.
+  - Good: "every question now tells you which project and branch you're in"
+  - Bad: "AskUserQuestion format standardized via preamble resolver"`;
+}
