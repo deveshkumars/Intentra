@@ -239,6 +239,20 @@ function readNewJsonlLines(): void {
             duration_s: typeof entry.duration_s === 'number' ? entry.duration_s : undefined,
             ts: typeof entry.ts === 'string' ? entry.ts : now(),
           });
+          continue;
+        }
+        // Plain skill start entries written by the preamble: {"skill":"...","ts":"...","repo":"..."}
+        // No event_type / event field — just skill + ts. Emit as skill_start.
+        if (typeof entry.skill === 'string' && !entry.event && !entry.event_type) {
+          addEvent({
+            kind: 'skill_start',
+            source: 'jsonl_watcher',
+            ingest_lane: 'intentra_jsonl_bridge',
+            upstream_kind: 'gstack_skill_run',
+            skill: entry.skill,
+            message: `Started: ${entry.skill}`,
+            ts: typeof entry.ts === 'string' ? entry.ts : now(),
+          });
         }
       } catch {
         // skip malformed lines
